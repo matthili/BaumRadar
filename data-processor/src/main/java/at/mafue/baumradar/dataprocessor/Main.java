@@ -6,7 +6,7 @@ import java.util.List;
 public class Main {
     private static final String PUB_KEY_FILE = "public_key.b64";
     // Default URL configured for GitHub Pages / Raw from user's repository
-    private static final String BASE_URL = "https://raw.githubusercontent.com/matthili/BaumRadar/main/docs/data/";
+    private static final String BASE_URL = "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/";
     
     public static void main(String[] args) {
         System.out.println("Starting BaumRadar Data Processor...");

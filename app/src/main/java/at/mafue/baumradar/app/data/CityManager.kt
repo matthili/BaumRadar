@@ -21,14 +21,22 @@ data class CityCatalogEntry(
 
 class CityManager(private val context: Context) {
     private val client = OkHttpClient()
-    private val PUBLIC_KEY_BASE64 = "MCowBQYDK2VwAyEAgmHhUtIJY+h2YucRYUam2Wnv/tdsorssnjsRiYXSKIQ="
-    private val CATALOG_URL = "https://raw.githubusercontent.com/matthili/BaumRadar/main/docs/data/catalog.json"
+    private val PUBLIC_KEY_BASE64 = "MCowBQYDK2VwAyEAU0YZsfJJL6Y658HRNQYpwhev8AxqH2MIYLZmcIHAA1E="
+    private val CATALOG_URL = "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/catalog.json"
 
     suspend fun getCatalog(): List<CityCatalogEntry> = withContext(Dispatchers.IO) {
         val request = Request.Builder().url(CATALOG_URL).build()
         val response = client.newCall(request).execute()
+        if (!response.isSuccessful) {
+            return@withContext emptyList()
+        }
         val body = response.body?.string() ?: return@withContext emptyList()
-        val json = JSONObject(body)
+        val json = try {
+            JSONObject(body)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return@withContext emptyList()
+        }
         val cities = json.getJSONArray("cities")
         val result = mutableListOf<CityCatalogEntry>()
         for (i in 0 until cities.length()) {

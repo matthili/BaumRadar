@@ -16,5 +16,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "WienerBaumRadar"
+rootProject.name = "BaumRadar"
 include(":app", ":data-processor")
