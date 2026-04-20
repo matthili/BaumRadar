@@ -44,7 +44,9 @@ import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 @Composable
 fun MapArScreen() {
     val context = LocalContext.current.applicationContext as Application
+    val activity = LocalContext.current as androidx.activity.ComponentActivity
     val viewModel: MapViewModel = viewModel(
+        activity,
         factory = object : ViewModelProvider.Factory {
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
                 @Suppress("UNCHECKED_CAST")

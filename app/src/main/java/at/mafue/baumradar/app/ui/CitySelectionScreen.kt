@@ -13,10 +13,16 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Place
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CitySelectionScreen(isWizard: Boolean, onWizardComplete: () -> Unit) {
+fun CitySelectionScreen(
+    isWizard: Boolean, 
+    onWizardComplete: () -> Unit,
+    onJumpToCity: (at.mafue.baumradar.app.data.CityCatalogEntry) -> Unit = {}
+) {
     val context = LocalContext.current.applicationContext as Application
     val viewModel: CitySelectionViewModel = viewModel(
         factory = object : ViewModelProvider.Factory {
@@ -61,6 +67,12 @@ fun CitySelectionScreen(isWizard: Boolean, onWizardComplete: () -> Unit) {
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(text = city.name, style = MaterialTheme.typography.titleMedium)
                                     Text(text = if (isDownloaded) "Installiert" else "Nicht installiert", style = MaterialTheme.typography.bodySmall)
+                                }
+                                
+                                if (isDownloaded && !isWizard) {
+                                    IconButton(onClick = { onJumpToCity(city) }) {
+                                        Icon(Icons.Default.Place, contentDescription = "Zur Stadt springen")
+                                    }
                                 }
                                 Switch(
                                     checked = isDownloaded,

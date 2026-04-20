@@ -46,11 +46,14 @@ fun AppContent() {
 
     NavHost(navController = navController, startDestination = startDestination) {
         composable("wizard") {
-            at.mafue.baumradar.app.ui.CitySelectionScreen(isWizard = true) {
-                navController.navigate("main") {
-                    popUpTo("wizard") { inclusive = true }
+            at.mafue.baumradar.app.ui.CitySelectionScreen(
+                isWizard = true,
+                onWizardComplete = {
+                    navController.navigate("main") {
+                        popUpTo("wizard") { inclusive = true }
+                    }
                 }
-            }
+            )
         }
         composable("main") {
             at.mafue.baumradar.app.ui.MainScreen()

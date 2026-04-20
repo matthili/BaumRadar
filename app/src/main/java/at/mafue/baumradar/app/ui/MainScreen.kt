@@ -14,6 +14,10 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.compose.viewModel
+import android.app.Application
 import at.mafue.baumradar.app.R
 
 @Composable
@@ -21,7 +25,18 @@ fun MainScreen() {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route ?: "map"
-    val context = LocalContext.current
+    val context = LocalContext.current.applicationContext as Application
+    val activity = LocalContext.current as androidx.activity.ComponentActivity
+    
+    val mapViewModel: MapViewModel = viewModel(
+        activity,
+        factory = object : ViewModelProvider.Factory {
+            override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                @Suppress("UNCHECKED_CAST")
+                return MapViewModel(context) as T
+            }
+        }
+    )
 
     Scaffold(
         bottomBar = {
@@ -71,7 +86,24 @@ fun MainScreen() {
                 ProfileScreen()
             }
             composable("settings") {
-                CitySelectionScreen(isWizard = false, onWizardComplete = {})
+                CitySelectionScreen(
+                    isWizard = false, 
+                    onWizardComplete = {},
+                    onJumpToCity = { city ->
+                        val bbox = city.boundingBox
+                        if (bbox != null && bbox.size == 4) {
+                            val targetLat = (bbox[0] + bbox[2]) / 2.0
+                            val targetLon = (bbox[1] + bbox[3]) / 2.0
+                            val targetLoc = android.location.Location("Virtual").apply {
+                                latitude = targetLat
+                                longitude = targetLon
+                            }
+                            mapViewModel.virtualLocation.value = targetLoc
+                            mapViewModel.triggerRecenter()
+                        }
+                        navController.navigate("map") { popUpTo(0) }
+                    }
+                )
             }
         }
     }
