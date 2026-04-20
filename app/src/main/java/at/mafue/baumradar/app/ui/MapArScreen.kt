@@ -149,6 +149,27 @@ fun MapArScreen() {
                     Icon(Icons.Default.Search, contentDescription = "Erkundungsmodus")
                 }
             }
+            
+            val suggestedCity by viewModel.suggestedCityToDownload.collectAsState()
+            if (suggestedCity != null) {
+                androidx.compose.material3.AlertDialog(
+                    onDismissRequest = { viewModel.ignoreSuggestedCity() },
+                    title = { Text("Neue Region entdeckt!") },
+                    text = { Text("Du befindest dich im Gebiet von ${suggestedCity!!.name}. Möchtest du die Daten dafür jetzt laden?") },
+                    confirmButton = {
+                        androidx.compose.material3.TextButton(onClick = { 
+                            viewModel.downloadSuggestedCity {}
+                        }) {
+                            Text("Herunterladen")
+                        }
+                    },
+                    dismissButton = {
+                        androidx.compose.material3.TextButton(onClick = { viewModel.ignoreSuggestedCity() }) {
+                            Text("Ignorieren")
+                        }
+                    }
+                )
+            }
         }
     } else {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

@@ -23,8 +23,12 @@ class CityManager(private val context: Context) {
     private val client = OkHttpClient()
     private val PUBLIC_KEY_BASE64 = "MCowBQYDK2VwAyEAEFRXIOa0woB9DbJ/WeYJPvrQhw7+2BbZ+8CEhiKdY9U="
     private val CATALOG_URL = "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/catalog.json"
+    private var cachedCatalog: List<CityCatalogEntry>? = null
 
-    suspend fun getCatalog(): List<CityCatalogEntry> = withContext(Dispatchers.IO) {
+    suspend fun getCatalog(forceRefresh: Boolean = false): List<CityCatalogEntry> = withContext(Dispatchers.IO) {
+        if (!forceRefresh && cachedCatalog != null) {
+            return@withContext cachedCatalog!!
+        }
         val request = Request.Builder().url(CATALOG_URL).build()
         val response = client.newCall(request).execute()
         if (!response.isSuccessful) {
