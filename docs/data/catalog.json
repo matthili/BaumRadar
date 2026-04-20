@@ -7,6 +7,13 @@
       "boundingBox": [48.11, 16.16, 48.33, 16.58],
       "dbUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/wien.db",
       "sigUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/wien.db.sig"
+    },
+    {
+      "id": "linz",
+      "name": "Linz",
+      "boundingBox": [48.24, 14.24, 48.36, 14.36],
+      "dbUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/linz.db",
+      "sigUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/linz.db.sig"
     }
   ]
 }

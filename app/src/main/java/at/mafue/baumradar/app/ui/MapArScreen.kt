@@ -16,6 +16,7 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Place
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -33,8 +34,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.osmdroid.config.Configuration
+import org.osmdroid.events.MapEventsReceiver
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
+import org.osmdroid.views.overlay.MapEventsOverlay
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 
@@ -114,14 +117,37 @@ fun MapArScreen() {
                 }
             }
 
-            FloatingActionButton(
-                onClick = { viewModel.isExplorationMode.value = !isExplorationMode },
+            val virtualLocation by viewModel.virtualLocation.collectAsState()
+            if (virtualLocation != null) {
+                androidx.compose.material3.Button(
+                    onClick = { viewModel.virtualLocation.value = null },
+                    modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 32.dp),
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Color.Red)
+                ) {
+                    Text("Virtuellen Standort beenden")
+                }
+            }
+
+            androidx.compose.foundation.layout.Column(
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .padding(32.dp),
-                containerColor = if (isExplorationMode) Color(0xFF4CAF50) else Color.LightGray
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(16.dp)
             ) {
-                Icon(Icons.Default.Search, contentDescription = "Erkundungsmodus")
+                FloatingActionButton(
+                    onClick = { viewModel.triggerRecenter() },
+                    containerColor = Color.White
+                ) {
+                    Icon(Icons.Default.Place, contentDescription = "Zentrieren", tint = Color.Black)
+                }
+
+                FloatingActionButton(
+                    onClick = { viewModel.isExplorationMode.value = !isExplorationMode },
+                    containerColor = if (isExplorationMode) Color(0xFF4CAF50) else Color.LightGray
+                ) {
+                    Icon(Icons.Default.Search, contentDescription = "Erkundungsmodus")
+                }
             }
         }
     } else {
@@ -136,7 +162,8 @@ fun MapViewContent(viewModel: MapViewModel) {
     val context = LocalContext.current
     val trees by viewModel.nearbyAllergicTrees.collectAsState()
     val location by viewModel.location.collectAsState()
-
+    val recenterTrigger by viewModel.recenterTrigger.collectAsState()
+    var lastRecenter by remember { mutableStateOf(0) }
     AndroidView(
         modifier = Modifier.fillMaxSize(),
         factory = { ctx ->
@@ -144,20 +171,61 @@ fun MapViewContent(viewModel: MapViewModel) {
                 setMultiTouchControls(true)
                 controller.setZoom(16.0)
                 
+                val mapEventsOverlay = MapEventsOverlay(object : MapEventsReceiver {
+                    override fun singleTapConfirmedHelper(p: GeoPoint?): Boolean {
+                        return false
+                    }
+
+                    override fun longPressHelper(p: GeoPoint?): Boolean {
+                        p?.let {
+                            val loc = android.location.Location("Virtual").apply {
+                                latitude = it.latitude
+                                longitude = it.longitude
+                            }
+                            viewModel.virtualLocation.value = loc
+                        }
+                        return true
+                    }
+                })
+                overlays.add(mapEventsOverlay)
+                
                 val myLocOverlay = MyLocationNewOverlay(this)
                 myLocOverlay.enableMyLocation()
                 overlays.add(myLocOverlay)
             }
         },
         update = { map ->
-            if (location != null && map.overlays.size <= 1) { // roughly check if we already centered
+            val virtLoc = viewModel.virtualLocation.value
+            if (virtLoc != null && map.overlays.size <= 2) { 
+                map.controller.setCenter(GeoPoint(virtLoc.latitude, virtLoc.longitude))
+            } else if (location != null && map.overlays.size <= 2) { // roughly check if we already centered
                 map.controller.setCenter(GeoPoint(location!!.latitude, location!!.longitude))
             }
+
+            if (recenterTrigger > lastRecenter) {
+                lastRecenter = recenterTrigger
+                val currentEffLoc = viewModel.effectiveLocation.value
+                if (currentEffLoc != null) {
+                    map.controller.animateTo(GeoPoint(currentEffLoc.latitude, currentEffLoc.longitude))
+                }
+            }
             
-            // Clear old markers, preserve MyLocationOverlay
+            // Clear old markers, preserve MyLocationOverlay and MapEventsOverlay
             val myLoc = map.overlays.find { it is MyLocationNewOverlay }
+            val mapEv = map.overlays.find { it is MapEventsOverlay }
             map.overlays.clear()
-            myLoc?.let { map.overlays.add(it) }
+            mapEv?.let { map.overlays.add(it) }
+            
+            if (virtLoc == null) {
+                myLoc?.let { map.overlays.add(it) }
+            } else {
+                val virtMarker = Marker(map)
+                virtMarker.position = GeoPoint(virtLoc.latitude, virtLoc.longitude)
+                virtMarker.title = "Virtueller Standort"
+                virtMarker.icon = ContextCompat.getDrawable(context, android.R.drawable.ic_menu_mylocation)
+                virtMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+                map.overlays.add(virtMarker)
+            }
 
             // Add trees
             trees.forEach { tree ->

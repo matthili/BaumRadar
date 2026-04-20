@@ -21,7 +21,7 @@ data class CityCatalogEntry(
 
 class CityManager(private val context: Context) {
     private val client = OkHttpClient()
-    private val PUBLIC_KEY_BASE64 = "MCowBQYDK2VwAyEAU0YZsfJJL6Y658HRNQYpwhev8AxqH2MIYLZmcIHAA1E="
+    private val PUBLIC_KEY_BASE64 = "MCowBQYDK2VwAyEAEFRXIOa0woB9DbJ/WeYJPvrQhw7+2BbZ+8CEhiKdY9U="
     private val CATALOG_URL = "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/catalog.json"
 
     suspend fun getCatalog(): List<CityCatalogEntry> = withContext(Dispatchers.IO) {

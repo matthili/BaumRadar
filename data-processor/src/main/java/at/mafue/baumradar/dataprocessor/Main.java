@@ -1,6 +1,7 @@
 package at.mafue.baumradar.dataprocessor;
 
 import java.io.File;
+import java.util.Arrays;
 import java.util.List;
 
 public class Main {
@@ -17,9 +18,9 @@ public class Main {
         }
         
         // Setup Providers
-        List<CityProvider> providers = List.of(
-            new ViennaProvider()
-            // Future providers like BerlinProvider, MunichProvider can be added here
+        List<CityProvider> providers = Arrays.asList(
+            new ViennaProvider(),
+            new LinzProvider()
         );
         
         try {

@@ -21,10 +21,20 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
 
     val isMapLoading = MutableStateFlow(true)
     val isExplorationMode = MutableStateFlow(false)
+    val recenterTrigger = MutableStateFlow(0)
+
+    val virtualLocation = MutableStateFlow<android.location.Location?>(null)
+
+    val effectiveLocation: StateFlow<android.location.Location?> = combine(
+        arManager.currentLocation,
+        virtualLocation
+    ) { real, virtual ->
+        virtual ?: real
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     // Combine location, selected allergies, and mode to query the database
     val nearbyAllergicTrees: StateFlow<List<TreeEntity>> = combine(
-        arManager.currentLocation.filterNotNull().sample(2000),
+        effectiveLocation.filterNotNull().sample(2000),
         ds.selectedTreesFlow,
         isExplorationMode
     ) { loc, selectedTrees, mode ->
@@ -66,12 +76,16 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
     }
     .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val location = arManager.currentLocation
+    val location = effectiveLocation
     val azimuth = arManager.azimuth
 
     init {
         // Stop loading if no location permission granted or stuck?
         // Let's rely on UI to handle permission rendering.
+    }
+
+    fun triggerRecenter() {
+        recenterTrigger.value++
     }
 
     fun startTracking() {
