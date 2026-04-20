@@ -1,0 +1,34 @@
+# Android / Gradle / Build
+*.apk
+*.ap_
+*.aab
+*.dex
+*.class
+bin/
+gen/
+out/
+build/
+app/build/
+data-processor/build/
+.gradle/
+local.properties
+
+# IDEs
+.idea/
+.vscode/
+*.iml
+*.iws
+
+# MacOS
+.DS_Store
+
+# Kotlin / gradle internal caches
+.kotlin/
+
+# Antigravity / Agents
+.gemini/
+.antigravity/
+
+# NOTE: We explicitly DO NOT ignore /docs/data/ oder *.db, da 
+# die generierten Baum-Datenbanken und der Katalog in GitHub 
+# als Release-Artefakte mit versioniert werden sollen!

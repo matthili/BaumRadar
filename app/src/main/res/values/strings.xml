@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">BaumRadar</string>
+    <string name="download_prompt_title">Download Required</string>
+    <string name="download_prompt_message">The tree database needs to be downloaded for the first use. Would you like to download it now?</string>
+    <string name="download_btn">Download</string>
+    <string name="download_progress">Downloading data...</string>
+    <string name="verify_progress">Verifying signature...</string>
+    <string name="error_signature_invalid">Invalid data signature. The download might be corrupted or tampered with.</string>
+    <string name="error_download">An error occurred during download.</string>
+    <string name="retry">Retry</string>
+    <string name="tab_map">Map</string>
+    <string name="tab_profile">Allergy Profile</string>
+    <string name="select_trees">Select your allergy triggers:</string>
+    <string name="save">Save</string>
+    <string name="distance_meters">%1$s m</string>
+    <string name="unknown_tree">Unknown species</string>
+</resources>

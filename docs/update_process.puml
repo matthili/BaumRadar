@@ -1,0 +1,46 @@
+@startuml
+skinparam style strictuml
+
+actor User
+participant "DataProcessor" as DP
+participant "CSV Downloader" as Downloader
+participant "CSV Parser" as Parser
+database "SQLite DB" as DB
+participant "Ed25519 Signer" as Signer
+participant "File System" as FS
+
+User -> DP : start()
+activate DP
+
+DP -> Downloader : fetch(url)
+activate Downloader
+Downloader -->> DP : Open Stream
+deactivate Downloader
+
+DP -> DB : createTable(trees)
+activate DB
+
+DP -> Parser : processStream(stream)
+activate Parser
+loop while line available
+    Parser -> Parser : extract(ID, LAT, LON, GATTUNG, ART)
+    Parser -> DB : insertBatch()
+end
+deactivate Parser
+DB -->> DP : commit()
+deactivate DB
+
+DP -> Signer : sign(trees.db)
+activate Signer
+Signer -> FS : read(trees.db)
+Signer -> Signer : generatePrivateKey() \n(or load)
+Signer -> Signer : signBytes(data)
+Signer -->> DP : byte[] signature
+deactivate Signer
+
+DP -> FS : save(trees.db.sig)
+DP -> FS : save(public.key)
+
+DP -->> User : Success
+deactivate DP
+@enduml

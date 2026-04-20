@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">BaumRadar</string>
+    <string name="download_prompt_title">Download erforderlich</string>
+    <string name="download_prompt_message">Die Baum-Datenbank muss für die erste Verwendung heruntergeladen werden. Möchtest du sie jetzt herunterladen?</string>
+    <string name="download_btn">Herunterladen</string>
+    <string name="download_progress">Daten werden heruntergeladen...</string>
+    <string name="verify_progress">Signatur wird verifiziert...</string>
+    <string name="error_signature_invalid">Ungültige Daten-Signatur. Der Download ist möglicherweise beschädigt oder manipuliert.</string>
+    <string name="error_download">Beim Download ist ein Fehler aufgetreten.</string>
+    <string name="retry">Wiederholen</string>
+    <string name="tab_map">Karte</string>
+    <string name="tab_profile">Allergie-Profil</string>
+    <string name="select_trees">Wähle deine Allergie-Auslöser:</string>
+    <string name="save">Speichern</string>
+    <string name="distance_meters">%1$s m</string>
+    <string name="unknown_tree">Unbekannte Art</string>
+</resources>

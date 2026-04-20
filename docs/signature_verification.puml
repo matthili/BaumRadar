@@ -1,0 +1,41 @@
+@startuml
+skinparam style strictuml
+
+actor AppUser
+participant "MainActivity" as UI
+participant "DatabaseManager" as DBManager
+participant "SignatureVerifier" as Verifier
+participant "File System" as FS
+database "Room Database" as Room
+
+UI -> DBManager : requestDatabaseUpdate()
+activate DBManager
+
+DBManager -> FS : loadNewDbFiles(trees.db, trees.db.sig)
+activate FS
+FS -->> DBManager : File streams
+deactivate FS
+
+DBManager -> Verifier : verify(trees.db, trees.db.sig, publicKey)
+activate Verifier
+
+Verifier -> Verifier : load(publicKey) from assets
+Verifier -> Verifier : checkSignature()
+
+alt Signature is Valid
+    Verifier -->> DBManager : true
+    DBManager -> FS : replaceOldDatabase()
+    DBManager -> Room : reconnect()
+    activate Room
+    Room -->> DBManager : initialized
+    deactivate Room
+    DBManager -->> UI : onSuccess()
+else Signature is Invalid
+    Verifier -->> DBManager : false
+    DBManager -> FS : discardNewFiles()
+    DBManager -->> UI : onError("Invalid Signature")
+end
+
+deactivate Verifier
+deactivate DBManager
+@enduml
