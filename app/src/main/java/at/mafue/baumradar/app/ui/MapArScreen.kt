@@ -164,6 +164,7 @@ fun MapViewContent(viewModel: MapViewModel) {
     val location by viewModel.location.collectAsState()
     val recenterTrigger by viewModel.recenterTrigger.collectAsState()
     var lastRecenter by remember { mutableStateOf(0) }
+    var isMapCentered by remember { mutableStateOf(false) }
     AndroidView(
         modifier = Modifier.fillMaxSize(),
         factory = { ctx ->
@@ -196,10 +197,14 @@ fun MapViewContent(viewModel: MapViewModel) {
         },
         update = { map ->
             val virtLoc = viewModel.virtualLocation.value
-            if (virtLoc != null && map.overlays.size <= 2) { 
-                map.controller.setCenter(GeoPoint(virtLoc.latitude, virtLoc.longitude))
-            } else if (location != null && map.overlays.size <= 2) { // roughly check if we already centered
-                map.controller.setCenter(GeoPoint(location!!.latitude, location!!.longitude))
+            if (!isMapCentered) {
+                if (virtLoc != null) { 
+                    map.controller.setCenter(GeoPoint(virtLoc.latitude, virtLoc.longitude))
+                    isMapCentered = true
+                } else if (location != null) {
+                    map.controller.setCenter(GeoPoint(location!!.latitude, location!!.longitude))
+                    isMapCentered = true
+                }
             }
 
             if (recenterTrigger > lastRecenter) {
