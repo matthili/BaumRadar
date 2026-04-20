@@ -105,7 +105,7 @@ fun MapArScreen() {
                     shadowElevation = 4.dp
                 ) {
                     Text(
-                        text = "ERKUNDUNGSMODUS\nAlle BÃ¤ume im Umkreis (100m)",
+                        text = "ERKUNDUNGSMODUS\nAlle Bäume im Umkreis (100m)",
                         color = Color.White,
                         modifier = Modifier.padding(12.dp),
                         style = androidx.compose.material3.MaterialTheme.typography.labelLarge,

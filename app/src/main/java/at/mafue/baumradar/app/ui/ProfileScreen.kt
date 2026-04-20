@@ -50,7 +50,7 @@ fun ProfileScreen() {
                 if (selectedTrees.isNotEmpty()) {
                     TextButton(onClick = { viewModel.clearAllSelections() }) {
                         Text(
-                            text = "Alle abwÃ¤hlen", 
+                            text = "Alle abwählen", 
                             color = MaterialTheme.colorScheme.error,
                             style = MaterialTheme.typography.labelLarge
                         )
@@ -71,7 +71,7 @@ fun ProfileScreen() {
             trailingIcon = {
                 if (searchQuery.isNotEmpty()) {
                     IconButton(onClick = { viewModel.searchQuery.value = "" }) {
-                        Icon(Icons.Default.Clear, contentDescription = "LÃ¶schen")
+                        Icon(Icons.Default.Clear, contentDescription = "Löschen")
                     }
                 }
             },

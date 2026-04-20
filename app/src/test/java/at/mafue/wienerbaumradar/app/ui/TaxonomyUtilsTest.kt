@@ -1,4 +1,4 @@
-﻿package at.mafue.baumradar.app.ui
+package at.mafue.baumradar.app.ui
 
 import at.mafue.baumradar.app.data.TreeSpeciesDTO
 import org.junit.Assert.assertEquals
@@ -32,8 +32,8 @@ class TaxonomyUtilsTest {
 
     @Test
     fun testSanitizeDisplayName_UnclosedParenthesis() {
-        val result = TaxonomyUtils.sanitizeDisplayName("Zanthoxylum simulans (TÃ¤uschende Stachelesche")
-        assertEquals("Zanthoxylum simulans (TÃ¤uschende Stachelesche)", result)
+        val result = TaxonomyUtils.sanitizeDisplayName("Zanthoxylum simulans (Täuschende Stachelesche")
+        assertEquals("Zanthoxylum simulans (Täuschende Stachelesche)", result)
     }
 
     @Test

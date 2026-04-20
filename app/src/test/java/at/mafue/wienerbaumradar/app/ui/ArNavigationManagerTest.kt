@@ -1,4 +1,4 @@
-﻿package at.mafue.baumradar.app.ui
+package at.mafue.baumradar.app.ui
 
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -11,13 +11,13 @@ class ArNavigationManagerTest {
         val latA = 48.208493
         val lonA = 16.373118
 
-        // Point B: SchÃ¶nbrunn Palace, Vienna
+        // Point B: Schönbrunn Palace, Vienna
         val latB = 48.184865
         val lonB = 16.312240
 
         val distance = ArNavigationManager.calculateDistance(latA, lonA, latB, lonB)
 
-        // Known distance between Stephansdom and SchÃ¶nbrunn is ~5.2 km (5200m)
+        // Known distance between Stephansdom and Schönbrunn is ~5.2 km (5200m)
         // Adjust precision delta to 50 meters
         assertEquals(5245.0, distance, 50.0)
     }
