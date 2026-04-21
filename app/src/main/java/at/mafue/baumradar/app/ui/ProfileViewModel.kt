@@ -56,6 +56,9 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
     private val _selectedTrees = MutableStateFlow<Set<String>>(emptySet())
     val selectedTrees: StateFlow<Set<String>> = _selectedTrees
 
+    private val _warnTrees = MutableStateFlow<Set<String>>(emptySet())
+    val warnTrees: StateFlow<Set<String>> = _warnTrees
+
     init {
         loadData()
     }
@@ -90,6 +93,7 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
             
             _groupedTrees.value = structuredGroups
             _selectedTrees.value = allergyDataStore.selectedTreesFlow.first()
+            _warnTrees.value = allergyDataStore.warnTreesFlow.first()
         }
     }
 
@@ -105,6 +109,19 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
         _selectedTrees.value = current
         viewModelScope.launch {
             allergyDataStore.saveSelectedTrees(current)
+        }
+    }
+
+    fun toggleWarnSelection(speciesId: String) {
+        val current = _warnTrees.value.toMutableSet()
+        if (current.contains(speciesId)) {
+            current.remove(speciesId)
+        } else {
+            current.add(speciesId)
+        }
+        _warnTrees.value = current
+        viewModelScope.launch {
+            allergyDataStore.saveWarnTrees(current)
         }
     }
 
@@ -131,8 +148,10 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
     fun clearAllSelections() {
         val empty = emptySet<String>()
         _selectedTrees.value = empty
+        _warnTrees.value = empty
         viewModelScope.launch {
             allergyDataStore.saveSelectedTrees(empty)
+            allergyDataStore.saveWarnTrees(empty)
         }
     }
 }

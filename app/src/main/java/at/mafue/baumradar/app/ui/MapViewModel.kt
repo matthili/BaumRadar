@@ -9,6 +9,12 @@ import at.mafue.baumradar.app.data.TreeEntity
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import org.osmdroid.util.GeoPoint
+import at.mafue.baumradar.app.routing.OsrmRoutingClient
+import at.mafue.baumradar.app.routing.RouteResult
+import at.mafue.baumradar.app.routing.NominatimGeocoder
+import at.mafue.baumradar.app.data.GeofenceEntity
+import at.mafue.baumradar.app.data.RouteHistoryEntity
 
 @OptIn(FlowPreview::class, kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class MapViewModel(application: Application) : AndroidViewModel(application) {
@@ -29,6 +35,31 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
     private val ignoredCities = mutableSetOf<String>()
 
     val virtualLocation = MutableStateFlow<android.location.Location?>(null)
+    
+    // UI Tracking for Map Clicks
+    val longPressGeoPoint = MutableStateFlow<GeoPoint?>(null)
+
+    // Routing State
+    val routeStart = MutableStateFlow<GeoPoint?>(null)
+    val routeEnd = MutableStateFlow<GeoPoint?>(null)
+    val startAddress = MutableStateFlow("")
+    val endAddress = MutableStateFlow("")
+    val routingProfile = MutableStateFlow("foot")
+
+    val routeAlternatives = MutableStateFlow<List<RouteResult>>(emptyList())
+    val selectedRouteIndex = MutableStateFlow(0)
+    
+    val currentRouteResult: StateFlow<RouteResult?> = combine(
+        routeAlternatives, selectedRouteIndex
+    ) { alts, index ->
+        if (alts.isEmpty() || index < 0 || index >= alts.size) null else alts[index]
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    val currentRouteGeofences = MutableStateFlow<List<GeofenceEntity>>(emptyList())
+    val isRouting = MutableStateFlow(false)
+    val routingError = MutableStateFlow<String?>(null)
+
+    private val routingClient = OsrmRoutingClient()
 
     val effectiveLocation: StateFlow<android.location.Location?> = combine(
         arManager.currentLocation,
@@ -36,6 +67,8 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
     ) { real, virtual ->
         virtual ?: real
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    val routeHistory = db.historyDao().getRecentHistory(10).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     init {
         viewModelScope.launch {
@@ -83,20 +116,27 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    // Combine location, selected allergies, and mode to query the database
+    // Combine location, selected allergies, and warn trees to query the database
     val nearbyAllergicTrees: StateFlow<List<TreeEntity>> = combine(
         effectiveLocation.filterNotNull().sample(2000),
         ds.selectedTreesFlow,
+        ds.warnTreesFlow,
         isExplorationMode
-    ) { loc, selectedTrees, mode ->
-        Triple(loc, selectedTrees, mode)
+    ) { loc, selectedTrees, warnTrees, mode ->
+        // Return a custom object or list, but let's just make it a tuple
+        listOf(loc, selectedTrees.plus(warnTrees), mode)
     }
     .onEach { 
         // Trigger loading state whenever an input changes
         isMapLoading.value = true 
     }
-    .flatMapLatest { (loc, selectedSet, mode) ->
-        if (!mode && selectedSet.isEmpty()) {
+    .flatMapLatest { tuple ->
+        val loc = tuple[0] as android.location.Location
+        @Suppress("UNCHECKED_CAST")
+        val combinedTreesSet = tuple[1] as Set<String>
+        val mode = tuple[2] as Boolean
+        
+        if (!mode && combinedTreesSet.isEmpty()) {
             flowOf(emptyList())
         } else {
             val radius = if (mode) EXPLORE_RADIUS_METERS else SEARCH_RADIUS_METERS
@@ -115,7 +155,7 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
                     if (mode) {
                         distanceOk // Exploration mode ignores selection and shows ALL trees in 100m
                     } else {
-                        distanceOk && selectedSet.contains(t.genusDe)
+                        distanceOk && combinedTreesSet.contains(t.genusDe)
                     }
                 }
             }
@@ -145,6 +185,115 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
 
     fun stopTracking() {
         arManager.stopTracking()
+    }
+
+    fun calculateRoute(start: GeoPoint, end: GeoPoint) {
+        viewModelScope.launch {
+            isRouting.value = true
+            routingError.value = null
+            try {
+                // 1. Fetch relevant Geofences in the Bounding Box of the route
+                val minLat = minOf(start.latitude, end.latitude) - 0.05
+                val maxLat = maxOf(start.latitude, end.latitude) + 0.05
+                val minLon = minOf(start.longitude, end.longitude) - 0.05
+                val maxLon = maxOf(start.longitude, end.longitude) + 0.05
+
+                val selectedAllergies = ds.selectedTreesFlow.first()
+                if (selectedAllergies.isEmpty()) {
+                    // No allergies, pure direct routing
+                    currentRouteGeofences.value = emptyList()
+                    val result = routingClient.getRoute(start.latitude, start.longitude, end.latitude, end.longitude, emptyList(), routingProfile.value)
+                    result.onSuccess { 
+                        routeAlternatives.value = it 
+                        selectedRouteIndex.value = 0
+                    }.onFailure { routingError.value = it.message }
+                } else {
+                    val geofences = db.treeDao().getGeofencesInBoundingBox(
+                        selectedAllergies.toList(), minLat, maxLat, minLon, maxLon
+                    )
+                    currentRouteGeofences.value = geofences
+
+                    // Pass to routing client to compute best alternative
+                    val result = routingClient.getRoute(
+                        start.latitude, start.longitude, end.latitude, end.longitude, geofences, routingProfile.value
+                    )
+                    result.onSuccess { 
+                        routeAlternatives.value = it 
+                        selectedRouteIndex.value = 0
+                    }.onFailure { routingError.value = it.message }
+                }
+            } catch (e: Exception) {
+                routingError.value = e.message
+            } finally {
+                isRouting.value = false
+            }
+        }
+    }
+    
+    fun calculateGeocodedRoute() {
+        val startQ = startAddress.value
+        val endQ = endAddress.value
+        if (startQ.isBlank() || endQ.isBlank()) {
+            routingError.value = "Start und Ziel dürfen nicht leer sein."
+            return
+        }
+        
+        viewModelScope.launch {
+            routeAlternatives.value = emptyList()
+            selectedRouteIndex.value = 0
+            currentRouteGeofences.value = emptyList()
+            isRouting.value = true
+            routingError.value = null
+            try {
+                val startRes = NominatimGeocoder.getCoordinates(startQ)
+                val endRes = NominatimGeocoder.getCoordinates(endQ)
+                
+                if (startRes.isSuccess && endRes.isSuccess) {
+                    val s = startRes.getOrThrow()
+                    val e = endRes.getOrThrow()
+                    routeStart.value = s
+                    routeEnd.value = e
+                    
+                    // Speichere in der Historie
+                    db.historyDao().insertHistory(
+                        RouteHistoryEntity(
+                            startAddress = startQ,
+                            endAddress = endQ,
+                            startLat = s.latitude,
+                            startLon = s.longitude,
+                            endLat = e.latitude,
+                            endLon = e.longitude,
+                            timestamp = System.currentTimeMillis()
+                        )
+                    )
+                    db.historyDao().trimHistory(10) // Settings limit hardcoded to 10 for now.
+
+                    calculateRoute(s, e)
+                } else {
+                    routingError.value = "Adresse konnte nicht aufgelöst werden."
+                    isRouting.value = false
+                }
+            } catch (e: Exception) {
+                routingError.value = e.message
+                isRouting.value = false
+            }
+        }
+    }
+
+    fun clearRoute() {
+        routeStart.value = null
+        routeEnd.value = null
+        startAddress.value = ""
+        endAddress.value = ""
+        routeAlternatives.value = emptyList()
+        selectedRouteIndex.value = 0
+        currentRouteGeofences.value = emptyList()
+    }
+
+    fun clearHistory() {
+        viewModelScope.launch {
+            db.historyDao().clearHistory()
+        }
     }
 
     override fun onCleared() {

@@ -14,6 +14,13 @@
       "boundingBox": [48.24, 14.24, 48.36, 14.36],
       "dbUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/linz.db",
       "sigUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/linz.db.sig"
+    },
+    {
+      "id": "berlin",
+      "name": "Berlin",
+      "boundingBox": [52.34, 13.08, 52.68, 13.76],
+      "dbUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/berlin.db",
+      "sigUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/berlin.db.sig"
     }
   ]
 }

@@ -16,6 +16,16 @@ interface TreeDao {
     
     @Query("SELECT * FROM trees WHERE lat BETWEEN :minLat AND :maxLat AND lon BETWEEN :minLon AND :maxLon")
     fun getTreesInBoundingBox(minLat: Double, maxLat: Double, minLon: Double, maxLon: Double): Flow<List<TreeEntity>>
+
+    @JvmSuppressWildcards
+    @Query("SELECT * FROM geofences WHERE genus_de IN (:allergicGenuses) AND lat BETWEEN :minLat AND :maxLat AND lon BETWEEN :minLon AND :maxLon")
+    suspend fun getGeofencesInBoundingBox(
+        allergicGenuses: List<String>,
+        minLat: Double,
+        maxLat: Double,
+        minLon: Double,
+        maxLon: Double
+    ): List<GeofenceEntity>
 }
 
 data class TreeSpeciesDTO(

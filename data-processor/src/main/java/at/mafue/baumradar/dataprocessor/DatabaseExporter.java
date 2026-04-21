@@ -6,8 +6,11 @@ import java.sql.PreparedStatement;
 import java.sql.Statement;
 import java.sql.SQLException;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class DatabaseExporter {
+    private static final Logger logger = LoggerFactory.getLogger(DatabaseExporter.class);
     private final String dbPath;
     private Connection connection;
 
@@ -16,6 +19,7 @@ public class DatabaseExporter {
     }
 
     public void open() throws SQLException {
+        logger.info("Opening SQLite database at {}", dbPath);
         // SQLite connection string
         String url = "jdbc:sqlite:" + dbPath;
         connection = DriverManager.getConnection(url);
@@ -30,7 +34,7 @@ public class DatabaseExporter {
     }
 
     public void createTable() throws SQLException {
-        String sql = "CREATE TABLE IF NOT EXISTS trees (" +
+        String sqlTrees = "CREATE TABLE IF NOT EXISTS trees (" +
                      "id TEXT PRIMARY KEY NOT NULL, " +
                      "city_id TEXT NOT NULL, " +
                      "lat REAL NOT NULL, " +
@@ -39,9 +43,48 @@ public class DatabaseExporter {
                      "genus_en TEXT, " +
                      "species_de TEXT, " +
                      "species_en TEXT);";
+                     
+        String sqlGeofences = "CREATE TABLE IF NOT EXISTS geofences (" +
+                     "id TEXT PRIMARY KEY NOT NULL, " +
+                     "lat REAL NOT NULL, " +
+                     "lon REAL NOT NULL, " +
+                     "radius INTEGER NOT NULL, " +
+                     "count INTEGER NOT NULL, " +
+                     "genus_de TEXT);";
+
         try (Statement stmt = connection.createStatement()) {
             stmt.execute("DROP TABLE IF EXISTS trees;");
-            stmt.execute(sql);
+            stmt.execute("DROP TABLE IF EXISTS geofences;");
+            stmt.execute(sqlTrees);
+            stmt.execute(sqlGeofences);
+        }
+    }
+
+    public void insertGeofences(List<GeofenceRecord> records) throws SQLException {
+        if (records.isEmpty()) return;
+        
+        String sql = "INSERT INTO geofences(id, lat, lon, radius, count, genus_de) VALUES(?,?,?,?,?,?)";
+        
+        connection.setAutoCommit(false);
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            for (GeofenceRecord record : records) {
+                pstmt.setString(1, record.id);
+                pstmt.setDouble(2, record.latitude);
+                pstmt.setDouble(3, record.longitude);
+                pstmt.setInt(4, record.radius);
+                pstmt.setInt(5, record.count);
+                pstmt.setString(6, record.genusDe);
+                pstmt.addBatch();
+            }
+            pstmt.executeBatch();
+            connection.commit();
+            logger.debug("Successfully committed {} geofence clusters to {}", records.size(), dbPath);
+        } catch (SQLException e) {
+            connection.rollback();
+            logger.error("Failed to insert geofences into {}. Rolling back...", dbPath, e);
+            throw e;
+        } finally {
+            connection.setAutoCommit(true);
         }
     }
 
@@ -65,8 +108,10 @@ public class DatabaseExporter {
             }
             pstmt.executeBatch();
             connection.commit();
+            logger.debug("Successfully committed patch of {} records to {}", records.size(), dbPath);
         } catch (SQLException e) {
             connection.rollback();
+            logger.error("Failed to insert batch into {}. Rolling back...", dbPath, e);
             throw e;
         } finally {
             connection.setAutoCommit(true);
@@ -76,6 +121,7 @@ public class DatabaseExporter {
     public void close() throws SQLException {
         if (connection != null && !connection.isClosed()) {
             connection.close();
+            logger.info("Closed SQLite database at {}", dbPath);
         }
     }
 }

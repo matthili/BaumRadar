@@ -20,9 +20,13 @@ dependencies {
     // BouncyCastle for Ed25519 signature
     implementation("org.bouncycastle:bcprov-jdk15to18:1.77")
     
-    // SLF4J Default logger for libraries
-    implementation("org.slf4j:slf4j-simple:2.0.12")
+    // SLF4J Logic and Logback Appender
+    implementation("ch.qos.logback:logback-classic:1.5.0")
     
+    // JSON processing
+    implementation("com.fasterxml.jackson.core:jackson-databind:2.15.2")
+    implementation("com.fasterxml.jackson.core:jackson-core:2.15.2")
+
     // JUnit for Testing
     testImplementation("junit:junit:4.13.2")
 }

@@ -8,6 +8,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -37,6 +39,7 @@ fun ProfileScreen() {
 
     val filteredTrees by viewModel.filteredTrees.collectAsState()
     val selectedTrees by viewModel.selectedTrees.collectAsState()
+    val warnTrees by viewModel.warnTrees.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
 
     val currentIsEn = Locale.getDefault().language == "en"
@@ -117,10 +120,10 @@ fun ProfileScreen() {
                             style = MaterialTheme.typography.titleMedium,
                             modifier = Modifier.weight(1f)
                         )
-                        Text(
-                            text = if (isExpanded) "â–²" else "â–¼",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        Icon(
+                            imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                            contentDescription = if (isExpanded) "Einklappen" else "Ausklappen",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                     Divider()
@@ -129,6 +132,7 @@ fun ProfileScreen() {
                 if (isExpanded) {
                     items(group.speciesList, key = { it.genusDe ?: it.hashCode().toString() }) { species ->
                         val isSelected = species.genusDe?.let { selectedTrees.contains(it) } == true
+                        val isWarn = species.genusDe?.let { warnTrees.contains(it) } == true
                         val rawName = if (currentIsEn && !species.genusEn.isNullOrEmpty()) {
                             species.genusEn
                         } else {
@@ -140,18 +144,34 @@ fun ProfileScreen() {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable { species.genusDe?.let { viewModel.toggleSpeciesSelection(it) } }
-                                .padding(start = 48.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
+                                .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Checkbox(
-                                checked = isSelected,
-                                onCheckedChange = { species.genusDe?.let { viewModel.toggleSpeciesSelection(it) } }
+                            Text(
+                                text = displayName, 
+                                style = MaterialTheme.typography.bodyLarge,
+                                modifier = Modifier.weight(1f)
                             )
-                            Spacer(modifier = Modifier.width(16.dp))
-                            Text(text = displayName, style = MaterialTheme.typography.bodyLarge)
+                            
+                            // Warn Button
+                            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(end = 8.dp)) {
+                                Text("Warnung ⚠️", style = MaterialTheme.typography.labelSmall)
+                                Checkbox(
+                                    checked = isWarn,
+                                    onCheckedChange = { species.genusDe?.let { viewModel.toggleWarnSelection(it) } }
+                                )
+                            }
+                            
+                            // Avoid Button
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text("Umfahren 🚫", style = MaterialTheme.typography.labelSmall)
+                                Checkbox(
+                                    checked = isSelected,
+                                    onCheckedChange = { species.genusDe?.let { viewModel.toggleSpeciesSelection(it) } }
+                                )
+                            }
                         }
-                        Divider(modifier = Modifier.padding(start = 48.dp))
+                        Divider(modifier = Modifier.padding(start = 16.dp))
                     }
                 }
             }

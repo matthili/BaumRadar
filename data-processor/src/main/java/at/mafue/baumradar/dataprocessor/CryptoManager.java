@@ -8,8 +8,11 @@ import java.nio.file.Files;
 import java.security.*;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class CryptoManager {
+    private static final Logger logger = LoggerFactory.getLogger(CryptoManager.class);
 
     static {
         Security.addProvider(new BouncyCastleProvider());
@@ -29,7 +32,7 @@ public class CryptoManager {
         byte[] encoded = publicKey.getEncoded();
         String base64 = Base64.getEncoder().encodeToString(encoded);
         Files.writeString(file.toPath(), base64);
-        System.out.println("Public key saved to " + file.getAbsolutePath());
+        logger.debug("Successfully exported Public Key base64 string.");
     }
 
     public void signFile(File dataFile, File sigFile) throws Exception {
@@ -46,6 +49,6 @@ public class CryptoManager {
         
         byte[] signatureBytes = sig.sign();
         Files.write(sigFile.toPath(), signatureBytes);
-        System.out.println("Signature successfully saved to " + sigFile.getAbsolutePath());
+        logger.debug("Successfully generated Ed25519 signature.");
     }
 }
