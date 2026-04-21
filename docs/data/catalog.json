@@ -5,22 +5,22 @@
       "id": "wien",
       "name": "Wien",
       "boundingBox": [48.11, 16.16, 48.33, 16.58],
-      "dbUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/wien.db",
-      "sigUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/wien.db.sig"
+      "dbUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/wien.db.gz",
+      "sigUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/wien.db.gz.sig"
     },
     {
       "id": "linz",
       "name": "Linz",
       "boundingBox": [48.24, 14.24, 48.36, 14.36],
-      "dbUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/linz.db",
-      "sigUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/linz.db.sig"
+      "dbUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/linz.db.gz",
+      "sigUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/linz.db.gz.sig"
     },
     {
       "id": "berlin",
       "name": "Berlin",
       "boundingBox": [52.34, 13.08, 52.68, 13.76],
-      "dbUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/berlin.db",
-      "sigUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/berlin.db.sig"
+      "dbUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/berlin.db.gz",
+      "sigUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/berlin.db.gz.sig"
     }
   ]
 }

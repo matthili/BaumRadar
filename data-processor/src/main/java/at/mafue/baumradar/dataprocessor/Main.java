@@ -1,8 +1,12 @@
 package at.mafue.baumradar.dataprocessor;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.List;
+import java.util.zip.GZIPOutputStream;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -18,7 +22,16 @@ public class Main {
     public static void main(String[] args) {
         logger.info("Starting BaumRadar Data Processor Background Job...");
 
-        File outDir = new File("../docs/data");
+        // Determine the correct output directory depending on the current working directory
+        File outDir;
+        if (new File("data-processor").exists() && new File("app").exists()) {
+            // Running from project root (e.g., via Android Studio Run button)
+            outDir = new File("docs/data");
+        } else {
+            // Running from data-processor directory (e.g., via Gradle)
+            outDir = new File("../docs/data");
+        }
+
         if (!outDir.exists()) {
             outDir.mkdirs();
         }
@@ -33,10 +46,10 @@ public class Main {
         try {
             logger.info("1. Cryptographic Setup...");
             CryptoManager cryptoManager = new CryptoManager();
-            cryptoManager.generateKeyPair();
+            File privKeyDest = new File(outDir, "private_key.b64");
             File pubKeyDest = new File(outDir, PUB_KEY_FILE);
-            cryptoManager.savePublicKey(pubKeyDest);
-            logger.info("   Public key saved to {}", pubKeyDest.getAbsolutePath());
+            cryptoManager.loadOrGenerateKeyPair(privKeyDest, pubKeyDest);
+            logger.info("   Public key saved/loaded at {}", pubKeyDest.getAbsolutePath());
 
             logger.info("2. Processing Cities in Parallel...");
             // Use a Thread Pool to process cities simultaneously
@@ -58,10 +71,26 @@ public class Main {
                         
                         exporter.close();
                         
-                        // Sign DB
-                        File sigFile = new File(outDir, dbFileName + ".sig");
-                        cryptoManager.signFile(dbFile, sigFile);
-                        logger.info("[{}] Finished pipeline! Created {} and .sig successfully.", provider.getName(), dbFileName);
+                        // Compress DB to .gz
+                        File gzFile = new File(outDir, dbFileName + ".gz");
+                        if (gzFile.exists()) gzFile.delete();
+                        try (FileInputStream fis = new FileInputStream(dbFile);
+                             FileOutputStream fos = new FileOutputStream(gzFile);
+                             GZIPOutputStream gzos = new GZIPOutputStream(fos)) {
+                            byte[] buffer = new byte[8192];
+                            int len;
+                            while ((len = fis.read(buffer)) > 0) {
+                                gzos.write(buffer, 0, len);
+                            }
+                        }
+                        
+                        // Delete uncompressed DB
+                        dbFile.delete();
+                        
+                        // Sign DB (the .gz file)
+                        File sigFile = new File(outDir, dbFileName + ".gz.sig");
+                        cryptoManager.signFile(gzFile, sigFile);
+                        logger.info("[{}] Finished pipeline! Created {}.gz and .sig successfully.", provider.getName(), dbFileName);
                     } catch (Exception e) {
                         logger.error("[{}] Failed completely with error: {}", provider.getName(), e.getMessage(), e);
                     }

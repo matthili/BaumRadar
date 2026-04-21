@@ -21,7 +21,7 @@ data class CityCatalogEntry(
 
 class CityManager(private val context: Context) {
     private val client = OkHttpClient()
-    private val PUBLIC_KEY_BASE64 = "MCowBQYDK2VwAyEAEFRXIOa0woB9DbJ/WeYJPvrQhw7+2BbZ+8CEhiKdY9U="
+    private val PUBLIC_KEY_BASE64 = "MCowBQYDK2VwAyEAEb9KGg1K77SqnuTv78CTcdLyKEZd7xr1EbE4PnUF3Yc="
     private val CATALOG_URL = "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/catalog.json"
     private var cachedCatalog: List<CityCatalogEntry>? = null
 
@@ -29,7 +29,8 @@ class CityManager(private val context: Context) {
         if (!forceRefresh && cachedCatalog != null) {
             return@withContext cachedCatalog!!
         }
-        val request = Request.Builder().url(CATALOG_URL).build()
+        val cacheBustedUrl = "$CATALOG_URL?t=${System.currentTimeMillis()}"
+        val request = Request.Builder().url(cacheBustedUrl).build()
         val response = client.newCall(request).execute()
         if (!response.isSuccessful) {
             return@withContext emptyList()
@@ -67,8 +68,9 @@ class CityManager(private val context: Context) {
             val dbFile = File(context.cacheDir, "${city.id}.db")
             val sigFile = File(context.cacheDir, "${city.id}.db.sig")
 
-            downloadFile(city.dbUrl, dbFile)
-            downloadFile(city.sigUrl, sigFile)
+            val cacheBusterSuffix = "?t=${System.currentTimeMillis()}"
+            downloadFile(city.dbUrl + cacheBusterSuffix, dbFile)
+            downloadFile(city.sigUrl + cacheBusterSuffix, sigFile)
 
             onProgress("Verifying signature...")
             if (!SignatureVerifier.verifyFile(dbFile, sigFile, PUBLIC_KEY_BASE64)) {

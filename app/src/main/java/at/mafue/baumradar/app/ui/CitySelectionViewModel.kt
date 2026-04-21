@@ -56,6 +56,11 @@ class CitySelectionViewModel(application: Application) : AndroidViewModel(applic
                 val success = cityManager.downloadAndMergeCity(city) { msg ->
                     _downloadProgress.value = msg
                 }
+                
+                if (!success) {
+                    _downloadProgress.value = "Fehler: Download blockiert oder Signatur ungültig!"
+                    kotlinx.coroutines.delay(2000)
+                }
                 _downloadProgress.value = null
                 refreshDownloadedStatus(_catalog.value)
             }

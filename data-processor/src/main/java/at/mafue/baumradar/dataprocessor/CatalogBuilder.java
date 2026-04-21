@@ -16,8 +16,8 @@ public class CatalogBuilder {
         
         for (int i = 0; i < providers.size(); i++) {
             CityProvider p = providers.get(i);
-            String dbUrl = baseUrl + p.getCityId() + ".db";
-            String sigUrl = baseUrl + p.getCityId() + ".db.sig";
+            String dbUrl = baseUrl + p.getCityId() + ".db.gz";
+            String sigUrl = baseUrl + p.getCityId() + ".db.gz.sig";
             double[] box = p.getBoundingBox();
 
             sb.append("    {\n");
