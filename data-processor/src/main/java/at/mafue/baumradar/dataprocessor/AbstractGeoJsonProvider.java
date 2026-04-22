@@ -37,6 +37,20 @@ public abstract class AbstractGeoJsonProvider implements CityProvider {
      */
     protected abstract TreeRecord mapFeatureToTree(JsonNode feature);
 
+    /**
+     * Whether the downloaded data is a ZIP file containing the GeoJSON.
+     */
+    protected boolean isZipped() {
+        return false;
+    }
+
+    /**
+     * Whether the API supports pagination. If false, we only fetch once.
+     */
+    protected boolean supportsPagination() {
+        return true;
+    }
+
     @Override
     public void processData(DatabaseExporter exporter) throws Exception {
         logger.info("Downloading & Parsing GeoJSON Stream for {}", getName());
@@ -68,7 +82,18 @@ public abstract class AbstractGeoJsonProvider implements CityProvider {
             int featuresParsedInThisBatch = 0;
             List<TreeRecord> batch = new ArrayList<>();
             
-            try (JsonParser parser = factory.createParser(response.body())) {
+            InputStream is = response.body();
+            if (isZipped()) {
+                java.util.zip.ZipInputStream zis = new java.util.zip.ZipInputStream(is);
+                java.util.zip.ZipEntry entry = zis.getNextEntry();
+                if (entry == null) {
+                    throw new RuntimeException("ZIP file is empty for " + getName());
+                }
+                logger.info("Extracting {} from ZIP...", entry.getName());
+                is = zis;
+            }
+
+            try (JsonParser parser = factory.createParser(is)) {
                 boolean featuresFound = false;
                 
                 // Advanced parsing: stream until we find "features" array
@@ -120,6 +145,9 @@ public abstract class AbstractGeoJsonProvider implements CityProvider {
                 } else {
                     offset += featuresParsedInThisBatch;
                     logger.info("Successfully fetched and inserted up to offset {}...", offset);
+                    if (!supportsPagination()) {
+                        hasMoreData = false;
+                    }
                 }
             } catch (Exception e) {
                 logger.error("Error parsing JSON at offset {}: {}", offset, e.getMessage(), e);
@@ -131,24 +159,28 @@ public abstract class AbstractGeoJsonProvider implements CityProvider {
         List<GeofenceRecord> geofenceBatch = new ArrayList<>();
         int geofenceInserted = 0;
         for (GeofenceCluster c : clusters.values()) {
-            if (c.count >= 2) {
-                double centerLat = c.sumLat / c.count;
-                double centerLon = c.sumLon / c.count;
-                geofenceBatch.add(new GeofenceRecord(
-                    UUID.randomUUID().toString(),
-                    getCityId(),
-                    centerLat,
-                    centerLon,
-                    100, // 100m radius
-                    c.count,
-                    c.genusDe
-                ));
-                
-                if (geofenceBatch.size() >= BATCH_SIZE) {
-                    exporter.insertGeofences(geofenceBatch);
-                    geofenceInserted += geofenceBatch.size();
-                    geofenceBatch.clear();
-                }
+            double centerLat = c.sumLat / c.count;
+            double centerLon = c.sumLon / c.count;
+            
+            // Baumgruppen bekommen 100m Basis-Radius. 
+            // Einzelne Bäume bekommen 50m Basis-Radius.
+            // Der Routenplaner addiert auf beides nochmals 60m Toleranz!
+            int radius = c.count >= 2 ? 100 : 50;
+            
+            geofenceBatch.add(new GeofenceRecord(
+                UUID.randomUUID().toString(),
+                getCityId(),
+                centerLat,
+                centerLon,
+                radius,
+                c.count,
+                c.genusDe
+            ));
+            
+            if (geofenceBatch.size() >= BATCH_SIZE) {
+                exporter.insertGeofences(geofenceBatch);
+                geofenceInserted += geofenceBatch.size();
+                geofenceBatch.clear();
             }
         }
         if (!geofenceBatch.isEmpty()) {

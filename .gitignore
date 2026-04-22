@@ -38,3 +38,9 @@ logs/
 
 # Secrets
 private_key.b64
+
+# Temporäre Rohdaten im Root-Verzeichnis
+/*.json
+/*.geojson
+/*.csv
+/*.xlsx

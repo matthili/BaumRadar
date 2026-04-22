@@ -150,6 +150,14 @@ fun MapArScreen() {
                         Icon(Icons.Default.Place, contentDescription = "Zentrieren", tint = Color.Black)
                     }
 
+                    val showAllGeofences by viewModel.showAllGeofences.collectAsState()
+                    FloatingActionButton(
+                        onClick = { viewModel.showAllGeofences.value = !showAllGeofences },
+                        containerColor = if (showAllGeofences) Color(0xFFFF9800) else Color.LightGray
+                    ) {
+                        Icon(Icons.Default.Warning, contentDescription = "Hotspots anzeigen", tint = Color.White)
+                    }
+
                     FloatingActionButton(
                         onClick = { viewModel.isExplorationMode.value = !isExplorationMode },
                         containerColor = if (isExplorationMode) Color(0xFF4CAF50) else Color.LightGray
@@ -255,7 +263,7 @@ fun MapArScreen() {
                                 val startName = viewModel.startAddress.value.ifBlank { "Markierung" }
                                 val endName = viewModel.endAddress.value.ifBlank { "Markierung" }
                                 val textDesc = "Route von $startName nach $endName unter Vermeidung von ausgewählten Bäumen."
-                                GpxGenerator.shareGpxRoute(context, routeResult!!, textDesc)
+                                GpxGenerator.shareGpxRoute(activity, routeResult!!, textDesc)
                             },
                             containerColor = MaterialTheme.colorScheme.primary
                         ) {
@@ -278,7 +286,7 @@ fun MapArScreen() {
             val routingErr by viewModel.routingError.collectAsState()
             val history by viewModel.routeHistory.collectAsState()
             var historyExpanded by remember { mutableStateOf(false) }
-            var searchExpanded by remember { mutableStateOf(true) }
+            var searchExpanded by remember { mutableStateOf(false) }
             
             Column(
                 modifier = Modifier
@@ -359,6 +367,7 @@ fun MapArScreen() {
                                                         viewModel.endAddress.value = item.endAddress
                                                         historyExpanded = false
                                                         viewModel.calculateGeocodedRoute()
+                                                        searchExpanded = false
                                                     }
                                                 )
                                             }
@@ -385,7 +394,10 @@ fun MapArScreen() {
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Button(
-                                        onClick = { viewModel.calculateGeocodedRoute() },
+                                        onClick = { 
+                                            viewModel.calculateGeocodedRoute()
+                                            searchExpanded = false
+                                        },
                                         modifier = Modifier.height(56.dp)
                                     ) {
                                         Icon(Icons.Default.Search, contentDescription = "Suchen")
@@ -467,7 +479,10 @@ fun MapArScreen() {
                             androidx.compose.material3.Surface(
                                 shape = RoundedCornerShape(16.dp),
                                 color = containerCol,
-                                onClick = { viewModel.selectedRouteIndex.value = index }
+                                onClick = { 
+                                    viewModel.selectedRouteIndex.value = index
+                                    searchExpanded = false
+                                }
                             ) {
                                 Row(
                                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
@@ -501,6 +516,7 @@ fun MapViewContent(viewModel: MapViewModel) {
     val routeStart by viewModel.routeStart.collectAsState()
     val routeEnd by viewModel.routeEnd.collectAsState()
     val currentGeofences by viewModel.currentRouteGeofences.collectAsState()
+    val visibleGeofences by viewModel.visibleGeofences.collectAsState()
     val routeResult by viewModel.currentRouteResult.collectAsState()
 
     var lastRecenter by remember { mutableStateOf(0) }
@@ -581,14 +597,19 @@ fun MapViewContent(viewModel: MapViewModel) {
                 }
                 marker.title = title
                 
+                val drawable = ContextCompat.getDrawable(context, at.mafue.baumradar.app.R.drawable.ic_pin)?.mutate()
+                drawable?.setTint(android.graphics.Color.YELLOW)
+                marker.icon = drawable
+                
                 marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
                 map.overlays.add(marker)
             }
 
             // Draw Geofences (Red semi-transparent circles)
-            currentGeofences.forEach { fence ->
+            val geofencesToDraw = (currentGeofences + visibleGeofences).distinctBy { it.id }
+            geofencesToDraw.forEach { fence ->
                 val polygon = Polygon(map).apply {
-                    points = Polygon.pointsAsCircle(GeoPoint(fence.lat, fence.lon), fence.radius.toDouble())
+                    points = Polygon.pointsAsCircle(GeoPoint(fence.lat, fence.lon), fence.radius.toDouble() + 60.0)
                     fillPaint.color = android.graphics.Color.argb(80, 255, 0, 0)
                     outlinePaint.color = android.graphics.Color.argb(150, 255, 0, 0)
                     outlinePaint.strokeWidth = 2f
@@ -602,6 +623,9 @@ fun MapViewContent(viewModel: MapViewModel) {
                 val m = Marker(map)
                 m.position = routeStart
                 m.title = "Startpunkt"
+                val drawable = ContextCompat.getDrawable(context, at.mafue.baumradar.app.R.drawable.ic_pin)?.mutate()
+                drawable?.setTint(android.graphics.Color.GREEN)
+                m.icon = drawable
                 m.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
                 map.overlays.add(m)
             }
@@ -609,6 +633,9 @@ fun MapViewContent(viewModel: MapViewModel) {
                 val m = Marker(map)
                 m.position = routeEnd
                 m.title = "Zielpunkt"
+                val drawable = ContextCompat.getDrawable(context, at.mafue.baumradar.app.R.drawable.ic_pin)?.mutate()
+                drawable?.setTint(android.graphics.Color.BLUE)
+                m.icon = drawable
                 m.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
                 map.overlays.add(m)
             }

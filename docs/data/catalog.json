@@ -4,6 +4,7 @@
     {
       "id": "wien",
       "name": "Wien",
+      "country": "Österreich",
       "boundingBox": [48.11, 16.16, 48.33, 16.58],
       "dbUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/wien.db.gz",
       "sigUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/wien.db.gz.sig"
@@ -11,6 +12,7 @@
     {
       "id": "linz",
       "name": "Linz",
+      "country": "Österreich",
       "boundingBox": [48.24, 14.24, 48.36, 14.36],
       "dbUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/linz.db.gz",
       "sigUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/linz.db.gz.sig"
@@ -18,9 +20,50 @@
     {
       "id": "berlin",
       "name": "Berlin",
+      "country": "Deutschland",
       "boundingBox": [52.34, 13.08, 52.68, 13.76],
       "dbUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/berlin.db.gz",
       "sigUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/berlin.db.gz.sig"
+    },
+    {
+      "id": "basel",
+      "name": "Basel",
+      "country": "Schweiz",
+      "boundingBox": [47.53, 7.57, 47.6, 7.68],
+      "dbUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/basel.db.gz",
+      "sigUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/basel.db.gz.sig"
+    },
+    {
+      "id": "zurich",
+      "name": "Zürich",
+      "country": "Schweiz",
+      "boundingBox": [47.32, 8.44, 47.43, 8.62],
+      "dbUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/zurich.db.gz",
+      "sigUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/zurich.db.gz.sig"
+    },
+    {
+      "id": "freiburg",
+      "name": "Freiburg im Breisgau",
+      "country": "Deutschland",
+      "boundingBox": [47.95, 7.78, 48.06, 7.93],
+      "dbUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/freiburg.db.gz",
+      "sigUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/freiburg.db.gz.sig"
+    },
+    {
+      "id": "dortmund",
+      "name": "Dortmund",
+      "country": "Deutschland",
+      "boundingBox": [51.42, 7.33, 51.58, 7.62],
+      "dbUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/dortmund.db.gz",
+      "sigUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/dortmund.db.gz.sig"
+    },
+    {
+      "id": "hamburg",
+      "name": "Hamburg",
+      "country": "Deutschland",
+      "boundingBox": [53.39, 9.73, 53.73, 10.32],
+      "dbUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/hamburg.db.gz",
+      "sigUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/hamburg.db.gz.sig"
     }
   ]
 }

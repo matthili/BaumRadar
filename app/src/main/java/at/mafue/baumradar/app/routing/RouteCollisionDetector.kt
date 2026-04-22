@@ -32,15 +32,15 @@ object RouteCollisionDetector {
             
             // Einfache Heuristik: Abstand zwischen Mittelpunkt und Liniensegment
             val dist = pointToLineDistance(fence.lat, fence.lon, p1.first, p1.second, p2.first, p2.second)
-            // Füge 15m Toleranz hinzu, da OSRM-Straßen oft knapp neben dem Baum liegen
-            if (dist <= fence.radius + 15.0) {
+            // Füge 60m Toleranz hinzu, da man auch in über 50m Entfernung allergisch reagieren kann
+            if (dist <= fence.radius + 60.0) {
                 return true
             }
         }
         // Auch den letzten Punkt separat prüfen
         val lastPoint = routePoints.last()
         val distToLast = haversineDistance(fence.lat, fence.lon, lastPoint.first, lastPoint.second)
-        if (distToLast <= fence.radius + 15.0) {
+        if (distToLast <= fence.radius + 60.0) {
             return true
         }
 

@@ -33,6 +33,11 @@ public class ViennaProvider extends AbstractCsvProvider {
     }
 
     @Override
+    public String getCountry() {
+        return "Österreich";
+    }
+
+    @Override
     public double[] getBoundingBox() {
         return new double[]{48.11, 16.16, 48.33, 16.58};
     }

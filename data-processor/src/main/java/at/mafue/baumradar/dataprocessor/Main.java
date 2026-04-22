@@ -40,7 +40,12 @@ public class Main {
         List<CityProvider> providers = Arrays.asList(
             new ViennaProvider(),
             new LinzProvider(),
-            new BerlinProvider()
+            new BerlinProvider(),
+            new BaselProvider(),
+            new ZurichProvider(),
+            new FreiburgProvider(),
+            new DortmundProvider(),
+            new HamburgProvider()
         );
         
         try {

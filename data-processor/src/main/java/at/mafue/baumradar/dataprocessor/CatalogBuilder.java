@@ -23,6 +23,7 @@ public class CatalogBuilder {
             sb.append("    {\n");
             sb.append("      \"id\": \"").append(p.getCityId()).append("\",\n");
             sb.append("      \"name\": \"").append(p.getName()).append("\",\n");
+            sb.append("      \"country\": \"").append(p.getCountry()).append("\",\n");
             
             sb.append("      \"boundingBox\": [");
             if (box != null && box.length == 4) {

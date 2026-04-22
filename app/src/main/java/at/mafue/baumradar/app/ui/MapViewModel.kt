@@ -55,6 +55,29 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
         if (alts.isEmpty() || index < 0 || index >= alts.size) null else alts[index]
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
+    val showAllGeofences = MutableStateFlow(false)
+
+    val visibleGeofences: StateFlow<List<GeofenceEntity>> = combine(
+        effectiveLocation.filterNotNull().sample(2000),
+        ds.selectedTreesFlow,
+        showAllGeofences
+    ) { loc, selectedTrees, showAll ->
+        if (!showAll || selectedTrees.isEmpty()) {
+            kotlinx.coroutines.flow.flowOf(emptyList())
+        } else {
+            val radius = 2000.0 // 2km Radius für die Kartendarstellung
+            val latDelta = (radius / 111000.0)
+            val lonDelta = (radius / (111000.0 * Math.cos(Math.toRadians(loc.latitude))))
+            db.treeDao().getGeofencesInBoundingBoxFlow(
+                selectedTrees.toList(),
+                loc.latitude - latDelta,
+                loc.latitude + latDelta,
+                loc.longitude - lonDelta,
+                loc.longitude + lonDelta
+            )
+        }
+    }.flatMapLatest { it }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     val currentRouteGeofences = MutableStateFlow<List<GeofenceEntity>>(emptyList())
     val isRouting = MutableStateFlow(false)
     val routingError = MutableStateFlow<String?>(null)

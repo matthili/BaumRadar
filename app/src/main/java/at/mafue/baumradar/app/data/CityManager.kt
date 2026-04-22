@@ -9,11 +9,14 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONObject
 import java.io.File
+import java.io.FileInputStream
 import java.io.FileOutputStream
+import java.util.zip.GZIPInputStream
 
 data class CityCatalogEntry(
     val id: String,
     val name: String,
+    val country: String,
     val dbUrl: String,
     val sigUrl: String,
     val boundingBox: List<Double>? // minX, minY, maxX, maxY
@@ -54,6 +57,7 @@ class CityManager(private val context: Context) {
             result.add(CityCatalogEntry(
                 id = obj.getString("id"),
                 name = obj.getString("name"),
+                country = obj.optString("country", "Unbekannt"),
                 dbUrl = obj.getString("dbUrl"),
                 sigUrl = obj.getString("sigUrl"),
                 boundingBox = boxList
@@ -65,18 +69,26 @@ class CityManager(private val context: Context) {
     suspend fun downloadAndMergeCity(city: CityCatalogEntry, onProgress: (String) -> Unit): Boolean = withContext(Dispatchers.IO) {
         try {
             onProgress("Downloading ${city.name}...")
+            val gzFile = File(context.cacheDir, "${city.id}.db.gz")
             val dbFile = File(context.cacheDir, "${city.id}.db")
-            val sigFile = File(context.cacheDir, "${city.id}.db.sig")
+            val sigFile = File(context.cacheDir, "${city.id}.db.gz.sig")
 
             val cacheBusterSuffix = "?t=${System.currentTimeMillis()}"
-            downloadFile(city.dbUrl + cacheBusterSuffix, dbFile)
+            downloadFile(city.dbUrl + cacheBusterSuffix, gzFile)
             downloadFile(city.sigUrl + cacheBusterSuffix, sigFile)
 
             onProgress("Verifying signature...")
-            if (!SignatureVerifier.verifyFile(dbFile, sigFile, PUBLIC_KEY_BASE64)) {
-                dbFile.delete()
+            if (!SignatureVerifier.verifyFile(gzFile, sigFile, PUBLIC_KEY_BASE64)) {
+                gzFile.delete()
                 sigFile.delete()
                 return@withContext false
+            }
+
+            onProgress("Decompressing data...")
+            GZIPInputStream(FileInputStream(gzFile)).use { gzipIn ->
+                FileOutputStream(dbFile).use { out ->
+                    gzipIn.copyTo(out)
+                }
             }
 
             onProgress("Merging into your map...")
@@ -90,6 +102,7 @@ class CityManager(private val context: Context) {
             helper.execSQL("INSERT INTO trees SELECT * FROM new_city_db.trees")
             helper.execSQL("DETACH DATABASE new_city_db")
 
+            gzFile.delete()
             dbFile.delete()
             sigFile.delete()
             

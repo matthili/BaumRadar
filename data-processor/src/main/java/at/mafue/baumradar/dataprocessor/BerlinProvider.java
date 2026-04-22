@@ -18,6 +18,11 @@ public class BerlinProvider implements CityProvider {
     }
 
     @Override
+    public String getCountry() {
+        return "Deutschland";
+    }
+
+    @Override
     public double[] getBoundingBox() {
         // Approximate box for Berlin
         return new double[]{52.34, 13.08, 52.68, 13.76};
@@ -35,6 +40,9 @@ public class BerlinProvider implements CityProvider {
 
                 @Override
                 public String getName() { return BerlinProvider.this.getName() + " (" + layer + ")"; }
+
+                @Override
+                public String getCountry() { return BerlinProvider.this.getCountry(); }
 
                 @Override
                 public double[] getBoundingBox() { return BerlinProvider.this.getBoundingBox(); }

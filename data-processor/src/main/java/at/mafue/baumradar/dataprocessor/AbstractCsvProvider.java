@@ -98,24 +98,28 @@ public abstract class AbstractCsvProvider implements CityProvider {
             List<GeofenceRecord> geofenceBatch = new ArrayList<>();
             int geofenceInserted = 0;
             for (GeofenceCluster c : clusters.values()) {
-                if (c.count >= 2) {
-                    double centerLat = c.sumLat / c.count;
-                    double centerLon = c.sumLon / c.count;
-                    geofenceBatch.add(new GeofenceRecord(
-                        UUID.randomUUID().toString(),
-                        getCityId(),
-                        centerLat,
-                        centerLon,
-                        100, // 100m radius
-                        c.count,
-                        c.genusDe
-                    ));
-                    
-                    if (geofenceBatch.size() >= BATCH_SIZE) {
-                        exporter.insertGeofences(geofenceBatch);
-                        geofenceInserted += geofenceBatch.size();
-                        geofenceBatch.clear();
-                    }
+                double centerLat = c.sumLat / c.count;
+                double centerLon = c.sumLon / c.count;
+                
+                // Baumgruppen bekommen 100m Basis-Radius. 
+                // Einzelne Bäume bekommen 50m Basis-Radius.
+                // Der Routenplaner addiert auf beides nochmals 60m Toleranz!
+                int radius = c.count >= 2 ? 100 : 50;
+                
+                geofenceBatch.add(new GeofenceRecord(
+                    UUID.randomUUID().toString(),
+                    getCityId(),
+                    centerLat,
+                    centerLon,
+                    radius,
+                    c.count,
+                    c.genusDe
+                ));
+                
+                if (geofenceBatch.size() >= BATCH_SIZE) {
+                    exporter.insertGeofences(geofenceBatch);
+                    geofenceInserted += geofenceBatch.size();
+                    geofenceBatch.clear();
                 }
             }
             if (!geofenceBatch.isEmpty()) {
