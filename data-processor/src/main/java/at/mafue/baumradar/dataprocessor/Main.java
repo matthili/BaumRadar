@@ -96,6 +96,45 @@ public class Main {
                         File sigFile = new File(outDir, dbFileName + ".gz.sig");
                         cryptoManager.signFile(gzFile, sigFile);
                         logger.info("[{}] Finished pipeline! Created {}.gz and .sig successfully.", provider.getName(), dbFileName);
+
+                        // Chunking for >50MB
+                        long maxSize = 50 * 1024 * 1024; // 50MB
+                        if (gzFile.length() > maxSize) {
+                            logger.info("[{}] GZ file exceeds 50MB ({} bytes). Splitting into chunks...", provider.getName(), gzFile.length());
+                            int chunkIndex = 1;
+                            try (FileInputStream fis = new FileInputStream(gzFile)) {
+                                byte[] buffer = new byte[8192];
+                                int len;
+                                long currentChunkSize = 0;
+                                FileOutputStream chunkFos = null;
+                                while ((len = fis.read(buffer)) > 0) {
+                                    if (chunkFos == null) {
+                                        String chunkExt = String.format(".%03d", chunkIndex);
+                                        File chunkFile = new File(outDir, gzFile.getName() + chunkExt);
+                                        chunkFos = new FileOutputStream(chunkFile);
+                                        currentChunkSize = 0;
+                                    }
+                                    chunkFos.write(buffer, 0, len);
+                                    currentChunkSize += len;
+                                    if (currentChunkSize >= maxSize) {
+                                        chunkFos.close();
+                                        chunkFos = null;
+                                        chunkIndex++;
+                                    }
+                                }
+                                if (chunkFos != null) {
+                                    chunkFos.close();
+                                }
+                            }
+                            // Delete the un-chunked file so we don't commit it!
+                            gzFile.delete();
+                        } else {
+                            // Ensure old chunks are deleted if it was previously chunked
+                            for (int i=1; i<100; i++) {
+                                File oldChunk = new File(outDir, String.format("%s.%03d", gzFile.getName(), i));
+                                if (oldChunk.exists()) oldChunk.delete(); else break;
+                            }
+                        }
                     } catch (Exception e) {
                         logger.error("[{}] Failed completely with error: {}", provider.getName(), e.getMessage(), e);
                     }

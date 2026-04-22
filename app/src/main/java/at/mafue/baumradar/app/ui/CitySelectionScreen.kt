@@ -88,7 +88,7 @@ fun CitySelectionScreen(
                                             modifier = Modifier.weight(1f)
                                         )
                                         Icon(
-                                            imageVector = if (isExpanded) androidx.compose.material.icons.filled.KeyboardArrowUp else androidx.compose.material.icons.filled.KeyboardArrowDown,
+                                            imageVector = if (isExpanded) androidx.compose.material.icons.Icons.Default.KeyboardArrowUp else androidx.compose.material.icons.Icons.Default.KeyboardArrowDown,
                                             contentDescription = if (isExpanded) "Einklappen" else "Ausklappen"
                                         )
                                     }

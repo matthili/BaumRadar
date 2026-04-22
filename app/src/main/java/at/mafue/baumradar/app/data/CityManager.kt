@@ -18,6 +18,7 @@ data class CityCatalogEntry(
     val name: String,
     val country: String,
     val dbUrl: String,
+    val dbUrlChunks: List<String>?,
     val sigUrl: String,
     val boundingBox: List<Double>? // minX, minY, maxX, maxY
 )
@@ -54,11 +55,19 @@ class CityManager(private val context: Context) {
                 listOf(bbox.getDouble(0), bbox.getDouble(1), bbox.getDouble(2), bbox.getDouble(3))
             } else null
             
+            val chunkArr = obj.optJSONArray("dbUrlChunks")
+            val chunksList = if (chunkArr != null) {
+                val list = mutableListOf<String>()
+                for (j in 0 until chunkArr.length()) list.add(chunkArr.getString(j))
+                list
+            } else null
+
             result.add(CityCatalogEntry(
                 id = obj.getString("id"),
                 name = obj.getString("name"),
                 country = obj.optString("country", "Unbekannt"),
                 dbUrl = obj.getString("dbUrl"),
+                dbUrlChunks = chunksList,
                 sigUrl = obj.getString("sigUrl"),
                 boundingBox = boxList
             ))
@@ -74,7 +83,23 @@ class CityManager(private val context: Context) {
             val sigFile = File(context.cacheDir, "${city.id}.db.gz.sig")
 
             val cacheBusterSuffix = "?t=${System.currentTimeMillis()}"
-            downloadFile(city.dbUrl + cacheBusterSuffix, gzFile)
+            if (city.dbUrlChunks != null && city.dbUrlChunks.isNotEmpty()) {
+                if (gzFile.exists()) gzFile.delete()
+                gzFile.createNewFile()
+                for ((index, chunkUrl) in city.dbUrlChunks.withIndex()) {
+                    onProgress("Downloading ${city.name} (Part ${index + 1}/${city.dbUrlChunks.size})...")
+                    val chunkFile = File(context.cacheDir, "${city.id}.chunk")
+                    downloadFile(chunkUrl + cacheBusterSuffix, chunkFile)
+                    FileOutputStream(gzFile, true).use { out ->
+                        FileInputStream(chunkFile).use { input ->
+                            input.copyTo(out)
+                        }
+                    }
+                    chunkFile.delete()
+                }
+            } else {
+                downloadFile(city.dbUrl + cacheBusterSuffix, gzFile)
+            }
             downloadFile(city.sigUrl + cacheBusterSuffix, sigFile)
 
             onProgress("Verifying signature...")

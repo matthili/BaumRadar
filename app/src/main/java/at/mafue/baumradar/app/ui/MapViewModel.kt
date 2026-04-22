@@ -35,7 +35,12 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
     private val ignoredCities = mutableSetOf<String>()
 
     val virtualLocation = MutableStateFlow<android.location.Location?>(null)
-    
+
+    val effectiveLocation: StateFlow<android.location.Location?> = combine(
+        arManager.currentLocation, virtualLocation
+    ) { real, virt -> virt ?: real }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
     // UI Tracking for Map Clicks
     val longPressGeoPoint = MutableStateFlow<GeoPoint?>(null)
 
@@ -83,13 +88,6 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
     val routingError = MutableStateFlow<String?>(null)
 
     private val routingClient = OsrmRoutingClient()
-
-    val effectiveLocation: StateFlow<android.location.Location?> = combine(
-        arManager.currentLocation,
-        virtualLocation
-    ) { real, virtual ->
-        virtual ?: real
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     val routeHistory = db.historyDao().getRecentHistory(10).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 

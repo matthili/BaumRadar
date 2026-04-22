@@ -20,6 +20,18 @@ public class CatalogBuilder {
             String sigUrl = baseUrl + p.getCityId() + ".db.gz.sig";
             double[] box = p.getBoundingBox();
 
+            // Find chunks
+            java.util.List<String> chunks = new java.util.ArrayList<>();
+            File outDir = outputFile.getParentFile();
+            for (int j = 1; j < 100; j++) {
+                File chunkFile = new File(outDir, String.format("%s.db.gz.%03d", p.getCityId(), j));
+                if (chunkFile.exists()) {
+                    chunks.add(baseUrl + chunkFile.getName());
+                } else {
+                    break;
+                }
+            }
+
             sb.append("    {\n");
             sb.append("      \"id\": \"").append(p.getCityId()).append("\",\n");
             sb.append("      \"name\": \"").append(p.getName()).append("\",\n");
@@ -33,6 +45,14 @@ public class CatalogBuilder {
             sb.append("],\n");
             
             sb.append("      \"dbUrl\": \"").append(dbUrl).append("\",\n");
+            if (!chunks.isEmpty()) {
+                sb.append("      \"dbUrlChunks\": [");
+                for (int c = 0; c < chunks.size(); c++) {
+                    sb.append("\"").append(chunks.get(c)).append("\"");
+                    if (c < chunks.size() - 1) sb.append(", ");
+                }
+                sb.append("],\n");
+            }
             sb.append("      \"sigUrl\": \"").append(sigUrl).append("\"\n");
             sb.append("    }");
             if (i < providers.size() - 1) {
