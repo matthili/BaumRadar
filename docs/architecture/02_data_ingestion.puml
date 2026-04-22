@@ -1,0 +1,46 @@
+@startuml
+!theme plain
+start
+
+:Main.java gestartet;
+:Lade Private Key;
+:Initialisiere CatalogBuilder;
+
+while (Für jeden CityProvider) is (Gibt weitere)
+  :cityProvider.processData();
+  
+  if (Ist komprimiert? z.B. Hamburg) then (ja)
+    :Entpacke ZIP Stream;
+  else (nein)
+    :Öffne JSON/CSV Stream;
+  endif
+  
+  :Parse Datensatz (Streaming);
+  :Wende Übersetzungen an (Bot. -> Deutsch/Englisch);
+  
+  if (Koordinaten UTM?) then (ja)
+    :UtmConverter (zu WGS84);
+  else (nein)
+  endif
+  
+  :Füge Baum in SQLite DB ein;
+  :Berechne Geofence Cluster (Radius);
+  
+  :Schreibe fertige SQLite;
+  :Komprimiere als .db.gz;
+  :Erstelle .sig Signatur;
+  
+  if (Dateigröße > 50MB?) then (ja)
+    :Splitte in Chunks (.001, .002);
+    :Lösche Original .gz;
+  else (nein)
+  endif
+  
+  :Füge Stadt zu CatalogBuilder hinzu;
+endwhile
+
+:Schreibe catalog.json;
+:Pipeline erfolgreich beendet;
+
+stop
+@enduml

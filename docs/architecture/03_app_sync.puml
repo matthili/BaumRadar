@@ -1,0 +1,48 @@
+@startuml
+!theme plain
+actor User
+participant "CitySelectionScreen" as UI
+participant "CityManager" as Manager
+participant "GitHub Pages" as Host
+participant "SignatureVerifier" as Crypto
+database "AppDatabase\n(Room)" as DB
+
+User -> UI : Klickt auf Download
+UI -> Manager : downloadAndMergeCity(city)
+activate Manager
+
+Manager -> Host : GET catalog.json (cache-busted)
+Host --> Manager : JSON inkl. dbUrlChunks & sigUrl
+
+alt Chunks vorhanden (z.B. Berlin >50MB)
+  loop Für jeden Chunk (.001, .002...)
+    Manager -> Host : GET chunk
+    Host --> Manager : bytes
+    Manager -> Manager : Append to city.db.gz
+  end
+else Keine Chunks
+  Manager -> Host : GET city.db.gz
+  Host --> Manager : Datei
+end
+
+Manager -> Host : GET city.db.gz.sig
+Host --> Manager : Signatur-Datei
+
+Manager -> Crypto : verifyFile(city.db.gz, sig, PublicKey)
+activate Crypto
+Crypto --> Manager : true/false
+deactivate Crypto
+
+alt Signatur gültig
+  Manager -> Manager : Entpacke GZIP zu city.db
+  Manager -> DB : ATTACH DATABASE 'city.db'
+  Manager -> DB : INSERT INTO trees SELECT *
+  Manager -> DB : DETACH DATABASE
+  Manager -> UI : true (Erfolg)
+else Signatur ungültig
+  Manager -> Manager : Lösche fehlerhafte Dateien
+  Manager -> UI : false (Abbruch)
+end
+
+deactivate Manager
+@enduml

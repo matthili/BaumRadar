@@ -1,0 +1,52 @@
+@startuml
+!theme plain
+skinparam componentStyle rectangle
+
+package "Open Data Portals" {
+  [Wien OGD]
+  [Linz OGD]
+  [Hamburg WFS]
+  [Zürich WFS]
+  note right: Basel, Dortmund, Freiburg, etc.
+}
+
+node "Backend (data-processor)" {
+  [City Providers]
+  [Geofence Clusterer]
+  [Database Exporter]
+  [Crypto Manager]
+}
+
+node "GitHub Repository" {
+  [GitHub Pages Host]
+  database "catalog.json"
+  database "City SQLite DBs (.db.gz)"
+  database "Signatures (.sig)"
+}
+
+node "Android Device" {
+  [BaumRadar App]
+  database "Room DB"
+  [Map & Router]
+}
+
+[Wien OGD] --> [City Providers] : JSON/CSV/ZIP
+[Linz OGD] --> [City Providers]
+[Hamburg WFS] --> [City Providers]
+[Zürich WFS] --> [City Providers]
+
+[City Providers] --> [Geofence Clusterer]
+[Geofence Clusterer] --> [Database Exporter]
+[Database Exporter] --> [Crypto Manager] : Sign
+
+[Crypto Manager] --> [City SQLite DBs (.db.gz)] : Write & Split (>50MB)
+[Crypto Manager] --> [Signatures (.sig)]
+[Database Exporter] --> [catalog.json]
+
+[catalog.json] ..> [BaumRadar App] : Download Catalog
+[City SQLite DBs (.db.gz)] ..> [BaumRadar App] : Download Chunks
+[Signatures (.sig)] ..> [BaumRadar App] : Verify
+
+[BaumRadar App] --> [Room DB] : Merge & Import
+[Room DB] --> [Map & Router] : Query Trees & Geofences
+@enduml

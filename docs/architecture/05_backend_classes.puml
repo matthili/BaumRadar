@@ -1,0 +1,90 @@
+@startuml
+!theme plain
+title Data-Processor Package Structure
+
+package at.mafue.baumradar.dataprocessor {
+  
+  class Main {
+    + main(String[] args)
+  }
+
+  package models {
+    class TreeRecord {
+      + id: String
+      + latitude: double
+      + longitude: double
+      + genusDe: String
+      + artDe: String
+    }
+    class GeofenceRecord {
+      + id: String
+      + latitude: double
+      + longitude: double
+      + radiusMeters: int
+    }
+  }
+
+  package providers {
+    interface CityProvider {
+      + getCityId(): String
+      + getName(): String
+      + getCountry(): String
+      + processData(DatabaseExporter exporter)
+    }
+    abstract class AbstractGeoJsonProvider implements CityProvider {
+      # isZipped(): boolean
+      # supportsPagination(): boolean
+      # getGeoJsonUrl(offset: int): String
+      # mapFeatureToTree(feature: JsonNode): TreeRecord
+    }
+    abstract class AbstractCsvProvider implements CityProvider {
+      # getCsvUrl(): String
+      # parseLine(line: String): TreeRecord
+    }
+
+    package austria {
+      class ViennaProvider extends AbstractCsvProvider
+      class LinzProvider extends AbstractCsvProvider
+    }
+    
+    package germany {
+      class BerlinProvider extends AbstractGeoJsonProvider
+      class HamburgProvider extends AbstractGeoJsonProvider
+      class FreiburgProvider extends AbstractGeoJsonProvider
+      class DortmundProvider extends AbstractGeoJsonProvider
+    }
+    
+    package switzerland {
+      class ZurichProvider extends AbstractGeoJsonProvider
+      class BaselProvider extends AbstractGeoJsonProvider
+    }
+  }
+
+  package utils {
+    class DatabaseExporter {
+      + insertBatch(trees: List<TreeRecord>)
+      + insertGeofences(geofences: List<GeofenceRecord>)
+    }
+    class CatalogBuilder {
+      + build(outputFile: File, providers: List<CityProvider>, baseUrl: String)
+    }
+    class CryptoManager {
+      + generateAndSaveKeys(privateKeyFile: File, publicKeyFile: File)
+      + signFile(dataFile: File, signatureFile: File)
+    }
+    class Translator {
+      + translateGenus(german: String): String
+    }
+    class UtmConverter {
+      + utm32NToWgs84(easting: double, northing: double): double[]
+    }
+  }
+}
+
+Main --> CityProvider : iterates
+Main --> DatabaseExporter : creates
+Main --> CryptoManager : signs
+Main --> CatalogBuilder : builds catalog
+AbstractGeoJsonProvider ..> TreeRecord : creates
+AbstractGeoJsonProvider ..> UtmConverter : uses (optional)
+@enduml

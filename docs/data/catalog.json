@@ -23,6 +23,7 @@
       "country": "Deutschland",
       "boundingBox": [52.34, 13.08, 52.68, 13.76],
       "dbUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/berlin.db.gz",
+      "dbUrlChunks": ["https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/berlin.db.gz.001", "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/berlin.db.gz.002", "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/berlin.db.gz.003"],
       "sigUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/berlin.db.gz.sig"
     },
     {

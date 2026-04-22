@@ -1,0 +1,38 @@
+@startuml
+!theme plain
+actor User
+participant "MapViewModel" as ViewModel
+participant "NominatimGeocoder" as Geocoder
+participant "OsrmRoutingClient" as Router
+participant "RouteCollisionDetector" as Collision
+participant "AllergyDataStore" as DataStore
+database "AppDatabase" as DB
+
+User -> ViewModel : Eingabe Start & Ziel
+ViewModel -> Geocoder : geocode(Start), geocode(Ziel)
+Geocoder --> ViewModel : GeoPoint Start, GeoPoint Ziel
+
+ViewModel -> Router : getRoute(Start, Ziel, Profil)
+Router --> ViewModel : RouteResult (Geometrie, Distanz, Dauer)
+
+ViewModel -> DataStore : getSelectedTreesFlow()
+DataStore --> ViewModel : Aktive Allergene (z.B. "Birke", "Hasel")
+
+ViewModel -> DB : Hole Geofences im BoundingBox der Route
+DB --> ViewModel : List<GeofenceEntity>
+
+ViewModel -> Collision : detectCollisions(Route, Geofences, Allergene)
+activate Collision
+Collision -> Collision : Pufferberechnung (Geofence Radius + Toleranz)
+Collision -> Collision : Linien-Schnittpunkt-Test
+Collision --> ViewModel : List<CollisionPoint> (Kollisionen)
+deactivate Collision
+
+alt Kollisionen gefunden
+  ViewModel -> ViewModel : Markiere Route rot / Warnung
+else Keine Kollisionen
+  ViewModel -> ViewModel : Markiere Route grün / "Allergiefrei"
+end
+
+ViewModel -> User : Zeichne Route & Warn-Marker auf Map
+@enduml

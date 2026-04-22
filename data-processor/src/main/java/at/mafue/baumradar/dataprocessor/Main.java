@@ -1,5 +1,12 @@
 package at.mafue.baumradar.dataprocessor;
 
+import at.mafue.baumradar.dataprocessor.providers.*;
+import at.mafue.baumradar.dataprocessor.providers.austria.*;
+import at.mafue.baumradar.dataprocessor.providers.germany.*;
+import at.mafue.baumradar.dataprocessor.providers.switzerland.*;
+import at.mafue.baumradar.dataprocessor.models.*;
+import at.mafue.baumradar.dataprocessor.utils.*;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -156,3 +163,4 @@ public class Main {
         }
     }
 }
+
