@@ -1,40 +1,42 @@
 @startuml
 !theme plain
-title Collision Detection Activity (Routing)
+title Kollisionserkennung: RouteCollisionDetector
 
 start
 
-:Receive Route Geometry;
-:Fetch Active Allergies (e.g. Birch, Hazel);
-:Fetch Geofences in Bounding Box;
+:OsrmRoutingClient empfängt Route (List<Pair<lat, lon>>)\nund Geofences (List<GeofenceEntity>) für aktive Allergene;
 
-if (Are Allergies Active?) then (Yes)
-  :Filter Geofences by Active Allergies;
-else (No)
-  :No Collisions Possible;
-  stop
-endif
+:Rufe RouteCollisionDetector.countCollisions() auf;
 
-while (More Geofences?) is (Yes)
-  :Select Geofence;
-  :Calculate Geofence Center & Radius (including Tolerance);
+:collisionCount = 0;
+
+while (Nächster Geofence?) is (Ja)
+  :Wähle Geofence (lat, lon, radius, genusDe);
+  :Effektiver Radius = fence.radius + 60m (Pollen-Toleranz);
   
-  while (More Route Segments?) is (Yes)
-    :Select Segment (Point A to Point B);
-    :Calculate Closest Distance from Center to Segment;
+  while (Nächstes Routen-Segment (A → B)?) is (Ja)
+    :Projiziere Geofence-Zentrum auf lokales\nmetrisches Grid (Equirectangulare Projektion);
+    :Berechne kürzeste Distanz vom\nGeofence-Zentrum zum Liniensegment\n(Punkt-zu-Linie Vektorprojektion,\ngeclamped auf Segment [0, 1]);
     
-    if (Distance <= Radius) then (Yes)
-      :Add Collision Point;
-    else (No)
+    if (Distanz <= effektiver Radius?) then (Ja)
+      :collisionCount++;
+      :break; (nächster Geofence)
+    else (Nein)
     endif
   endwhile
+  
+  note right
+    Zusätzlich wird auch der letzte Routenpunkt
+    per Haversine-Distanz separat geprüft.
+  end note
 endwhile
 
-if (Collisions Found?) then (Yes)
-  :Mark Route as "Warning/Red";
-  :Return Collision Points for Map Markers;
-else (No)
-  :Mark Route as "Safe/Green";
+:Gib collisionCount zurück;
+
+if (collisionCount > 0?) then (Ja)
+  :Route enthält Kollisionen → UI markiert als Warnung;
+else (Nein)
+  :Route ist allergiefrei → UI zeigt "Allergiefrei 🟢";
 endif
 
 stop

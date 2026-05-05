@@ -1,38 +1,51 @@
 @startuml
 !theme plain
 actor User
+participant "MapArScreen" as Screen
 participant "MapViewModel" as ViewModel
 participant "NominatimGeocoder" as Geocoder
+participant "AllergyDataStore" as DataStore
+database "AppDatabase\n(Room)" as DB
 participant "OsrmRoutingClient" as Router
 participant "RouteCollisionDetector" as Collision
-participant "AllergyDataStore" as DataStore
-database "AppDatabase" as DB
 
-User -> ViewModel : Eingabe Start & Ziel
-ViewModel -> Geocoder : geocode(Start), geocode(Ziel)
-Geocoder --> ViewModel : GeoPoint Start, GeoPoint Ziel
+User -> Screen : Tippt Startadresse & Zieladresse ein
+Screen -> ViewModel : calculateGeocodedRoute()
+ViewModel -> Geocoder : getCoordinates(startQuery)
+Geocoder --> ViewModel : GeoPoint (Start)
+ViewModel -> Geocoder : getCoordinates(endQuery)
+Geocoder --> ViewModel : GeoPoint (Ziel)
 
-ViewModel -> Router : getRoute(Start, Ziel, Profil)
-Router --> ViewModel : RouteResult (Geometrie, Distanz, Dauer)
+ViewModel -> ViewModel : Speichere Route in Historie (HistoryDao)
 
-ViewModel -> DataStore : getSelectedTreesFlow()
-DataStore --> ViewModel : Aktive Allergene (z.B. "Birke", "Hasel")
+ViewModel -> DataStore : selectedTreesFlow.first()
+DataStore --> ViewModel : Set<String> (z.B. {"Birke", "Hasel"})
 
-ViewModel -> DB : Hole Geofences im BoundingBox der Route
-DB --> ViewModel : List<GeofenceEntity>
+alt Allergien vorhanden
+  ViewModel -> DB : getGeofencesInBoundingBox(\nallergicGenuses, minLat, maxLat, minLon, maxLon)
+  DB --> ViewModel : List<GeofenceEntity>
+  ViewModel -> Router : getRoute(Start, Ziel,\ngeofences, Profil)
+  activate Router
 
-ViewModel -> Collision : detectCollisions(Route, Geofences, Allergene)
-activate Collision
-Collision -> Collision : Pufferberechnung (Geofence Radius + Toleranz)
-Collision -> Collision : Linien-Schnittpunkt-Test
-Collision --> ViewModel : List<CollisionPoint> (Kollisionen)
-deactivate Collision
+  Router -> Router : HTTP Request an routing.openstreetmap.de\n(alternatives=3 für Umfahrungs-Optionen)
+  
+  loop Für jede Routen-Alternative
+    Router -> Collision : countCollisions(polylinePoints, geofences)
+    activate Collision
+    Collision -> Collision : pointToLineDistance()\n(Equirectangulare Projektion\n+ fence.radius + 60m Toleranz)
+    Collision --> Router : Int (Anzahl kollidierender Zonen)
+    deactivate Collision
+  end
 
-alt Kollisionen gefunden
-  ViewModel -> ViewModel : Markiere Route rot / Warnung
-else Keine Kollisionen
-  ViewModel -> ViewModel : Markiere Route grün / "Allergiefrei"
+  Router -> Router : Sortiere Routen nach\ncollisionCount, dann Dauer
+  Router --> ViewModel : List<RouteResult>
+  deactivate Router
+else Keine Allergien
+  ViewModel -> Router : getRoute(Start, Ziel,\nemptyList, Profil)
+  Router --> ViewModel : List<RouteResult> (1 direkte Route)
 end
 
-ViewModel -> User : Zeichne Route & Warn-Marker auf Map
+ViewModel -> Screen : routeAlternatives.value = Ergebnisse
+
+Screen -> User : Zeichne Route auf Karte\n+ Geofence-Zonen als rote Kreise\n+ "Allergiefrei 🟢" / "Route X" Chips
 @enduml

@@ -1,26 +1,105 @@
 # Backend Architecture (Data-Processor)
 
-The backend of Baumradar (a Java project) is responsible for aggregating and processing Open Data from various cities. It essentially acts as a "Data Pipeline" or "Data Trust".
+The Baumradar backend is a **Java project** (`data-processor` module) that acts as a data pipeline. It aggregates public tree cadastre data (Open Data) from various cities, normalizes it, computes spatial geofence clusters, and exports the result as cryptographically signed SQLite databases.
 
-## Workflow and Data Ingestion
+---
 
-![Data Ingestion Workflow](architecture/02_data_ingestion.png)
-![System Architecture Overview](architecture/01_system_architecture.png)
+## Package Structure
 
-1. **City Providers**
-   There are abstract base classes for different data formats (`AbstractGeoJsonProvider`, `AbstractCsvProvider`). Each city has its own implementation (e.g., `ViennaProvider`, `HamburgProvider`). These fetch data from the cities' Open Data portals (sometimes ZIP archives, sometimes direct APIs with pagination).
-
-2. **Normalization & Translation**
-   Tree species designations vary greatly from city to city. The `Translator` unifies botanical names and common names to a shared standard. Geo-coordinates in different projections (like UTM in Hamburg) are converted to standard WGS84 coordinates using the `UtmConverter`.
-
-3. **Geofence Clustering**
-   To optimize performance, the backend calculates geofence zones for trees of the same species that are close to each other. Instead of checking every single tree during routing, the app can later collide against these larger zones.
-
-4. **Cryptographic Security & Splitting**
-   The result is exported into a highly performant SQLite database and compressed using `GZIP`.
-   - The `CryptoManager` cryptographically signs this file (Ed25519) using a Private Key. The signature (.sig file) and the database are saved.
-   - If a database exceeds 50MB, it is split into chunks (`.001`, `.002`) to comply with GitHub file size limits.
+```
+at.mafue.baumradar.dataprocessor
+├── Main.java                    # Entry point: Orchestrates the entire pipeline
+├── models/
+│   ├── TreeRecord.java          # Data class: id, cityId, latitude, longitude, genusDe, genusEn, speciesDe, speciesEn
+│   └── GeofenceRecord.java      # Data class: id, cityId, latitude, longitude, radius, count, genusDe
+├── providers/
+│   ├── CityProvider.java        # Interface: getCityId(), getName(), getCountry(), getBoundingBox(), processData()
+│   ├── AbstractGeoJsonProvider.java  # Base for GeoJSON-based cities (streaming parser, pagination, ZIP support)
+│   ├── AbstractCsvProvider.java      # Base for CSV-based cities (line-by-line parsing, header mapping)
+│   ├── austria/                      # ViennaProvider, LinzProvider (CSV)
+│   ├── germany/                      # BerlinProvider, HamburgProvider, FreiburgProvider, DortmundProvider (GeoJSON)
+│   └── switzerland/                  # ZurichProvider, BaselProvider (GeoJSON)
+└── utils/
+    ├── DatabaseExporter.java    # SQLite creation: table setup, batch inserts, performance pragmas
+    ├── CatalogBuilder.java      # Generates catalog.json with URLs, chunks, and bounding boxes
+    ├── CryptoManager.java       # Ed25519 key management (load/generate), signature creation
+    ├── Translator.java          # Translation table: German genus names → English (e.g., "Birke" → "Birch")
+    └── UtmConverter.java        # UTM Zone 32N → WGS84 coordinate conversion (e.g., for Hamburg)
+```
 
 ![Backend Class Diagram](architecture/05_backend_classes.png)
+
+---
+
+## Pipeline Workflow (Main.java)
+
+![Data Ingestion Workflow](architecture/02_data_ingestion.png)
+
+### Step 1: Cryptographic Setup
+```
+CryptoManager.loadOrGenerateKeyPair(privFile, pubFile)
+```
+If an Ed25519 key pair already exists on disk (`private_key.b64`, `public_key.b64`), it is loaded. Otherwise, a new pair is generated and saved. The private key **never** leaves the backend; only the public key is committed.
+
+### Step 2: Parallel City Processing
+All 8 registered `CityProvider` instances are processed simultaneously via `ExecutorService` (thread pool). Per city:
+
+1. **Download & Parse**: Depending on provider type:
+   - `AbstractGeoJsonProvider`: Jackson streaming parser (`JsonFactory`), optionally with pagination (ArcGIS APIs return e.g., max. 5000 features per request) and ZIP extraction.
+   - `AbstractCsvProvider`: Line-by-line `BufferedReader` parsing with configurable delimiter (`getSplitRegex()`). Headers are analyzed via `processHeaders()`.
+
+2. **Normalization**:
+   - `Translator.translateGenus()` and `translateSpecies()` unify names (e.g., various spellings of "Hänge-Birke" → consistent entry).
+   - `UtmConverter.utm32NToWgs84()` is needed for cities like Hamburg whose coordinates are not in WGS84.
+
+3. **Geofence Clustering**: During parsing, a **grid-based cluster** is computed for each tree:
+   - Grid key: `genusDe + "|" + lat (3 decimals) + "|" + lon (3 decimals)` → approx. 100m × 100m cells.
+   - Trees of the same genus in the same cell are merged into a single `GeofenceRecord`.
+   - Radius: 50m for individual trees, 100m for tree groups (≥ 2 trees).
+   - Center: Arithmetic mean of all tree coordinates in the cluster.
+
+4. **SQLite Export**: `DatabaseExporter` creates a SQLite database with optimized pragmas (`journal_mode=OFF`, `synchronous=0`, `cache_size=100000`) and writes data in batches of 5000 into the `trees` and `geofences` tables.
+
+5. **GZIP Compression**: The finished `.db` file is compressed as `.db.gz`.
+
+6. **Signing**: `CryptoManager.signFile()` creates an Ed25519 signature (`.db.gz.sig`) covering the entire compressed file.
+
+7. **Chunking** (if > 50MB): The `.db.gz` is split into 50MB chunks (`.001`, `.002`, ...). The original file is deleted, the signature remains – it applies to the reassembled file.
+
+### Step 3: Catalog Generation
+`CatalogBuilder.build()` creates a `catalog.json` containing for each city:
+```json
+{
+  "id": "vienna",
+  "name": "Wien",
+  "country": "Österreich",
+  "boundingBox": [48.12, 16.18, 48.32, 16.58],
+  "dbUrl": "https://raw.githubusercontent.com/.../vienna.db.gz",
+  "dbUrlChunks": ["...vienna.db.gz.001", "...vienna.db.gz.002"],
+  "sigUrl": "https://raw.githubusercontent.com/.../vienna.db.gz.sig"
+}
+```
+
+![System Architecture Overview](architecture/01_system_architecture.png)
+
+---
+
+## Adding a New City Provider
+
+1. Create a new class (e.g., `MunichProvider`) in the appropriate country package, extending `AbstractGeoJsonProvider` or `AbstractCsvProvider`.
+2. Implement the abstract methods: `getCityId()`, `getName()`, `getCountry()`, `getBoundingBox()`, and `mapFeatureToTree()` or `mapRowToTree()`.
+3. Register the provider in `Main.java` in the `providers` list.
+4. Done – on the next run, the city will be automatically processed, signed, and added to the catalog.
+
+---
+
+## Dependencies
+
+| Library | Purpose |
+|---|---|
+| Jackson (Streaming + Databind) | GeoJSON parsing |
+| SQLite JDBC | Database creation |
+| BouncyCastle | Ed25519 cryptography |
+| SLF4J + Logback | Logging |
 
 [Back to Start](../README_en.md) | [Deutsche Version](backend_architecture.md)
