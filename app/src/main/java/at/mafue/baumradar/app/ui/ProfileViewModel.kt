@@ -8,6 +8,9 @@ import at.mafue.baumradar.app.data.AppDatabase
 import at.mafue.baumradar.app.data.TreeSpeciesDTO
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import at.mafue.baumradar.app.background.GeofenceManager
+import com.google.android.gms.location.LocationServices
+import android.annotation.SuppressLint
 
 data class GenusGroup(
     val genusLatin: String,
@@ -122,6 +125,7 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
         _warnTrees.value = current
         viewModelScope.launch {
             allergyDataStore.saveWarnTrees(current)
+            updateGeofencesBackground()
         }
     }
 
@@ -152,6 +156,20 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             allergyDataStore.saveSelectedTrees(empty)
             allergyDataStore.saveWarnTrees(empty)
+            updateGeofencesBackground()
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun updateGeofencesBackground() {
+        val fusedLocationClient = LocationServices.getFusedLocationProviderClient(getApplication<Application>())
+        fusedLocationClient.lastLocation.addOnSuccessListener { loc ->
+            if (loc != null) {
+                viewModelScope.launch {
+                    val manager = GeofenceManager(getApplication())
+                    manager.updateGeofences(loc)
+                }
+            }
         }
     }
 }

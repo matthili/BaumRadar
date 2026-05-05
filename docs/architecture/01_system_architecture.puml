@@ -7,7 +7,7 @@ package "Open Data Portals" {
   [Linz OGD]
   [Hamburg WFS]
   [Zürich WFS]
-  note right: Basel, Dortmund, Freiburg, etc.
+  [Weitere Städte...]
 }
 
 node "Backend (data-processor)" {
@@ -34,6 +34,7 @@ node "Android Device" {
 [Linz OGD] --> [City Providers]
 [Hamburg WFS] --> [City Providers]
 [Zürich WFS] --> [City Providers]
+[Weitere Städte...] --> [City Providers]
 
 [City Providers] --> [Geofence Clusterer]
 [Geofence Clusterer] --> [Database Exporter]

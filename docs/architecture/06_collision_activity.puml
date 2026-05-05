@@ -1,0 +1,41 @@
+@startuml
+!theme plain
+title Collision Detection Activity (Routing)
+
+start
+
+:Receive Route Geometry;
+:Fetch Active Allergies (e.g. Birch, Hazel);
+:Fetch Geofences in Bounding Box;
+
+if (Are Allergies Active?) then (Yes)
+  :Filter Geofences by Active Allergies;
+else (No)
+  :No Collisions Possible;
+  stop
+endif
+
+while (More Geofences?) is (Yes)
+  :Select Geofence;
+  :Calculate Geofence Center & Radius (including Tolerance);
+  
+  while (More Route Segments?) is (Yes)
+    :Select Segment (Point A to Point B);
+    :Calculate Closest Distance from Center to Segment;
+    
+    if (Distance <= Radius) then (Yes)
+      :Add Collision Point;
+    else (No)
+    endif
+  endwhile
+endwhile
+
+if (Collisions Found?) then (Yes)
+  :Mark Route as "Warning/Red";
+  :Return Collision Points for Map Markers;
+else (No)
+  :Mark Route as "Safe/Green";
+endif
+
+stop
+@enduml

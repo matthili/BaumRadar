@@ -1,4 +1,4 @@
-﻿package at.mafue.baumradar.dataprocessor;
+package at.mafue.baumradar.dataprocessor.utils;
 
 import org.junit.Test;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
@@ -22,7 +22,11 @@ public class CryptoManagerTest {
         Files.write(tempDbFile.toPath(), "Hello World SQLite Data".getBytes());
 
         CryptoManager manager = new CryptoManager();
-        manager.generateKeyPair();
+        File tempPriv = File.createTempFile("priv", ".key");
+        File tempPub = File.createTempFile("pub", ".key");
+        tempPriv.delete();
+        tempPub.delete();
+        manager.loadOrGenerateKeyPair(tempPriv, tempPub);
         
         // 1. Generate Signature
         manager.signFile(tempDbFile, tempSigFile);
@@ -42,5 +46,7 @@ public class CryptoManagerTest {
         tempDbFile.delete();
         tempSigFile.delete();
         tempKeyFile.delete();
+        tempPriv.delete();
+        tempPub.delete();
     }
 }

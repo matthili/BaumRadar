@@ -1,4 +1,4 @@
-﻿package at.mafue.baumradar.dataprocessor;
+package at.mafue.baumradar.dataprocessor.utils;
 
 import org.junit.Test;
 import static org.junit.Assert.*;

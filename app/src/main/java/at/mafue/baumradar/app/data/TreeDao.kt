@@ -36,6 +36,15 @@ interface TreeDao {
         minLon: Double,
         maxLon: Double
     ): Flow<List<GeofenceEntity>>
+
+    @JvmSuppressWildcards
+    @Query("SELECT * FROM geofences WHERE genus_de IN (:allergicGenuses) ORDER BY ((lat - :lat)*(lat - :lat) + (lon - :lon)*(lon - :lon)) ASC LIMIT :limit")
+    suspend fun getClosestGeofences(
+        allergicGenuses: List<String>,
+        lat: Double,
+        lon: Double,
+        limit: Int
+    ): List<GeofenceEntity>
 }
 
 data class TreeSpeciesDTO(

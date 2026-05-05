@@ -44,3 +44,4 @@ private_key.b64
 /*.geojson
 /*.csv
 /*.xlsx
+/docs/architecture/plantuml.jar

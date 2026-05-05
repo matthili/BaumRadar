@@ -78,17 +78,24 @@ fun MapArScreen() {
     }
 
     val launcher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        permissionGranted = isGranted
-        if (isGranted) {
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        permissionGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] ?: false
+        if (permissionGranted) {
             viewModel.startTracking()
         }
     }
 
     LaunchedEffect(Unit) {
         if (!permissionGranted) {
-            launcher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+            val permissionsToRequest = mutableListOf(Manifest.permission.ACCESS_FINE_LOCATION)
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                permissionsToRequest.add(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+            }
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                permissionsToRequest.add(Manifest.permission.POST_NOTIFICATIONS)
+            }
+            launcher.launch(permissionsToRequest.toTypedArray())
         } else {
             viewModel.startTracking()
         }
