@@ -20,16 +20,21 @@ The extracted `.db` file contains two very simple, easy-to-understand tables:
 ### Table `trees`
 Contains all individual trees.
 - `id` (String): Unique ID of the tree.
-- `latitude` (Double): WGS84 Latitude.
-- `longitude` (Double): WGS84 Longitude.
-- `genusDe` (String): Unified common name of the tree genus (e.g., "Birke" for Birch).
-- `artDe` (String): Specific species (if known).
+- `city_id` (String): ID of the city (e.g., "vienna").
+- `lat` (Double): WGS84 Latitude.
+- `lon` (Double): WGS84 Longitude.
+- `genus_de` (String): Unified common name of the tree genus in German (e.g., "Birke").
+- `genus_en` (String): Unified common name of the tree genus in English.
+- `species_de` (String): Specific species in German (if known).
+- `species_en` (String): Specific species in English (if known).
 
 ### Table `geofences`
 Pre-calculated zones for grouped trees of the same species. Highly practical for route-collision detection, saving you from checking tens of thousands of individual trees.
 - `id` (String): Unique zone ID.
-- `latitude` (Double), `longitude` (Double): Center of the zone.
-- `radiusMeters` (Int): Radius in meters (e.g., 50m for single trees, 100m for tree clusters).
+- `lat` (Double), `lon` (Double): Center of the zone.
+- `radius` (Int): Radius in meters (e.g., 50m for single trees, 100m for tree clusters).
+- `count` (Int): Number of trees contained within this cluster/geofence.
+- `genus_de` (String): **The Relation!** This matches the tree genus (e.g., "Birke"). This tells you exactly which allergy this geofence triggers for.
 
 ## Usage
 Start by fetching the entry point JSON (`catalog.json`). It contains the direct download links to the databases and signatures for all supported cities.

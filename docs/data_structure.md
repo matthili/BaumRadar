@@ -20,16 +20,21 @@ Die entpackte `.db`-Datei beinhaltet zwei sehr einfache, leicht verständliche T
 ### Tabelle `trees`
 Enthält alle einzelnen Bäume.
 - `id` (String): Eindeutige ID des Baumes.
-- `latitude` (Double): WGS84 Breitengrad.
-- `longitude` (Double): WGS84 Längengrad.
-- `genusDe` (String): Deutscher Name der Baum-Gattung (z.B. "Birke").
-- `artDe` (String): Spezifische Art (falls bekannt).
+- `city_id` (String): ID der Stadt (z.B. "vienna").
+- `lat` (Double): WGS84 Breitengrad.
+- `lon` (Double): WGS84 Längengrad.
+- `genus_de` (String): Deutscher Name der Baum-Gattung (z.B. "Birke").
+- `genus_en` (String): Englischer Name der Baum-Gattung.
+- `species_de` (String): Spezifische Art auf Deutsch (falls bekannt).
+- `species_en` (String): Spezifische Art auf Englisch.
 
 ### Tabelle `geofences`
 Berechnete Zonen für zusammenhängende Bäume derselben Art. Praktisch für Routen-Kollisionsberechnungen, da du nicht zehntausende einzelne Bäume prüfen musst.
 - `id` (String): Eindeutige Zonen-ID.
-- `latitude` (Double), `longitude` (Double): Zentrum der Zone.
-- `radiusMeters` (Int): Radius in Metern (z.B. 50m für Einzelbäume, 100m für Baumgruppen).
+- `lat` (Double), `lon` (Double): Zentrum der Zone.
+- `radius` (Int): Radius in Metern (z.B. 50m für Einzelbäume, 100m für Baumgruppen).
+- `count` (Int): Anzahl der Bäume, die sich in diesem Cluster/Geofence befinden.
+- `genus_de` (String): **Die Relation!** Hier steht der deutsche Gattungsname (z.B. "Birke"). So weißt du, für welche Allergie diese Zone gilt.
 
 ## Nutzung
 Hole dir die Einstiegs-JSON (`catalog.json`). Darin stehen die direkten Download-Links zu den Datenbanken und Signaturen der unterstützten Städte.
