@@ -17,12 +17,20 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import at.mafue.baumradar.app.background.GeofenceLifecycleObserver
 import at.mafue.baumradar.app.ui.theme.BaumRadarTheme
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Re-register geofences whenever the app comes to the foreground.
+        // This covers the case where the OS killed the process and geofences were lost.
+        // Uses the Activity's own lifecycle – no ProcessLifecycleOwner needed.
+        lifecycle.addObserver(
+            GeofenceLifecycleObserver(applicationContext)
+        )
         
         setContent {
             BaumRadarTheme {

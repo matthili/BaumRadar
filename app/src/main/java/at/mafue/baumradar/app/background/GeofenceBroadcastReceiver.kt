@@ -47,7 +47,8 @@ class GeofenceBroadcastReceiver : BroadcastReceiver() {
                 }
             } else if (requestId.startsWith("TREE_") && transition == Geofence.GEOFENCE_TRANSITION_ENTER) {
                 // User entered an allergenic tree zone!
-                val genus = requestId.substringAfterLast("_")
+                // requestId format: "TREE_{uuid}_{genusDe}" – genusDe can contain spaces/parens
+                val genus = requestId.removePrefix("TREE_").substringAfter("_")
                 sendNotification(context, genus)
             }
         }

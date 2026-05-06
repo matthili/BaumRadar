@@ -15,11 +15,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -68,7 +64,7 @@ public abstract class AbstractCsvProvider implements CityProvider {
             processHeaders(headerLine.split(getSplitRegex()));
             
             List<TreeRecord> batch = new ArrayList<>();
-            Map<String, GeofenceCluster> clusters = new HashMap<>();
+            GeofenceClusterer clusterer = new GeofenceClusterer();
 
             String line;
             while ((line = reader.readLine()) != null) {
@@ -78,15 +74,7 @@ public abstract class AbstractCsvProvider implements CityProvider {
                 TreeRecord record = mapRowToTree(cols, totalLines);
                 if (record != null) {
                     batch.add(record);
-                    
-                    // Spatial Clustering (Grid 0.001 deg ~ 100m)
-                    String gridKey = String.format(Locale.US, "%.3f|%.3f", record.latitude, record.longitude);
-                    String clusterKey = record.genusDe + "|" + gridKey;
-                    
-                    GeofenceCluster c = clusters.computeIfAbsent(clusterKey, k -> new GeofenceCluster(record.genusDe));
-                    c.count++;
-                    c.sumLat += record.latitude;
-                    c.sumLon += record.longitude;
+                    clusterer.addTree(record.latitude, record.longitude, record.genusDe);
 
                     if (batch.size() >= BATCH_SIZE) {
                         exporter.insertBatch(batch);
@@ -101,28 +89,12 @@ public abstract class AbstractCsvProvider implements CityProvider {
                 inserted += batch.size();
             }
             
-            // Export clustered Geofences
-            List<GeofenceRecord> geofenceBatch = new ArrayList<>();
+            // Build merged geofence clusters and export
+            List<GeofenceRecord> geofences = clusterer.buildGeofences(getCityId());
             int geofenceInserted = 0;
-            for (GeofenceCluster c : clusters.values()) {
-                double centerLat = c.sumLat / c.count;
-                double centerLon = c.sumLon / c.count;
-                
-                // Baumgruppen bekommen 100m Basis-Radius. 
-                // Einzelne Bäume bekommen 50m Basis-Radius.
-                // Der Routenplaner addiert auf beides nochmals 60m Toleranz!
-                int radius = c.count >= 2 ? 100 : 50;
-                
-                geofenceBatch.add(new GeofenceRecord(
-                    UUID.randomUUID().toString(),
-                    getCityId(),
-                    centerLat,
-                    centerLon,
-                    radius,
-                    c.count,
-                    c.genusDe
-                ));
-                
+            List<GeofenceRecord> geofenceBatch = new ArrayList<>();
+            for (GeofenceRecord gf : geofences) {
+                geofenceBatch.add(gf);
                 if (geofenceBatch.size() >= BATCH_SIZE) {
                     exporter.insertGeofences(geofenceBatch);
                     geofenceInserted += geofenceBatch.size();
@@ -136,17 +108,6 @@ public abstract class AbstractCsvProvider implements CityProvider {
             
             logger.info("Processed {} lines, safely exported {} valid trees.", totalLines, inserted);
             logger.info("Computed and exported {} spatial geofence clusters.", geofenceInserted);
-        }
-    }
-
-    private static class GeofenceCluster {
-        int count = 0;
-        double sumLat = 0.0;
-        double sumLon = 0.0;
-        String genusDe;
-        
-        GeofenceCluster(String genusDe) {
-            this.genusDe = genusDe;
         }
     }
 }
