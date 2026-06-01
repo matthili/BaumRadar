@@ -6,6 +6,13 @@ skinparam defaultFontName Inter
 skinparam padding 8
 skinparam roundCorner 12
 
+' Weiße Linien, Pfeile und Beschriftungen für Dark-Mode-Kompatibilität
+skinparam ArrowColor white
+skinparam ArrowFontColor white
+skinparam actorBorderColor white
+skinparam actorFontColor white
+skinparam actorBackgroundColor transparent
+
 ' Vertikales Layout (top to bottom statt left to right)
 top to bottom direction
 
