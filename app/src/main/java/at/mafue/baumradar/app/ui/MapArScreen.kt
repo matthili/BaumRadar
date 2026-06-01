@@ -77,9 +77,12 @@ fun MapArScreen() {
         )
     }
 
+    var permissionRequested by remember { mutableStateOf(false) }
+
     val launcher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
+        permissionRequested = true
         permissionGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] ?: false
         if (permissionGranted) {
             viewModel.startTracking()
@@ -480,8 +483,17 @@ fun MapArScreen() {
                             val containerCol = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
                             val contentCol = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
                             
-                            val title = if (alt.collisionCount == 0) "Allergiefrei \uD83D\uDFE2" else "Route ${index + 1}"
-                            val subtitle = "${(alt.durationSec / 60).toInt()} min"
+                            val title = when {
+                                alt.collisionCount == 0 -> "Allergiefrei \uD83D\uDFE2"
+                                else -> "Route ${index + 1} \u26A0\uFE0F"
+                            }
+                            val subtitle = buildString {
+                                append("${(alt.durationSec / 60).toInt()} min")
+                                if (alt.collisionCount > 0) {
+                                    append(" · ${alt.collisionCount} Hotspot")
+                                    if (alt.collisionCount > 1) append("s")
+                                }
+                            }
                             
                             androidx.compose.material3.Surface(
                                 shape = RoundedCornerShape(16.dp),
@@ -503,12 +515,92 @@ fun MapArScreen() {
                             }
                         }
                     }
+
+                    // Warning if no allergen-free route was found
+                    val bestCollisions = routeAlternatives.minOfOrNull { it.collisionCount } ?: 0
+                    if (routeAlternatives.isNotEmpty() && bestCollisions > 0) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Card(
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.errorContainer
+                            )
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    Icons.Default.Warning,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onErrorContainer
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    "Keine allergenfreie Route gefunden. Die beste Route berührt $bestCollisions Hotspot${if (bestCollisions > 1) "s" else ""}.",
+                                    color = MaterialTheme.colorScheme.onErrorContainer,
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
     } else {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("Location permission required for AR and Map.")
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(
+                    Icons.Default.Place,
+                    contentDescription = null,
+                    modifier = Modifier.padding(bottom = 16.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    "Standortberechtigung benötigt",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                Text(
+                    "BaumRadar benötigt Zugriff auf deinen Standort\nfür die Karte und AR-Ansicht.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    modifier = Modifier.padding(horizontal = 32.dp, vertical = 8.dp)
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                val shouldShowRationale = activity.shouldShowRequestPermissionRationale(
+                    Manifest.permission.ACCESS_FINE_LOCATION
+                )
+                // shouldShowRationale is false both on first launch AND after permanent denial.
+                // Use permissionRequested to distinguish: if we already asked and rationale is false,
+                // the user selected "Don't ask again" → open Settings.
+                val canAskAgain = shouldShowRationale || !permissionRequested
+                Button(onClick = {
+                    if (canAskAgain) {
+                        // System will show the permission dialog (first time or rationale)
+                        val permissionsToRequest = mutableListOf(Manifest.permission.ACCESS_FINE_LOCATION)
+                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                            permissionsToRequest.add(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+                        }
+                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                            permissionsToRequest.add(Manifest.permission.POST_NOTIFICATIONS)
+                        }
+                        launcher.launch(permissionsToRequest.toTypedArray())
+                    } else {
+                        // Permission permanently denied — open app settings
+                        val intent = android.content.Intent(
+                            android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                            android.net.Uri.fromParts("package", context.packageName, null)
+                        )
+                        intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                        context.startActivity(intent)
+                    }
+                }) {
+                    Text(
+                        if (canAskAgain) "Berechtigung erteilen"
+                        else "Einstellungen öffnen"
+                    )
+                }
+            }
         }
     }
 }

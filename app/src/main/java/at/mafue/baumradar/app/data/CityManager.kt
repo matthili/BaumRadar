@@ -125,6 +125,8 @@ class CityManager(private val context: Context) {
             
             helper.execSQL("ATTACH DATABASE '${dbFile.absolutePath}' AS new_city_db")
             helper.execSQL("INSERT INTO trees SELECT * FROM new_city_db.trees")
+            // Import geofence clusters for routing avoidance and proximity alerts
+            helper.execSQL("INSERT OR REPLACE INTO geofences SELECT * FROM new_city_db.geofences")
             helper.execSQL("DETACH DATABASE new_city_db")
 
             gzFile.delete()

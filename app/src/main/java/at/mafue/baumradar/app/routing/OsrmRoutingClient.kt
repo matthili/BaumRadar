@@ -7,6 +7,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONObject
 import java.io.IOException
+import android.util.Log
 
 data class RouteResult(
     val polylinePoints: List<Pair<Double, Double>>,
@@ -18,10 +19,18 @@ data class RouteResult(
 
 class OsrmRoutingClient {
     private val client = OkHttpClient()
+    private val TAG = "OsrmRoutingClient"
 
     /**
-     * Holt eine OSM Route.
-     * @param avoidAreas Optional: Eine Liste an Geofences, die komplett umgangen werden sollen.
+     * Holt eine OSM Route mit intelligenter Allergen-Umfahrung.
+     *
+     * Strategie:
+     * 1. Standard-Route + Alternativen von OSRM holen
+     * 2. Kollisionen mit Geofences zählen
+     * 3. Falls beste Route Kollisionen hat: Waypoint-basierte Umfahrung versuchen
+     * 4. Bis zu 2 Umfahrungs-Iterationen (für kaskadierte Kollisionen)
+     *
+     * @param avoidAreas Liste an Geofences, die umgangen werden sollen.
      * @param profile Das OSRM Profil (foot, bike, driving).
      */
     suspend fun getRoute(
@@ -33,68 +42,127 @@ class OsrmRoutingClient {
         profile: String = "foot"
     ): Result<List<RouteResult>> = withContext(Dispatchers.IO) {
         try {
-            val routeProfileUrl = when (profile) {
-                "foot" -> "routed-foot/route/v1/driving"
-                "bike" -> "routed-bike/route/v1/driving"
-                else -> "routed-car/route/v1/driving"
+            val baseUrl = buildProfileUrl(profile)
+
+            // Phase 1: Standard-Routen holen (mit Alternativen wenn avoid nötig)
+            val alternativesParam = if (avoidAreas.isNotEmpty()) "alternatives=3" else "alternatives=false"
+            val standardUrl = "$baseUrl/$startLon,$startLat;$endLon,$endLat?geometries=geojson&overview=full&$alternativesParam"
+
+            val standardRoutes = fetchAndParseRoutes(standardUrl, avoidAreas)
+                ?: return@withContext Result.failure(IOException("No route found"))
+
+            if (avoidAreas.isEmpty()) {
+                return@withContext Result.success(standardRoutes.sortedWith(routeComparator))
             }
-            val baseUrl = "https://routing.openstreetmap.de/$routeProfileUrl"
-            // OSRM Format: lon,lat
-            var url = "$baseUrl/$startLon,$startLat;$endLon,$endLat?geometries=geojson&overview=full&alternatives=false"
+
+            val allRoutes = standardRoutes.toMutableList()
+
+            // Phase 2: Waypoint-basierte Umfahrung (bis zu 2 Iterationen)
+            var bestRoute = allRoutes.minByOrNull { it.collisionCount * 100000.0 + it.durationSec }
             
-            // Note: Public OSRM doesn't easily support dynamic 'avoid_polygons' with high precision in URL freely.
-            // Some specialized instances do. For OSRM, you typically post custom weights or use GraphHopper.
-            // As a fallback for the public OSRM API, we compute intersection locally and rank the alternative routes.
-            // So we request 'alternatives=true' to get possible bypasses if we have areas to avoid.
-            if (avoidAreas.isNotEmpty()) {
-                url = "$baseUrl/$startLon,$startLat;$endLon,$endLat?geometries=geojson&overview=full&alternatives=3"
-            }
+            for (iteration in 1..2) {
+                if (bestRoute == null || bestRoute.collisionCount == 0) break
 
-            val request = Request.Builder().url(url).build()
-            val response = client.newCall(request).execute()
+                Log.d(TAG, "Avoidance iteration $iteration: best route has ${bestRoute.collisionCount} collisions")
 
-            if (!response.isSuccessful) {
-                return@withContext Result.failure(IOException("OSRM error ${response.code}"))
-            }
-
-            val bodyString = response.body?.string() ?: return@withContext Result.failure(IOException("Empty body"))
-            val root = JSONObject(bodyString)
-            val routes = root.optJSONArray("routes")
-
-            if (routes == null || routes.length() == 0) {
-                return@withContext Result.failure(IOException("No route found"))
-            }
-
-            // Evaluate all routes
-            val routeResults = mutableListOf<RouteResult>()
-            for (i in 0 until routes.length()) {
-                val r = routes.getJSONObject(i)
-                val geom = r.getJSONObject("geometry")
-                val coords = geom.getJSONArray("coordinates")
-                val poly = parseCoordinates(coords)
-                
-                val collisions = if (avoidAreas.isNotEmpty()) {
-                    RouteCollisionDetector.countCollisions(poly, avoidAreas)
-                } else 0
-                
-                routeResults.add(
-                    RouteResult(
-                        polylinePoints = poly,
-                        rawGeoJson = bodyString, // Or specific feature
-                        durationSec = r.optDouble("duration", 0.0),
-                        distanceMeters = r.optDouble("distance", 0.0),
-                        collisionCount = collisions
-                    )
+                val collidingFences = RouteCollisionDetector.findCollidingGeofences(
+                    bestRoute.polylinePoints, avoidAreas
                 )
+                if (collidingFences.isEmpty()) break
+
+                val detourWaypoints = RouteCollisionDetector.computeDetourWaypoints(
+                    bestRoute.polylinePoints, collidingFences
+                )
+                if (detourWaypoints.isEmpty()) break
+
+                // OSRM Waypoint-Route: start;wp1;wp2;...;end
+                val waypointCoords = buildString {
+                    append("$startLon,$startLat")
+                    for ((wpLat, wpLon) in detourWaypoints) {
+                        append(";$wpLon,$wpLat")
+                    }
+                    append(";$endLon,$endLat")
+                }
+                val waypointUrl = "$baseUrl/$waypointCoords?geometries=geojson&overview=full&alternatives=false"
+
+                try {
+                    val detourRoutes = fetchAndParseRoutes(waypointUrl, avoidAreas)
+                    if (detourRoutes != null) {
+                        allRoutes.addAll(detourRoutes)
+                        
+                        // Update best for next iteration
+                        bestRoute = allRoutes.minByOrNull { it.collisionCount * 100000.0 + it.durationSec }
+                    }
+                } catch (e: Exception) {
+                    Log.w(TAG, "Waypoint route request failed in iteration $iteration", e)
+                    // Weiter mit den bisherigen Routen
+                }
             }
 
-            // Sort by collisions first, then by duration
-            routeResults.sortBy { it.collisionCount * 100000.0 + it.durationSec }
+            // Deduplizieren (gleiche Routenlänge = wahrscheinlich identisch)
+            val uniqueRoutes = allRoutes.distinctBy { 
+                "${it.polylinePoints.size}_${it.distanceMeters.toInt()}_${it.collisionCount}" 
+            }
 
-            Result.success(routeResults)
+            Result.success(uniqueRoutes.sortedWith(routeComparator))
         } catch (e: Exception) {
             Result.failure(e)
         }
+    }
+
+    private fun buildProfileUrl(profile: String): String {
+        val routeProfile = when (profile) {
+            "foot" -> "routed-foot/route/v1/driving"
+            "bike" -> "routed-bike/route/v1/driving"
+            else -> "routed-car/route/v1/driving"
+        }
+        return "https://routing.openstreetmap.de/$routeProfile"
+    }
+
+    /**
+     * Führt eine OSRM-Anfrage aus und parst die Ergebnisse.
+     * Zählt Kollisionen falls avoidAreas vorhanden.
+     */
+    private fun fetchAndParseRoutes(
+        url: String, 
+        avoidAreas: List<GeofenceEntity>
+    ): List<RouteResult>? {
+        val request = Request.Builder().url(url).build()
+        val response = client.newCall(request).execute()
+
+        if (!response.isSuccessful) {
+            Log.w(TAG, "OSRM error ${response.code} for URL: $url")
+            return null
+        }
+
+        val bodyString = response.body?.string() ?: return null
+        val root = JSONObject(bodyString)
+        val routes = root.optJSONArray("routes")
+
+        if (routes == null || routes.length() == 0) return null
+
+        val routeResults = mutableListOf<RouteResult>()
+        for (i in 0 until routes.length()) {
+            val r = routes.getJSONObject(i)
+            val geom = r.getJSONObject("geometry")
+            val coords = geom.getJSONArray("coordinates")
+            val poly = parseCoordinates(coords)
+            
+            val collisions = if (avoidAreas.isNotEmpty()) {
+                RouteCollisionDetector.countCollisions(poly, avoidAreas)
+            } else 0
+            
+            routeResults.add(
+                RouteResult(
+                    polylinePoints = poly,
+                    rawGeoJson = bodyString,
+                    durationSec = r.optDouble("duration", 0.0),
+                    distanceMeters = r.optDouble("distance", 0.0),
+                    collisionCount = collisions
+                )
+            )
+        }
+        return routeResults
     }
 
     private fun parseCoordinates(coordinates: org.json.JSONArray): List<Pair<Double, Double>> {
@@ -106,5 +174,16 @@ class OsrmRoutingClient {
             polyList.add(Pair(lat, lon))
         }
         return polyList
+    }
+
+    companion object {
+        /**
+         * Sortiert Routen: zuerst nach Kollisionsanzahl (weniger = besser),
+         * dann nach Dauer (kürzer = besser).
+         */
+        val routeComparator = compareBy<RouteResult>(
+            { it.collisionCount },
+            { it.durationSec }
+        )
     }
 }
