@@ -10,6 +10,20 @@ import at.mafue.baumradar.dataprocessor.utils.*;
 import com.fasterxml.jackson.databind.JsonNode;
 import java.util.UUID;
 
+/**
+ * City provider for <strong>Berlin, Germany</strong>.
+ *
+ * <p>Berlin's tree inventory is published as a WFS (Web Feature Service) with
+ * two separate layers: {@code strassenbaeume} (street trees) and
+ * {@code anlagenbaeume} (park/facility trees).  This provider iterates
+ * over both layers sequentially, delegating each to an anonymous
+ * {@link AbstractGeoJsonProvider} instance that handles WFS pagination
+ * via {@code startIndex}/{@code count} parameters.
+ *
+ * <p>Because the two layers use slightly different property names for
+ * genus and species, field extraction includes fallback lookups
+ * (e.g. trying {@code gattung} first, then {@code baumart}).
+ */
 public class BerlinProvider implements CityProvider {
 
     private static final String WFS_BASE = "https://gdi.berlin.de/services/wfs/baumbestand?service=WFS&version=2.0.0&request=GetFeature&outputFormat=application/json";
@@ -35,9 +49,14 @@ public class BerlinProvider implements CityProvider {
         return new double[]{52.34, 13.08, 52.68, 13.76};
     }
     
+    /**
+     * Processes both WFS layers by creating a temporary {@link AbstractGeoJsonProvider}
+     * per layer that reuses this provider's metadata and feature-mapping logic.
+     */
     @Override
     public void processData(DatabaseExporter exporter) throws Exception {
-        // Berlin uses WFS which has two layers. We delegate to two dummy providers.
+        // Berlin uses WFS which has two layers.  Each layer is processed by
+        // an anonymous AbstractGeoJsonProvider that handles pagination.
         String[] layers = {"baumbestand:strassenbaeume", "baumbestand:anlagenbaeume"};
         
         for (String layer : layers) {
@@ -70,6 +89,11 @@ public class BerlinProvider implements CityProvider {
         }
     }
 
+    /**
+     * Maps a single GeoJSON Feature to a {@link TreeRecord}, applying fallback
+     * field lookups for genus and species names that may differ between
+     * the street-tree and park-tree WFS layers.
+     */
     protected TreeRecord mapFeatureToTree(JsonNode feature, String layer) {
         JsonNode props = feature.path("properties");
         JsonNode geom = feature.path("geometry");
@@ -88,7 +112,7 @@ public class BerlinProvider implements CityProvider {
         if (idStr.isEmpty()) idStr = UUID.randomUUID().toString();
         String id = getCityId() + "_" + idStr;
         
-        // Extract fields
+        // Try multiple property names: the two layers use different field names
         String gattungDe = props.path("gattung").asText("");
         if (gattungDe.isEmpty() || gattungDe.equals("null")) gattungDe = props.path("baumart").asText("");
 

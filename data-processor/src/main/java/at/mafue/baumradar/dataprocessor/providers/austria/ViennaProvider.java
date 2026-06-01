@@ -18,6 +18,16 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * City provider for <strong>Vienna, Austria</strong>.
+ *
+ * <p>Downloads the municipal tree cadastre (Baumkataster) from the Vienna
+ * Open Government Data portal ({@code data.wien.gv.at}) as a WFS CSV export.
+ * The CSV uses commas as delimiters and may contain quoted fields with
+ * embedded commas.  Coordinates are delivered either as a WKT
+ * {@code POINT(lon lat)} in the {@code SHAPE} column or as separate
+ * {@code LAT}/{@code LON} columns, depending on the WFS version.
+ */
 public class ViennaProvider extends AbstractCsvProvider {
 
     private static final String CSV_URL = "https://data.wien.gv.at/daten/geo?service=WFS&request=GetFeature&version=1.1.0&typeName=ogdwien:BAUMKATOGD&srsName=EPSG:4326&outputFormat=csv";
@@ -54,11 +64,20 @@ public class ViennaProvider extends AbstractCsvProvider {
         return CSV_URL;
     }
 
+    /**
+     * Regex that splits on commas but respects double-quoted fields.
+     * This is necessary because the Vienna WFS CSV may contain commas
+     * inside quoted values (e.g. WKT geometry strings).
+     */
     @Override
     protected String getSplitRegex() {
         return ",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)";
     }
 
+    /**
+     * Dynamically discovers column indices from the header row.
+     * Falls back to hard-coded indices if key columns are not found.
+     */
     @Override
     protected void processHeaders(String[] headers) {
         for (int i = 0; i < headers.length; i++) {
@@ -93,6 +112,7 @@ public class ViennaProvider extends AbstractCsvProvider {
         double lon = 0;
         
         if (shapeIdx != -1 && cols.length > shapeIdx) {
+            // Parse WKT POINT geometry: "POINT(lon lat)" format
             String shape = cols[shapeIdx].replaceAll("\"", "");
             shape = shape.replace("POINT", "").replace("(", "").replace(")", "").trim();
             String[] coords = shape.split(" ");
@@ -113,6 +133,7 @@ public class ViennaProvider extends AbstractCsvProvider {
             }
         }
         
+        // Skip trees without valid coordinates or with unknown/empty genus
         if (lat != 0 && lon != 0 && !gattungDe.isEmpty() && !gattungDe.equalsIgnoreCase("unbekannt")) {
             String gattungEn = Translator.translateGenus(gattungDe);
             String artEn = artDe.isEmpty() ? "" : Translator.translateSpecies(artDe);

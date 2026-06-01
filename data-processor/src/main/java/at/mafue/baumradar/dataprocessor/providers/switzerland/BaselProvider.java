@@ -10,6 +10,15 @@ import at.mafue.baumradar.dataprocessor.utils.*;
 import com.fasterxml.jackson.databind.JsonNode;
 import java.util.UUID;
 
+/**
+ * City provider for <strong>Basel, Switzerland</strong>.
+ *
+ * <p>Downloads the tree cadastre from the Canton of Basel-Stadt’s
+ * Opendatasoft-based open-data portal as paginated GeoJSON.  The genus
+ * is extracted from the first word of the Latin botanical species name
+ * ({@code baumart_lateinisch}), similar to the approach used by
+ * {@link at.mafue.baumradar.dataprocessor.providers.germany.FreiburgProvider}.
+ */
 public class BaselProvider extends AbstractGeoJsonProvider {
 
     @Override
@@ -62,12 +71,13 @@ public class BaselProvider extends AbstractGeoJsonProvider {
         String artEn = "";
         String genusEn = "";
         
+        // Extract genus from the first word of the Latin species name
         if (!baumart_lateinisch.isEmpty()) {
             String[] parts = baumart_lateinisch.split(" ");
             if (parts.length > 0) genusDe = parts[0];
             genusEn = Translator.translateGenus(genusDe);
         } else {
-            return null; // Ohne Gattung kein Geofence
+            return null; // Without a genus, geofence clustering is not possible
         }
 
         return new TreeRecord(id, getCityId(), lat, lon, genusDe, genusEn, artDe, artEn);

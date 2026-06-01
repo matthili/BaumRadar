@@ -10,6 +10,17 @@ import at.mafue.baumradar.dataprocessor.utils.*;
 import com.fasterxml.jackson.databind.JsonNode;
 import java.util.UUID;
 
+/**
+ * City provider for <strong>Dortmund, Germany</strong>.
+ *
+ * <p>Downloads the tree cadastre from Dortmund's Opendatasoft-based open-data
+ * portal as paginated GeoJSON exports.  Property field names are truncated
+ * (e.g. {@code art_botani} instead of {@code art_botanisch}), which is a
+ * common artifact of Shapefile-origin datasets with 10-character field limits.
+ *
+ * <p>The genus is derived from the first word of the botanical species name,
+ * following the same convention as {@link FreiburgProvider}.
+ */
 public class DortmundProvider extends AbstractGeoJsonProvider {
 
     @Override
@@ -60,11 +71,12 @@ public class DortmundProvider extends AbstractGeoJsonProvider {
         
         String genusDe = "";
         
+        // Extract genus from the first word of the Latin botanical species name
         if (!art_botani.isEmpty()) {
             String[] parts = art_botani.split(" ");
             if (parts.length > 0) genusDe = parts[0];
         } else {
-            return null;
+            return null; // Cannot classify without a botanical name
         }
         
         String genusEn = Translator.translateGenus(genusDe);

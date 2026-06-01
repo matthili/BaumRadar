@@ -14,6 +14,19 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
+/**
+ * BroadcastReceiver, der Geofence-Übergänge vom Android-Betriebssystem empfängt.
+ *
+ * Behandelt zwei Arten von Geofence-Ereignissen:
+ * - **TREE_*-ENTER**: Der Nutzer betritt den Bereich eines allergenen Baum-Hotspots.
+ *   Es wird eine Push-Benachrichtigung mit dem Gattungsnamen gesendet.
+ * - **UPDATE_ZONE-EXIT**: Der Nutzer verlässt die 2-km-Update-Zone.
+ *   Die 99 nächsten Geofences werden anhand des neuen Standorts neu registriert.
+ *
+ * `goAsync()` wird verwendet, um die asynchrone Geofence-Neuregistrierung
+ * abzuschließen, bevor das System den Receiver beendet (BroadcastReceiver
+ * haben standardmäßig nur ca. 10 Sekunden Laufzeit).
+ */
 class GeofenceBroadcastReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
@@ -47,13 +60,22 @@ class GeofenceBroadcastReceiver : BroadcastReceiver() {
                 }
             } else if (requestId.startsWith("TREE_") && transition == Geofence.GEOFENCE_TRANSITION_ENTER) {
                 // User entered an allergenic tree zone!
-                // requestId format: "TREE_{uuid}_{genusDe}" – genusDe can contain spaces/parens
+                // Format der Request-ID: "TREE_{uuid}_{genusDe}"
+                // Der Gattungsname wird nach dem zweiten Unterstrich extrahiert
+                // und kann Leerzeichen/Klammern enthalten (z. B. "Acer (Ahorn)")
                 val genus = requestId.removePrefix("TREE_").substringAfter("_")
                 sendNotification(context, genus)
             }
         }
     }
 
+    /**
+     * Sendet eine lokale Push-Benachrichtigung über einen allergenen Baum in der Nähe.
+     *
+     * Ab Android O (API 26) ist ein NotificationChannel Pflicht. Der Channel
+     * wird bei jedem Aufruf erstellt, was idempotent ist (Android ignoriert
+     * doppelte Channel-Registrierungen).
+     */
     private fun sendNotification(context: Context, treeName: String) {
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val channelId = "baumradar_alerts"
@@ -77,7 +99,9 @@ class GeofenceBroadcastReceiver : BroadcastReceiver() {
             .setAutoCancel(true)
             .build()
 
-        // Use a semi-random ID to allow multiple distinct tree alerts
+        // Notification-ID auf Basis des Baumnamens-Hashcodes: Damit können
+        // mehrere verschiedene Baum-Warnungen gleichzeitig sichtbar sein,
+        // ohne sich gegenseitig zu überschreiben
         notificationManager.notify(treeName.hashCode(), notification)
     }
 }

@@ -24,6 +24,19 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import at.mafue.baumradar.app.R
 import java.util.Locale
 
+/**
+ * Allergieprofil-Bildschirm mit erweiterbarer Baumgattungs-Liste.
+ *
+ * Zeigt alle verfügbaren Baumgattungen gruppiert an. Jede Gattung kann aufgeklappt
+ * werden, um einzelne Arten auszuwählen. Pro Art gibt es zwei Optionen:
+ * - **Warnung** (⚠️): Aktiviert Geofence-Benachrichtigungen bei Annäherung
+ * - **Umfahren** (🚫): Gattung wird beim Routing gemieden
+ *
+ * Die Gattungs-Überschrift nutzt einen [TriStateCheckbox]:
+ * - Alle Arten ausgewählt → On
+ * - Einige Arten ausgewählt → Indeterminate
+ * - Keine Art ausgewählt → Off
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen() {
@@ -84,6 +97,8 @@ fun ProfileScreen() {
         LazyColumn(modifier = Modifier.fillMaxSize()) {
             filteredTrees.forEach { group ->
                 val isExpanded = expandedStates[group.genusLatin] == true || searchQuery.isNotBlank()
+                // TriState-Logik: Zähle, wie viele Arten der Gattung ausgewählt sind,
+                // um den richtigen Checkbox-Zustand (On/Off/Indeterminate) zu bestimmen
                 val selectedCount = group.speciesList.count { it.genusDe?.let { de -> selectedTrees.contains(de) } == true }
                 
                 val triState = when {

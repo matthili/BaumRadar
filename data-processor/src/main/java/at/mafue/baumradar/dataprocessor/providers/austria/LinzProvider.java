@@ -18,6 +18,17 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * City provider for <strong>Linz, Austria</strong>.
+ *
+ * <p>Downloads the municipal tree cadastre from the Linz Open Data portal
+ * ({@code data.linz.gv.at}) as a semicolon-delimited CSV file.  Coordinates
+ * use German decimal notation (comma as decimal separator), which is
+ * normalized to dots during parsing.
+ *
+ * <p>The Linz dataset provides genus and species in Latin rather than
+ * German, so the Latin name is used as the English translation fallback.
+ */
 public class LinzProvider extends AbstractCsvProvider {
 
     private static final String CSV_URL = "https://data.linz.gv.at/katalog/umwelt/baumkataster/Baumkataster.csv";
@@ -54,6 +65,7 @@ public class LinzProvider extends AbstractCsvProvider {
         return CSV_URL;
     }
 
+    /** Linz CSV uses semicolons as column delimiters. */
     @Override
     protected String getSplitRegex() {
         return ";";
@@ -98,6 +110,7 @@ public class LinzProvider extends AbstractCsvProvider {
         
         if (latIdx != -1 && lonIdx != -1 && cols.length > Math.max(latIdx, lonIdx)) {
             try {
+                // Convert German decimal comma (e.g. "48,3066") to dot notation
                 lat = Double.parseDouble(cols[latIdx].trim().replaceAll("\"", "").replace(",", "."));
                 lon = Double.parseDouble(cols[lonIdx].trim().replaceAll("\"", "").replace(",", "."));
             } catch (NumberFormatException e) {
@@ -106,6 +119,8 @@ public class LinzProvider extends AbstractCsvProvider {
         }
         
         if (lat != 0 && lon != 0 && !nameDe.isEmpty()) {
+            // Linz provides Latin genus/species names; use the Latin form as the
+            // English "translation" since Latin botanical names are internationally understood.
             String genusEn = gattungLat.isEmpty() ? Translator.translateGenus(nameDe) : gattungLat;
             String speciesEn = artLat.isEmpty() ? "" : artLat;
 

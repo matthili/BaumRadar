@@ -12,12 +12,29 @@ import at.mafue.baumradar.app.background.GeofenceManager
 import com.google.android.gms.location.LocationServices
 import android.annotation.SuppressLint
 
+/**
+ * Gruppiert Baumarten nach botanischer Gattung (Genus) für die Profilansicht.
+ *
+ * Jede Gattung (z. B. "Acer") enthält eine Liste ihrer Unterarten (z. B. "Acer platanoides").
+ * Der Trivialname (z. B. "Ahorn") wird aus den Klammer-Bezeichnungen der Artenliste extrahiert.
+ */
 data class GenusGroup(
     val genusLatin: String,
     val genusTrivial: String,
     val speciesList: List<TreeSpeciesDTO>
 )
 
+/**
+ * ViewModel für die Allergieprofil-Ansicht.
+ *
+ * Verwaltet die Auswahl allergener Baumgattungen in zwei Kategorien:
+ * - **Umfahren** (selectedTrees): Gattungen werden beim Routing gemieden
+ * - **Warnung** (warnTrees): Geofence-Benachrichtigungen sind aktiviert
+ *
+ * Die Baumarten werden nach lateinischer Gattung gruppiert und mit einem
+ * Suchfilter versehen. Änderungen an der Warn-Auswahl lösen sofort eine
+ * Neuregistrierung der Geofences aus.
+ */
 class ProfileViewModel(application: Application) : AndroidViewModel(application) {
     private val allergyDataStore = AllergyDataStore(application)
     private val db = AppDatabase.getInstance(application)
@@ -66,11 +83,22 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
         loadData()
     }
 
+    /**
+     * Lädt und strukturiert die verfügbaren Baumarten aus der Datenbank.
+     *
+     * Ablauf:
+     * 1. Alle Arten mit gültigem deutschen Gattungsnamen laden
+     * 2. Ungültige Einträge herausfiltern (z. B. "Baumgruppe", "Laubbaum")
+     * 3. Nach lateinischer Gattung gruppieren
+     * 4. Trivialnamen aus Klammerausdrücken extrahieren (z. B. "spec. (Ahorn)" → "Ahorn")
+     */
     private fun loadData() {
         viewModelScope.launch {
             val speciesList = db.treeDao().getAvailableSpecies()
             
-            // 1. Data Sanitization (Filter out known garbage entries)
+            // Datenbereinigung: Bestimmte Einträge in kommunalen Baumkatastern sind
+            // keine echten Gattungsnamen, sondern Platzhalterkategorien. Diese werden
+            // hier anhand bekannter Präfixe herausgefiltert.
             val invalidPrefixes = setOf(
                 "baumgruppe", "laubbaum", "obstbaum", "nicht", "jungbaum", "nadelbaum", "wald"
             )
@@ -80,7 +108,8 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
                 name.isNotBlank() && invalidPrefixes.none { name.startsWith(it) }
             }
 
-            // 2. Group by Latin Genus and Extract Trivial Names
+            // Gruppierung: Das erste Wort des deutschen Gattungsnamens ist der
+            // lateinische Gattungsname (z. B. "Acer platanoides (Spitz-Ahorn)" → "Acer")
             val tempGrouped = validSpecies
                 .groupBy { it.genusDe!!.split(" ").first() }
                 .toSortedMap()
@@ -100,8 +129,7 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    // Removed internal extractTrivialName, using TaxonomyUtils instead
-
+    /** Schaltet die Routing-Vermeidung für eine einzelne Baumart um. */
     fun toggleSpeciesSelection(speciesId: String) {
         val current = _selectedTrees.value.toMutableSet()
         if (current.contains(speciesId)) {
@@ -129,6 +157,10 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    /**
+     * Schaltet alle Arten einer Gattung gleichzeitig ein oder aus.
+     * Ermöglicht z. B. "alle Birken auf einmal auswählen".
+     */
     fun toggleGenusGroup(genusLatin: String, isChecked: Boolean) {
         val current = _selectedTrees.value.toMutableSet()
         val group = _groupedTrees.value[genusLatin] ?: return
@@ -160,6 +192,13 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    /**
+     * Löst im Hintergrund eine Neuregistrierung der Geofences aus.
+     *
+     * Wird nach jeder Änderung der Warn-Auswahl aufgerufen, damit die
+     * Geofences beim Betriebssystem aktualisiert werden, ohne dass der
+     * Nutzer die App neu starten muss.
+     */
     @SuppressLint("MissingPermission")
     private fun updateGeofencesBackground() {
         val fusedLocationClient = LocationServices.getFusedLocationProviderClient(getApplication<Application>())

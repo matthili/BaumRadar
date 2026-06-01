@@ -7,6 +7,19 @@ import at.mafue.baumradar.dataprocessor.providers.switzerland.*;
 import at.mafue.baumradar.dataprocessor.models.*;
 import at.mafue.baumradar.dataprocessor.utils.*;
 
+/**
+ * Immutable data-transfer object representing a spatial geofence cluster.
+ *
+ * <p>A geofence is a circular region defined by a center point
+ * ({@code latitude}/{@code longitude}) and a {@code radius} in meters.
+ * It aggregates a {@code count} of nearby trees that share the same
+ * German genus name ({@code genusDe}). These clusters are produced by
+ * {@link at.mafue.baumradar.dataprocessor.utils.GeofenceClusterer} and
+ * persisted in the {@code geofences} table of the per-city SQLite database.
+ *
+ * <p>The Android app uses these records to trigger proximity notifications
+ * without querying every individual tree row at runtime.
+ */
 public class GeofenceRecord {
     public final String id;
     public final String cityId;

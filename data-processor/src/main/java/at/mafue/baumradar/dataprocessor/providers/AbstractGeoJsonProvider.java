@@ -23,10 +23,28 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Template Method base class for city providers whose open-data portal
+ * delivers tree data as GeoJSON over HTTP.
+ *
+ * <p>Subclasses implement:
+ * <ul>
+ *   <li>{@link #getGeoJsonUrl(int)} — the paginated download URL</li>
+ *   <li>{@link #mapFeatureToTree(JsonNode)} — Feature-to-{@link TreeRecord} mapping</li>
+ * </ul>
+ * Optionally, {@link #isZipped()} and {@link #supportsPagination()} can be
+ * overridden for portals that deliver ZIP-wrapped responses or do not support
+ * offset-based pagination.
+ *
+ * <p>GeoJSON is parsed with a streaming Jackson {@link JsonParser} so that
+ * only one Feature node is held in memory at a time, which is critical for
+ * cities like Berlin that deliver hundreds of thousands of tree records.
+ */
 public abstract class AbstractGeoJsonProvider implements CityProvider {
 
     protected final Logger logger = LoggerFactory.getLogger(getClass());
 
+    /** Number of tree records accumulated before flushing a batch to the database. */
     protected static final int BATCH_SIZE = 5000;
 
     /**
@@ -54,6 +72,11 @@ public abstract class AbstractGeoJsonProvider implements CityProvider {
         return true;
     }
 
+    /**
+     * Downloads and parses GeoJSON data in a pagination loop, mapping each
+     * Feature to a {@link TreeRecord} and batch-inserting valid records.
+     * After all pages are exhausted, geofence clusters are computed and exported.
+     */
     @Override
     public void processData(DatabaseExporter exporter) throws Exception {
         logger.info("Downloading & Parsing GeoJSON Stream for {}", getName());
@@ -110,7 +133,9 @@ public abstract class AbstractGeoJsonProvider implements CityProvider {
                 try (JsonParser parser = factory.createParser(is)) {
                     boolean featuresFound = false;
                     
-                    // Advanced parsing: stream until we find "features" array
+                    // Use streaming JSON parsing: advance through the top-level object
+                    // until the "features" array is found, then parse each Feature
+                    // individually via readTree() to avoid loading the entire array.
                     while (!parser.isClosed()) {
                         JsonToken token = parser.nextToken();
                         if (token == null) break;

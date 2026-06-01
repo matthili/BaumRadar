@@ -9,6 +9,15 @@ import org.json.JSONObject
 import java.io.IOException
 import android.util.Log
 
+/**
+ * Ergebnis einer einzelnen berechneten Route.
+ *
+ * @property polylinePoints  Liste von (lat, lon)-Paaren, die den Routenverlauf beschreiben
+ * @property rawGeoJson      Rohe OSRM-Antwort im GeoJSON-Format (für Debugging/Export)
+ * @property durationSec     Geschätzte Reisezeit in Sekunden
+ * @property distanceMeters  Gesamtlänge der Route in Metern
+ * @property collisionCount  Anzahl der Allergie-Hotspots, die diese Route durchquert
+ */
 data class RouteResult(
     val polylinePoints: List<Pair<Double, Double>>,
     val rawGeoJson: String,
@@ -17,6 +26,18 @@ data class RouteResult(
     val collisionCount: Int = 0
 )
 
+/**
+ * HTTP-Client für die Kommunikation mit dem OSRM-Routing-Service (OpenStreetMap).
+ *
+ * Implementiert eine mehrstufige Routing-Strategie zur Allergen-Vermeidung:
+ * 1. Standard-Route und bis zu 3 Alternativen von OSRM anfordern
+ * 2. Kollisionen jeder Route mit den Allergie-Geofences zählen
+ * 3. Falls Kollisionen existieren: Ausweich-Wegpunkte berechnen und
+ *    eine Umfahrungsroute über OSRM anfordern (bis zu 2 Iterationen)
+ * 4. Alle Routen deduplizieren und nach Kollisionsanzahl + Dauer sortieren
+ *
+ * Die OSRM-Instanz wird von openstreetmap.de gehostet (kostenlos, ohne API-Key).
+ */
 class OsrmRoutingClient {
     private val client = OkHttpClient()
     private val TAG = "OsrmRoutingClient"
@@ -99,7 +120,9 @@ class OsrmRoutingClient {
                 }
             }
 
-            // Deduplizieren (gleiche Routenlänge = wahrscheinlich identisch)
+            // Deduplizierung: Routen mit identischer Punktanzahl, Distanz und
+            // Kollisionszahl sind mit hoher Wahrscheinlichkeit identische Routen
+            // aus verschiedenen Anfragen
             val uniqueRoutes = allRoutes.distinctBy { 
                 "${it.polylinePoints.size}_${it.distanceMeters.toInt()}_${it.collisionCount}" 
             }
@@ -110,6 +133,14 @@ class OsrmRoutingClient {
         }
     }
 
+    /**
+     * Baut die OSRM-Service-URL basierend auf dem Fortbewegungsprofil.
+     *
+     * Die openstreetmap.de-Instanz bietet separate Endpunkte für
+     * Fußgänger, Radfahrer und Autofahrer. Trotz der Profile-Namen
+     * enden alle Pfade auf `/v1/driving` – das ist kein Fehler, sondern
+     * die OSRM-Konvention dieser Hosting-Instanz.
+     */
     private fun buildProfileUrl(profile: String): String {
         val routeProfile = when (profile) {
             "foot" -> "routed-foot/route/v1/driving"
@@ -165,6 +196,12 @@ class OsrmRoutingClient {
         return routeResults
     }
 
+    /**
+     * Parst die GeoJSON-Koordinaten aus der OSRM-Antwort.
+     *
+     * OSRM liefert Koordinaten im Format [lon, lat] (GeoJSON-Konvention),
+     * die hier in die App-Konvention (lat, lon) umgewandelt werden.
+     */
     private fun parseCoordinates(coordinates: org.json.JSONArray): List<Pair<Double, Double>> {
         val polyList = mutableListOf<Pair<Double, Double>>()
         for (i in 0 until coordinates.length()) {

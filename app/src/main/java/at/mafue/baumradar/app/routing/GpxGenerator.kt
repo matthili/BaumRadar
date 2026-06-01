@@ -8,8 +8,16 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+/**
+ * Generiert und teilt GPX-Dateien (GPS Exchange Format) für berechnete Routen.
+ *
+ * GPX 1.1 ist ein standardisiertes XML-Format, das von praktisch allen
+ * Navigations-Apps und GPS-Geräten unterstützt wird. Damit können
+ * allergenfreie Routen exportiert und in externen Apps weiterverwendet werden.
+ */
 object GpxGenerator {
 
+    /** Erzeugt einen GPX-1.1-konformen XML-String aus einem Routenergebnis. */
     fun generateGpxString(route: RouteResult): String {
         val sb = java.lang.StringBuilder()
         sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
@@ -33,6 +41,15 @@ object GpxGenerator {
         return sb.toString()
     }
 
+    /**
+     * Speichert die Route als GPX-Datei und öffnet den Android-Share-Dialog.
+     *
+     * Die Datei wird im Cache-Verzeichnis gespeichert und über einen FileProvider
+     * geteilt. FileProvider erzeugt eine `content://`-URI, die anderen Apps
+     * temporären Lesezugriff gewährt – sicherer als direkte Dateipfade.
+     *
+     * @param textDesc Beschreibungstext, der zusammen mit der Datei geteilt wird
+     */
     fun shareGpxRoute(context: Context, route: RouteResult, textDesc: String) {
         val gpxData = generateGpxString(route)
         

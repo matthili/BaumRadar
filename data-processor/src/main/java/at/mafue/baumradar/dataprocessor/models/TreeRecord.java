@@ -7,6 +7,18 @@ import at.mafue.baumradar.dataprocessor.providers.switzerland.*;
 import at.mafue.baumradar.dataprocessor.models.*;
 import at.mafue.baumradar.dataprocessor.utils.*;
 
+/**
+ * Flat data-transfer object representing a single urban tree.
+ *
+ * <p>Each record carries the tree's GPS coordinates, a city identifier, and
+ * bilingual genus/species names (German original plus English translation).
+ * Instances are created by {@link at.mafue.baumradar.dataprocessor.providers.CityProvider}
+ * implementations and subsequently batch-inserted into a per-city SQLite database
+ * via {@link at.mafue.baumradar.dataprocessor.utils.DatabaseExporter#insertBatch}.
+ *
+ * <p>Fields are intentionally kept public for simple, POJO-style access without
+ * boilerplate getters/setters.
+ */
 public class TreeRecord {
     public String id;
     public String cityId;

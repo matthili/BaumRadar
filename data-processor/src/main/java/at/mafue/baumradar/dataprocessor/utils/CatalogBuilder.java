@@ -13,8 +13,38 @@ import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * Generates the {@code catalog.json} discovery manifest consumed by the Android app.
+ *
+ * <p>The catalog lists every available city with its download URLs, signature
+ * URL, bounding box, and — when the compressed database was split into
+ * numbered parts — an array of chunk URLs.  The Android app fetches this
+ * single JSON file on startup to determine which city databases are
+ * available and where to download them.
+ *
+ * <p>JSON is assembled manually via {@link StringBuilder} to avoid adding
+ * a runtime dependency on a JSON serialization library in the data-processor
+ * module.
+ */
 public class CatalogBuilder {
     
+    /**
+     * Builds and writes the catalog JSON file.
+     *
+     * <p>For each {@link CityProvider} the method emits a JSON object containing:
+     * <ul>
+     *   <li>{@code id} / {@code name} / {@code country} — display metadata</li>
+     *   <li>{@code boundingBox} — initial map viewport for the city</li>
+     *   <li>{@code dbUrl} / {@code sigUrl} — download and signature URLs</li>
+     *   <li>{@code dbUrlChunks} (optional) — ordered list of chunk URLs when
+     *       the archive was split by {@link at.mafue.baumradar.dataprocessor.Main}</li>
+     * </ul>
+     *
+     * @param outputFile the target catalog JSON file
+     * @param providers  list of city providers whose metadata is included
+     * @param baseUrl    base URL prefix prepended to all file references
+     * @throws IOException if writing the file fails
+     */
     public static void build(File outputFile, List<CityProvider> providers, String baseUrl) throws IOException {
         StringBuilder sb = new StringBuilder();
         sb.append("{\n");
@@ -27,7 +57,9 @@ public class CatalogBuilder {
             String sigUrl = baseUrl + p.getCityId() + ".db.gz.sig";
             double[] box = p.getBoundingBox();
 
-            // Find chunks
+            // Detect numbered chunk files (e.g. wien.db.gz.001, .002, …) that
+            // were produced when the compressed database exceeded 50 MB.
+            // Scanning stops at the first missing index.
             java.util.List<String> chunks = new java.util.ArrayList<>();
             File outDir = outputFile.getParentFile();
             for (int j = 1; j < 100; j++) {

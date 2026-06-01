@@ -19,13 +19,33 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Template Method base class for city providers whose open-data portal
+ * delivers tree data as a CSV file over HTTP.
+ *
+ * <p>Subclasses only need to implement:
+ * <ul>
+ *   <li>{@link #getCsvUrl()} — the download URL</li>
+ *   <li>{@link #getSplitRegex()} — the column delimiter regex</li>
+ *   <li>{@link #mapRowToTree(String[], long)} — row-to-{@link TreeRecord} mapping</li>
+ * </ul>
+ * Optionally, {@link #processHeaders(String[])} can be overridden to
+ * dynamically discover column indices from the header row.
+ *
+ * <p>The base class handles HTTP download, line-by-line streaming, batch
+ * insertion into the database, and geofence cluster computation.
+ */
 public abstract class AbstractCsvProvider implements CityProvider {
 
     protected final Logger logger = LoggerFactory.getLogger(getClass());
 
+    /** Number of tree records accumulated before flushing a batch to the database. */
     protected static final int BATCH_SIZE = 5000;
 
+    /** Returns the HTTP URL from which the CSV data is downloaded. */
     protected abstract String getCsvUrl();
+
+    /** Returns the regex used to split each CSV line into columns (e.g. {@code ","} or {@code ";"}). */
     protected abstract String getSplitRegex();
     
     /**
@@ -40,6 +60,11 @@ public abstract class AbstractCsvProvider implements CityProvider {
      */
     protected abstract TreeRecord mapRowToTree(String[] row, long lineNumber);
 
+    /**
+     * Downloads the CSV file as a stream, parses it line by line, maps each row
+     * to a {@link TreeRecord}, and batch-inserts valid records into the database.
+     * After all rows are processed, geofence clusters are computed and exported.
+     */
     @Override
     public void processData(DatabaseExporter exporter) throws Exception {
         logger.info("Downloading & Parsing CSV Stream for {} from {}", getName(), getCsvUrl());
@@ -61,9 +86,11 @@ public abstract class AbstractCsvProvider implements CityProvider {
             }
             
             
+            // Parse the first line as headers to allow dynamic column discovery
             processHeaders(headerLine.split(getSplitRegex()));
             
             List<TreeRecord> batch = new ArrayList<>();
+            // Collects spatial data for all parsed trees to produce geofence clusters
             GeofenceClusterer clusterer = new GeofenceClusterer();
 
             String line;

@@ -20,10 +20,33 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Entry point for the BaumRadar data-processing pipeline.
+ *
+ * <p>This batch job downloads urban tree inventories from multiple European
+ * open-data portals (one {@link at.mafue.baumradar.dataprocessor.providers.CityProvider}
+ * per city), converts each into a per-city SQLite database, and publishes the
+ * resulting artifacts (compressed databases, cryptographic signatures, and a
+ * discovery catalog) to the {@code docs/data/} directory for static hosting.
+ *
+ * <p>Processing steps executed in order:
+ * <ol>
+ *   <li>Load or generate an Ed25519 key pair for database integrity signing.</li>
+ *   <li>Process all city providers <em>in parallel</em>, each writing its own
+ *       SQLite file, compressing it with GZIP, and signing the archive.</li>
+ *   <li>Generate {@code catalog.json} so the Android app can discover available
+ *       city databases at runtime.</li>
+ * </ol>
+ */
 public class Main {
     private static final Logger logger = LoggerFactory.getLogger(Main.class);
+    /** Filename for the Base64-encoded public key distributed alongside the databases. */
     private static final String PUB_KEY_FILE = "public_key.b64";
-    // Default URL configured for GitHub Pages / Raw from user's repository
+    /**
+     * Base URL under which the compiled data files are published.
+     * The catalog references this URL so the Android app knows where to
+     * download individual city databases and signature files.
+     */
     private static final String BASE_URL = "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/";
     
     public static void main(String[] args) {
@@ -64,7 +87,8 @@ public class Main {
             logger.info("   Public key saved/loaded at {}", pubKeyDest.getAbsolutePath());
 
             logger.info("2. Processing Cities in Parallel...");
-            // Use a Thread Pool to process cities simultaneously
+            // Each city provider runs in its own thread so that network I/O from
+            // different open-data portals overlaps, significantly reducing wall-clock time.
             ExecutorService executor = Executors.newFixedThreadPool(providers.size());
             
             for (CityProvider provider : providers) {
@@ -104,8 +128,10 @@ public class Main {
                         cryptoManager.signFile(gzFile, sigFile);
                         logger.info("[{}] Finished pipeline! Created {}.gz and .sig successfully.", provider.getName(), dbFileName);
 
-                        // Chunking for >50MB
-                        long maxSize = 50 * 1024 * 1024; // 50MB
+                        // GitHub Pages and many CDNs limit individual file sizes.
+                        // Archives exceeding 50 MB are split into numbered chunks
+                        // (e.g. berlin.db.gz.001, .002, …) that the app reassembles.
+                        long maxSize = 50 * 1024 * 1024; // 50 MB threshold
                         if (gzFile.length() > maxSize) {
                             logger.info("[{}] GZ file exceeds 50MB ({} bytes). Splitting into chunks...", provider.getName(), gzFile.length());
                             int chunkIndex = 1;
@@ -136,7 +162,9 @@ public class Main {
                             // Delete the un-chunked file so we don't commit it!
                             gzFile.delete();
                         } else {
-                            // Ensure old chunks are deleted if it was previously chunked
+                            // If a city's data shrank below the chunk threshold between runs,
+                            // stale chunk files from the previous build must be removed to
+                            // avoid the app downloading outdated partial files.
                             for (int i=1; i<100; i++) {
                                 File oldChunk = new File(outDir, String.format("%s.%03d", gzFile.getName(), i));
                                 if (oldChunk.exists()) oldChunk.delete(); else break;

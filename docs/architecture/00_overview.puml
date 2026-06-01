@@ -1,0 +1,37 @@
+@startuml
+skinparam backgroundColor transparent
+skinparam componentStyle rectangle
+skinparam shadowing false
+skinparam defaultFontName Inter
+skinparam padding 8
+skinparam roundCorner 12
+
+' Vertikales Layout (top to bottom statt left to right)
+top to bottom direction
+
+skinparam rectangle {
+  BackgroundColor<<source>> #E8F5E9
+  BorderColor<<source>> #4CAF50
+  BackgroundColor<<backend>> #E3F2FD
+  BorderColor<<backend>> #1976D2
+  BackgroundColor<<github>> #F3E5F5
+  BorderColor<<github>> #7B1FA2
+  BackgroundColor<<app>> #FFF3E0
+  BorderColor<<app>> #F57C00
+}
+
+rectangle "🌐  Open-Data-Quellen\n10 Städte · AT / DE / CH\nBaumkataster-Datensätze" as Src <<source>>
+
+rectangle "⚙️  Java-Backend (Data-Processor)\n· Einlesen & Normalisieren\n· Gattungs-Übersetzung (DE/EN)\n· Räumliches Clustering → Geofences\n· GZIP-Kompression + Chunk-Split\n· Ed25519-Signatur" as BE <<backend>>
+
+rectangle "📦  GitHub Repository\nSignierte SQLite-Datenbanken\n+ catalog.json" as GH <<github>>
+
+rectangle "📱  Android-App (Kotlin / Compose)\n· Signaturprüfung (Zero Trust)\n· Offline-First (Room DB)\n· OSM-Karte + AR-Kompass-Pfeile\n· Allergiefreies Routing (OSRM)\n· Geofence-Annäherungswarnung" as App <<app>>
+
+actor "Nutzer:in\n(Allergie-Profil)" as User
+
+Src -down-> BE : einlesen
+BE -down-> GH : publish
+GH -down-> App : download\n& verify
+User -right-> App
+@enduml

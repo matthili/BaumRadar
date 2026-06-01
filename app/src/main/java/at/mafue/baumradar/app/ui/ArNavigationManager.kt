@@ -13,6 +13,21 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlin.math.*
 
+/**
+ * Verwaltet GPS-Standort und Kompass-Ausrichtung für die Karten- und AR-Ansicht.
+ *
+ * Kombiniert zwei Sensorquellen:
+ * - **FusedLocationProvider** (Google Play Services): Liefert GPS-Standorte
+ *   mit 2-Sekunden-Intervall bei hoher Genauigkeit
+ * - **TYPE_ROTATION_VECTOR**: Sensor-Fusion aus Gyroskop, Magnetometer und
+ *   Beschleunigungssensor für eine stabile Kompassrichtung
+ *
+ * Die Kompassdaten werden mit einem Tiefpassfilter (Exponential Moving Average)
+ * geglättet, um Zittern in der AR-Darstellung zu vermeiden.
+ *
+ * Stellt außerdem statische Hilfsfunktionen für geographische Berechnungen
+ * bereit ([calculateDistance], [calculateBearing]).
+ */
 class ArNavigationManager(private val context: Context) : SensorEventListener {
 
     private val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
@@ -29,7 +44,14 @@ class ArNavigationManager(private val context: Context) : SensorEventListener {
 
     // Smoothing the compass via a simple low-pass filter
     private var smoothedAzimuth = 0f
-    private val ALPHA = 0.15f // Lower means more smoothing
+    /**
+     * Glättungsfaktor für den Tiefpassfilter des Kompasses.
+     *
+     * Formel: `smoothed = smoothed + ALPHA * (current - smoothed)`
+     * Kleinere Werte = stärkere Glättung (trägere Reaktion).
+     * 0.15 bietet einen guten Kompromiss zwischen Reaktionszeit und Stabilität.
+     */
+    private val ALPHA = 0.15f
 
     private val locationCallback = object : LocationCallback() {
         override fun onLocationResult(result: LocationResult) {
@@ -55,7 +77,9 @@ class ArNavigationManager(private val context: Context) : SensorEventListener {
             Looper.getMainLooper()
         )
 
-        // Immediately fetch the last known location to avoid waiting for the first GPS fix
+        // Sofort den zuletzt bekannten Standort übernehmen, um die Wartezeit
+        // bis zum ersten GPS-Fix zu überbrücken (LastLocation ist gecacht und
+        // verursacht keinen zusätzlichen Energieverbrauch)
         fusedLocationClient.lastLocation.addOnSuccessListener { loc ->
             if (loc != null && _currentLocation.value == null) {
                 _currentLocation.value = loc
@@ -80,12 +104,15 @@ class ArNavigationManager(private val context: Context) : SensorEventListener {
             var currentAzimuth = Math.toDegrees(orientation[0].toDouble()).toFloat()
             if (currentAzimuth < 0) currentAzimuth += 360f
 
-            // Handle 360 -> 0 wrap around for smoothing
+            // Sonderbehandlung für den 360°/0°-Übergang:
+            // Ohne diese Korrektur würde der Tiefpassfilter bei einem Wechsel
+            // von z. B. 359° → 1° den Wert auf ~180° glätten statt auf ~0°.
             if (abs(currentAzimuth - smoothedAzimuth) > 180) {
                 if (currentAzimuth > smoothedAzimuth) smoothedAzimuth += 360
                 else smoothedAzimuth -= 360
             }
 
+            // Exponential Moving Average (EMA) als Tiefpassfilter
             smoothedAzimuth = smoothedAzimuth + ALPHA * (currentAzimuth - smoothedAzimuth)
             
             var normalizedAzimuth = smoothedAzimuth % 360
@@ -99,16 +126,17 @@ class ArNavigationManager(private val context: Context) : SensorEventListener {
 
     companion object {
         /**
-         * Calculates the distance between two points on the Earth's surface using the Haversine formula.
-         * The Haversine formula provides great-circle distances between two points on a sphere
-         * from their longitudes and latitudes.
-         * 
-         * Formula:
-         * a = sinÂ²(Î”lat/2) + cos(lat1).cos(lat2).sinÂ²(Î”long/2)
-         * c = 2.atan2(âˆša, âˆš(1âˆ’a))
-         * d = R.c
-         * 
-         * @return distance in meters
+         * Berechnet die Großkreis-Distanz zwischen zwei Koordinaten nach der Haversine-Formel.
+         *
+         * Die Haversine-Formel liefert exakte Ergebnisse für beliebige Entfernungen auf einer
+         * Kugel. Sie ist numerisch stabiler als die Sphärische Kosinusformel bei kleinen Distanzen.
+         *
+         * Formel:
+         * a = sin²(Δlat/2) + cos(lat1) · cos(lat2) · sin²(Δlon/2)
+         * c = 2 · atan2(√a, √(1−a))
+         * d = R · c
+         *
+         * @return Distanz in Metern
          */
         fun calculateDistance(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
             val R = 6371e3 // Earth's radius in meters
@@ -126,10 +154,13 @@ class ArNavigationManager(private val context: Context) : SensorEventListener {
         }
 
         /**
-         * Calculates the initial bearing from point 1 to point 2.
-         * Bearing is the direction you need to move to get from point 1 to point 2 directly.
-         * 
-         * @return bearing in degrees [0, 360)
+         * Berechnet den Anfangskurs (Initial Bearing) von Punkt 1 zu Punkt 2.
+         *
+         * Der Bearing ist die Richtung in Grad (0° = Nord, 90° = Ost), in die
+         * man sich bewegen muss, um auf dem kürzesten Weg von Punkt 1 zu Punkt 2
+         * zu gelangen. Wird für die AR-Pfeilrichtung verwendet.
+         *
+         * @return Kurs in Grad [0, 360)
          */
         fun calculateBearing(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
             val phi1 = Math.toRadians(lat1)

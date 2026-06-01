@@ -57,6 +57,18 @@ import org.osmdroid.views.overlay.Polygon
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 import at.mafue.baumradar.app.routing.GpxGenerator
 
+/**
+ * Kombinierter Karten- und AR-Bildschirm – das Herzstück der App-Oberfläche.
+ *
+ * Schichtet drei Ebenen übereinander:
+ * 1. [MapViewContent] – OSMDroid-Kartenansicht mit Baum-Markern, Geofence-Kreisen und Routen
+ * 2. [ArOverlay] – Semitransparentes Canvas mit Richtungspfeilen zu nahen Bäumen
+ * 3. UI-Controls – Routing-Formular, FABs, Routen-Chips, Dialoge
+ *
+ * Behandelt außerdem die Standortberechtigungs-Anfrage: Bei fehlender Berechtigung
+ * wird ein erklärender Bildschirm mit einem Button zur Berechtigungsanfrage angezeigt.
+ * Nach dauerhafter Ablehnung wird stattdessen zu den Systemeinstellungen weitergeleitet.
+ */
 @Composable
 fun MapArScreen() {
     val context = LocalContext.current.applicationContext as Application
@@ -103,7 +115,8 @@ fun MapArScreen() {
             viewModel.startTracking()
         }
         
-        // Setup OSMDroid Config
+        // OSMDroid benötigt einen gültigen User-Agent-String, da der Tile-Server
+        // anonyme Anfragen blockiert. Der Package-Name ist eindeutig und ausreichend.
         Configuration.getInstance().userAgentValue = context.packageName
     }
 
@@ -570,9 +583,10 @@ fun MapArScreen() {
                 val shouldShowRationale = activity.shouldShowRequestPermissionRationale(
                     Manifest.permission.ACCESS_FINE_LOCATION
                 )
-                // shouldShowRationale is false both on first launch AND after permanent denial.
-                // Use permissionRequested to distinguish: if we already asked and rationale is false,
-                // the user selected "Don't ask again" → open Settings.
+                // Erkennung der dauerhaften Ablehnung: shouldShowRationale ist false
+                // sowohl beim allerersten Aufruf ALS AUCH nach "Nicht erneut fragen".
+                // Nur anhand von permissionRequested lässt sich unterscheiden, ob
+                // die Berechtigung bereits einmal angefragt wurde.
                 val canAskAgain = shouldShowRationale || !permissionRequested
                 Button(onClick = {
                     if (canAskAgain) {
@@ -605,6 +619,19 @@ fun MapArScreen() {
     }
 }
 
+/**
+ * Kartenansicht basierend auf OSMDroid (OpenStreetMap).
+ *
+ * Verwendet [AndroidView], um die imperative MapView in Compose einzubetten.
+ * Bei jedem Recompose (update-Lambda) werden alle Overlays neu gezeichnet:
+ * - Baum-Marker (gelb)
+ * - Geofence-Kreise (rot, halbtransparent)
+ * - Start/Ziel-Marker (grün/blau)
+ * - Routenpolyline
+ *
+ * MyLocationOverlay und MapEventsOverlay werden beim Neuzeichnen bewusst
+ * beibehalten, da sie internen Zustand führen (GPS-Tracking, Touch-Events).
+ */
 @Composable
 fun MapViewContent(viewModel: MapViewModel) {
     val context = LocalContext.current
@@ -666,7 +693,9 @@ fun MapViewContent(viewModel: MapViewModel) {
                 }
             }
             
-            // Clear old markers, preserve MyLocationOverlay and MapEventsOverlay
+            // Alle dynamischen Overlays entfernen, aber MyLocationOverlay und
+            // MapEventsOverlay erhalten. Diese führen internen Zustand (GPS-Tracking,
+            // Touch-Events) und dürfen nicht neu erstellt werden.
             val myLoc = map.overlays.find { it is MyLocationNewOverlay }
             val mapEv = map.overlays.find { it is MapEventsOverlay }
             map.overlays.clear()
@@ -704,7 +733,8 @@ fun MapViewContent(viewModel: MapViewModel) {
                 map.overlays.add(marker)
             }
 
-            // Draw Geofences (Red semi-transparent circles)
+            // Geofence-Kreise zeichnen: Die Vereinigung aus Routing-Geofences und
+            // sichtbaren Geofences wird dedupliziert, damit kein Kreis doppelt erscheint
             val geofencesToDraw = (currentGeofences + visibleGeofences).distinctBy { it.id }
             geofencesToDraw.forEach { fence ->
                 val polygon = Polygon(map).apply {
@@ -760,6 +790,17 @@ fun MapViewContent(viewModel: MapViewModel) {
     )
 }
 
+/**
+ * AR-ähnliches Overlay, das Richtungspfeile zu nahen allergenen Bäumen zeichnet.
+ *
+ * Für jeden der 15 nächsten Bäume wird geprüft, ob er außerhalb des
+ * simulierten Sichtfelds (60°) liegt. Falls ja, wird ein halbtransparenter
+ * roter Pfeil am Rand eines virtuellen Kreises gezeichnet, der in die
+ * Richtung des Baumes zeigt. Die Distanz wird als Beschriftung angezeigt.
+ *
+ * Die Pfeilrichtung ergibt sich aus der Differenz zwischen Kompass-Azimut
+ * und dem Bearing zum Baum (relativeBearing).
+ */
 @Composable
 fun ArOverlay(viewModel: MapViewModel) {
     val location by viewModel.location.collectAsState()
@@ -776,7 +817,8 @@ fun ArOverlay(viewModel: MapViewModel) {
     val fov = 60f // Total FOV of screen
     val halfFov = fov / 2f
 
-    // Calculate distances and take only top 15 closest trees to avoid arrow-blobs
+    // Nur die 15 nächsten Bäume berücksichtigen, um die Canvas-Darstellung
+    // übersichtlich zu halten (zu viele Pfeile wären unleserlich)
     val treesWithDistance = remember(trees, location) {
         trees.map { it to ArNavigationManager.calculateDistance(myLat, myLon, it.lat, it.lon) }
             .sortedBy { it.second }

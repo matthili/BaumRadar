@@ -13,6 +13,21 @@ import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.util.zip.GZIPInputStream
 
+/**
+ * Beschreibt eine verfügbare Stadt im zentralen Katalog.
+ *
+ * Der Katalog wird von GitHub gehostet und enthält Metadaten für jede Stadt,
+ * deren Baumdaten heruntergeladen werden können.
+ *
+ * @property id           Eindeutige Kennung (z. B. "wien")
+ * @property name         Anzeigename (z. B. "Wien")
+ * @property country      Ländername (Fallback: "Unbekannt")
+ * @property dbUrl        URL zur komprimierten SQLite-Datenbankdatei (.db.gz)
+ * @property dbUrlChunks  Optionale Liste von Chunk-URLs für große Datenbanken,
+ *                        die die GitHub-Dateigrößenbeschränkung umgehen
+ * @property sigUrl       URL zur Ed25519-Signaturdatei für die Integritätsprüfung
+ * @property boundingBox  Geographische Begrenzung [minLat, minLon, maxLat, maxLon]
+ */
 data class CityCatalogEntry(
     val id: String,
     val name: String,
@@ -23,12 +38,35 @@ data class CityCatalogEntry(
     val boundingBox: List<Double>? // minX, minY, maxX, maxY
 )
 
+/**
+ * Verwaltet den Download, die Verifizierung und das Einlesen von Städte-Baumdaten.
+ *
+ * Der Ablauf beim Hinzufügen einer neuen Stadt:
+ * 1. Katalog von GitHub abrufen (JSON mit allen verfügbaren Städten)
+ * 2. Komprimierte Datenbank herunterladen (ggf. in Chunks bei großen Dateien)
+ * 3. Ed25519-Signatur herunterladen und die Datei kryptographisch verifizieren
+ * 4. GZIP dekomprimieren
+ * 5. Daten per `ATTACH DATABASE` in die Haupt-Datenbank mergen
+ * 6. Temporäre Dateien löschen und Download-Status in SharedPreferences speichern
+ *
+ * Der Katalog wird im Speicher gecacht, um wiederholte Netzwerkzugriffe zu vermeiden.
+ */
 class CityManager(private val context: Context) {
     private val client = OkHttpClient()
+    /** Ed25519-Public-Key (Base64-kodiert) zur Verifizierung heruntergeladener Datenbanken. */
     private val PUBLIC_KEY_BASE64 = "MCowBQYDK2VwAyEAEb9KGg1K77SqnuTv78CTcdLyKEZd7xr1EbE4PnUF3Yc="
+    /** URL des zentralen Stadtkatalogs auf GitHub. */
     private val CATALOG_URL = "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/catalog.json"
     private var cachedCatalog: List<CityCatalogEntry>? = null
 
+    /**
+     * Lädt den Stadtkatalog vom Server und gibt die Liste verfügbarer Städte zurück.
+     *
+     * Ein Cache-Buster-Query-Parameter (`?t=...`) verhindert, dass CDN-Caches
+     * veraltete Katalogversionen ausliefern.
+     *
+     * @param forceRefresh Erzwingt einen Netzwerkzugriff, auch wenn der Katalog bereits gecacht ist.
+     */
     suspend fun getCatalog(forceRefresh: Boolean = false): List<CityCatalogEntry> = withContext(Dispatchers.IO) {
         if (!forceRefresh && cachedCatalog != null) {
             return@withContext cachedCatalog!!
@@ -75,6 +113,17 @@ class CityManager(private val context: Context) {
         result
     }
 
+    /**
+     * Lädt die Datenbank einer Stadt herunter, verifiziert die Signatur und
+     * mergt die Daten in die App-Datenbank.
+     *
+     * Große Datenbanken werden in Chunks heruntergeladen und lokal zusammengefügt,
+     * da GitHub eine Dateigrößenbeschränkung von 100 MB hat.
+     *
+     * @param city       Die herunterzuladende Stadt aus dem Katalog
+     * @param onProgress Callback für Fortschrittstexte, die in der UI angezeigt werden
+     * @return true bei Erfolg, false bei Fehler (z. B. ungültige Signatur)
+     */
     suspend fun downloadAndMergeCity(city: CityCatalogEntry, onProgress: (String) -> Unit): Boolean = withContext(Dispatchers.IO) {
         try {
             onProgress("Downloading ${city.name}...")
@@ -123,9 +172,13 @@ class CityManager(private val context: Context) {
             // Delete old data for this city if any exists to prevent duplicates
             helper.execSQL("DELETE FROM trees WHERE city_id = '${city.id}'")
             
+            // Merge-Strategie: Die heruntergeladene SQLite-Datei wird als zweite
+            // Datenbank angehängt (ATTACH) und alle Zeilen per INSERT in die
+            // Hauptdatenbank kopiert. Danach wird die externe DB wieder getrennt.
             helper.execSQL("ATTACH DATABASE '${dbFile.absolutePath}' AS new_city_db")
             helper.execSQL("INSERT INTO trees SELECT * FROM new_city_db.trees")
-            // Import geofence clusters for routing avoidance and proximity alerts
+            // Geofence-Cluster mit INSERT OR REPLACE importieren, damit vorhandene
+            // Cluster bei Aktualisierung überschrieben werden
             helper.execSQL("INSERT OR REPLACE INTO geofences SELECT * FROM new_city_db.geofences")
             helper.execSQL("DETACH DATABASE new_city_db")
 
@@ -143,6 +196,7 @@ class CityManager(private val context: Context) {
         }
     }
 
+    /** Entfernt alle Baumdaten einer Stadt und löscht den Download-Status. */
     suspend fun deleteCity(cityId: String) = withContext(Dispatchers.IO) {
         val appDb = AppDatabase.getInstance(context)
         val helper = appDb.openHelper.writableDatabase
@@ -156,6 +210,7 @@ class CityManager(private val context: Context) {
         return prefs.getBoolean("city_dn_$cityId", false)
     }
     
+    /** Prüft, ob mindestens eine Stadt heruntergeladen wurde (für die Wizard-Logik). */
     fun hasAnyCity(): Boolean {
         val prefs = context.getSharedPreferences("city_prefs", Context.MODE_PRIVATE)
         return prefs.all.keys.any { it.startsWith("city_dn_") }

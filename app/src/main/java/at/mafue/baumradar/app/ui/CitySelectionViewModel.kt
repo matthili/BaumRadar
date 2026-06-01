@@ -9,6 +9,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
+/**
+ * ViewModel für den Städteverwaltungs-Bildschirm.
+ *
+ * Koordiniert das Laden des Stadtkatalogs, den Download/Löschvorgang einzelner
+ * Städte und die Fortschrittsanzeige in der UI. Der Download-Status wird in
+ * SharedPreferences gespeichert (via [CityManager]).
+ */
 class CitySelectionViewModel(application: Application) : AndroidViewModel(application) {
     private val cityManager = CityManager(application)
     
@@ -46,6 +53,15 @@ class CitySelectionViewModel(application: Application) : AndroidViewModel(applic
         _downloadedCities.value = downloaded
     }
 
+    /**
+     * Schaltet den Download-Status einer Stadt um.
+     *
+     * - Bereits heruntergeladen → Daten löschen
+     * - Noch nicht vorhanden → Herunterladen, verifizieren und einlesen
+     *
+     * Bei fehlgeschlagener Signaturprüfung wird eine Fehlermeldung für 2 Sekunden
+     * angezeigt, bevor der Fortschrittsindikator ausgeblendet wird.
+     */
     fun toggleCity(city: CityCatalogEntry) {
         viewModelScope.launch {
             if (cityManager.isCityDownloaded(city.id)) {

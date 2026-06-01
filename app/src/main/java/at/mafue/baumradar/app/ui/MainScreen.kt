@@ -20,6 +20,17 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import android.app.Application
 import at.mafue.baumradar.app.R
 
+/**
+ * Hauptbildschirm mit Bottom-Navigation und drei Tabs:
+ * - **Karte** (MapArScreen): Kartenansicht mit AR-Overlay
+ * - **Profil** (ProfileScreen): Allergieprofil-Verwaltung
+ * - **Städte** (CitySelectionScreen): Verwaltung heruntergeladener Stadtdaten
+ *
+ * Das [MapViewModel] wird auf Activity-Ebene gescoped (nicht auf Composable-Ebene),
+ * damit der Kartenzustand beim Wechsel zwischen Tabs erhalten bleibt. Außerdem
+ * ermöglicht dies der Städte-Ansicht, den virtuellen Standort im MapViewModel zu
+ * setzen ("Zur Stadt springen"-Funktion).
+ */
 @Composable
 fun MainScreen() {
     val navController = rememberNavController()
@@ -28,6 +39,10 @@ fun MainScreen() {
     val context = LocalContext.current.applicationContext as Application
     val activity = LocalContext.current as androidx.activity.ComponentActivity
     
+    // ViewModelProvider.Factory wird benötigt, weil MapViewModel den
+    // Application-Context als Konstruktorparameter erwartet (AndroidViewModel).
+    // Die Activity wird als ViewModelStoreOwner verwendet, damit dasselbe
+    // ViewModel über alle Tabs hinweg geteilt wird.
     val mapViewModel: MapViewModel = viewModel(
         activity,
         factory = object : ViewModelProvider.Factory {
@@ -90,6 +105,9 @@ fun MainScreen() {
                     isWizard = false, 
                     onWizardComplete = {},
                     onJumpToCity = { city ->
+                        // "Zur Stadt springen": Berechnet den Mittelpunkt der Bounding Box
+                        // und setzt ihn als virtuellen Standort. Dadurch zeigt die Karte
+                        // automatisch die gewählte Stadt an, auch ohne physische Anwesenheit.
                         val bbox = city.boundingBox
                         if (bbox != null && bbox.size == 4) {
                             val targetLat = (bbox[0] + bbox[2]) / 2.0

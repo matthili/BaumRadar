@@ -16,6 +16,21 @@ import at.mafue.baumradar.app.routing.NominatimGeocoder
 import at.mafue.baumradar.app.data.GeofenceEntity
 import at.mafue.baumradar.app.data.RouteHistoryEntity
 
+/**
+ * ViewModel für den Kartenbildschirm – das zentrale Steuerungsmodul der App.
+ *
+ * Verantwortlich für:
+ * - **Standort-Management**: Kombiniert echten GPS-Standort mit optionalem virtuellem Standort
+ * - **Baum-Abfragen**: Reaktive Datenpipeline über Room-Flow mit Bounding-Box-Filter
+ * - **Routing**: Koordiniert Geocoding, Routenberechnung und Allergen-Umfahrung
+ * - **Geofence-Visualisierung**: Allergie-Hotspots auf der Karte darstellen
+ * - **Stadterkennung**: Schlägt automatisch den Download nicht vorhandener Städte vor,
+ *   wenn sich der Nutzer in deren Bounding Box befindet
+ *
+ * Die Daten-Pipeline nutzt Kotlin Flows mit `sample()` für Debouncing,
+ * `flatMapLatest` für automatische Abfrage-Neustarts und `combine()` für
+ * die Zusammenführung mehrerer Datenquellen.
+ */
 @OptIn(FlowPreview::class, kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class MapViewModel(application: Application) : AndroidViewModel(application) {
     
@@ -24,7 +39,9 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
     private val ds = AllergyDataStore(application)
     private val cityManager = at.mafue.baumradar.app.data.CityManager(application)
 
+    /** Radius für die Allergenbaum-Suche im Normalmodus (in Metern). */
     private val SEARCH_RADIUS_METERS = 500.0
+    /** Radius für den Erkundungsmodus, der ALLE Bäume anzeigt (in Metern). */
     private val EXPLORE_RADIUS_METERS = 100.0
 
     val isMapLoading = MutableStateFlow(true)
@@ -36,6 +53,12 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
 
     val virtualLocation = MutableStateFlow<android.location.Location?>(null)
 
+    /**
+     * Effektiver Standort: Virtueller Standort hat Vorrang vor dem echten GPS-Standort.
+     *
+     * Ermöglicht das Testen der App an beliebigen Orten (z. B. per Long-Press auf die Karte)
+     * oder das Navigieren zu heruntergeladenen Städten ohne physische Anwesenheit.
+     */
     val effectiveLocation: StateFlow<android.location.Location?> = combine(
         arManager.currentLocation, virtualLocation
     ) { real, virt -> virt ?: real }
@@ -62,6 +85,13 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
 
     val showAllGeofences = MutableStateFlow(false)
 
+    /**
+     * Allergie-Geofences, die aktuell auf der Karte sichtbar sind (2 km Radius).
+     *
+     * Nutzt `flatMapLatest`: Wenn sich der Standort ändert, wird die vorherige
+     * Datenbank-Abfrage automatisch abgebrochen und eine neue gestartet.
+     * `sample(2000)` begrenzt Updates auf alle 2 Sekunden.
+     */
     val visibleGeofences: StateFlow<List<GeofenceEntity>> = combine(
         effectiveLocation.filterNotNull().sample(2000),
         ds.selectedTreesFlow,
@@ -91,6 +121,14 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
 
     val routeHistory = db.historyDao().getRecentHistory(10).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    /**
+     * Überwacht den effektiven Standort und schlägt automatisch den Download
+     * einer Stadt vor, falls sich der Nutzer in deren Bounding Box befindet
+     * und die Stadt noch nicht heruntergeladen wurde.
+     *
+     * Die Prüfung erfolgt nur alle 5 Sekunden (sample) und ignoriert bereits
+     * abgelehnte Vorschläge (ignoredCities).
+     */
     init {
         viewModelScope.launch {
             effectiveLocation.filterNotNull().sample(5000).collect { loc ->
@@ -138,6 +176,19 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     // Combine location, selected allergies, and warn trees to query the database
+    /**
+     * Reaktive Pipeline für die Anzeige allergener Bäume in der Nähe.
+     *
+     * Datenfluss:
+     * 1. `combine()` vereint Standort, ausgewählte Allergien, Warn-Bäume und Modus
+     * 2. `flatMapLatest` startet eine Bounding-Box-Abfrage bei jeder Änderung
+     * 3. `map` filtert die Ergebnisse exakt nach Haversine-Distanz
+     * 4. Im Erkundungsmodus werden ALLE Bäume im 100-m-Radius gezeigt,
+     *    unabhängig von der Allergie-Auswahl
+     *
+     * Die Bounding-Box-Abfrage ist eine schnelle Vorfilterung in der Datenbank;
+     * die exakte Distanzprüfung erfolgt in der `map`-Transformation.
+     */
     val nearbyAllergicTrees: StateFlow<List<TreeEntity>> = combine(
         effectiveLocation.filterNotNull().sample(2000),
         ds.selectedTreesFlow,
@@ -208,12 +259,21 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
         arManager.stopTracking()
     }
 
+    /**
+     * Berechnet eine Route mit Allergen-Umfahrung.
+     *
+     * Ablauf:
+     * 1. Bounding Box zwischen Start und Ziel berechnen (+ 5 km Puffer für Umwege)
+     * 2. Relevante Geofences in dieser Box aus der Datenbank laden
+     * 3. Route über [OsrmRoutingClient] mit Geofence-Vermeidung berechnen
+     * 4. Ergebnisse als sortierte Alternativen bereitstellen
+     */
     fun calculateRoute(start: GeoPoint, end: GeoPoint) {
         viewModelScope.launch {
             isRouting.value = true
             routingError.value = null
             try {
-                // 1. Fetch relevant Geofences in the Bounding Box of the route
+                // Bounding Box mit 0.05° Puffer (≈ 5 km) für mögliche Umfahrungswege
                 val minLat = minOf(start.latitude, end.latitude) - 0.05
                 val maxLat = maxOf(start.latitude, end.latitude) + 0.05
                 val minLon = minOf(start.longitude, end.longitude) - 0.05
@@ -251,6 +311,12 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
     
+    /**
+     * Zweistufige Routenberechnung mit Geocoding:
+     * 1. Start- und Zieladresse über Nominatim in Koordinaten auflösen
+     * 2. Die aufgelösten Koordinaten und Adressen im Verlauf speichern
+     * 3. Routenberechnung mit Allergen-Umfahrung starten
+     */
     fun calculateGeocodedRoute() {
         val startQ = startAddress.value
         val endQ = endAddress.value
@@ -275,7 +341,7 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
                     routeStart.value = s
                     routeEnd.value = e
                     
-                    // Speichere in der Historie
+                    // Suchanfrage im Verlauf speichern für späteren Schnellzugriff
                     db.historyDao().insertHistory(
                         RouteHistoryEntity(
                             startAddress = startQ,

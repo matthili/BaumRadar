@@ -10,6 +10,15 @@ import at.mafue.baumradar.dataprocessor.utils.*;
 import com.fasterxml.jackson.databind.JsonNode;
 import java.util.UUID;
 
+/**
+ * City provider for <strong>Freiburg im Breisgau, Germany</strong>.
+ *
+ * <p>Downloads the tree inventory from Freiburg's geoportal as a paginated
+ * WFS GeoJSON export.  The dataset provides a botanical species name
+ * ({@code baumart_botanisch}) but no separate genus field, so the genus
+ * is extracted by splitting the botanical name on whitespace and taking
+ * the first token (which is the Latin genus name by convention).
+ */
 public class FreiburgProvider extends AbstractGeoJsonProvider {
 
     @Override
@@ -58,11 +67,13 @@ public class FreiburgProvider extends AbstractGeoJsonProvider {
         
         String genusDe = "";
         
+        // Extract genus from the first word of the Latin botanical species name
+        // e.g. "Acer platanoides" → genus = "Acer"
         if (!art_botani.isEmpty()) {
             String[] parts = art_botani.split(" ");
             if (parts.length > 0) genusDe = parts[0];
         } else {
-            return null;
+            return null; // Cannot classify without a botanical name
         }
         
         String genusEn = Translator.translateGenus(genusDe);

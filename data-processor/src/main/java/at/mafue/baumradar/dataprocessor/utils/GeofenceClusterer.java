@@ -28,7 +28,16 @@ public class GeofenceClusterer {
     private final Map<String, GridCluster> gridClusters = new HashMap<>();
 
     /**
-     * Add a tree to the clusterer.
+     * Registers a single tree for clustering.
+     *
+     * <p>The tree's coordinates are quantized to a 0.001° grid (~111 m latitude,
+     * ~70 m longitude at 50°N) and combined with its genus to form a composite
+     * grid-cell key. All trees sharing the same key accumulate in one
+     * {@link GridCluster}, tracking count, coordinate sums, and bounding box.
+     *
+     * @param lat     WGS-84 latitude
+     * @param lon     WGS-84 longitude
+     * @param genusDe German genus name used as part of the clustering key
      */
     public void addTree(double lat, double lon, String genusDe) {
         long latIdx = Math.round(lat * 1000.0);
@@ -59,7 +68,9 @@ public class GeofenceClusterer {
             double centerLat = mc.sumLat / mc.count;
             double centerLon = mc.sumLon / mc.count;
             double maxDist = maxDistFromCenter(centerLat, centerLon, mc);
-            // Dynamic radius: actual extent + 20m buffer, minimum 50m
+            // Dynamic radius: actual max extent from centroid plus a 20 m safety
+            // buffer, with an absolute minimum of 50 m so tiny clusters still
+            // trigger the geofence reliably on mobile devices.
             int radius = Math.max(50, (int) Math.ceil(maxDist) + 20);
 
             result.add(new GeofenceRecord(
@@ -135,6 +146,14 @@ public class GeofenceClusterer {
         return allResult;
     }
 
+    /**
+     * Tests whether two clusters can be merged without exceeding the
+     * maximum allowed radius.
+     *
+     * <p>A hypothetical merged bounding box is computed and the farthest
+     * corner distance from the new centroid is measured.  If that distance
+     * is within {@value #MAX_MERGE_RADIUS_M} meters, merging is safe.
+     */
     private boolean canMerge(MergedCluster a, MergedCluster b) {
         // Compute hypothetical merged bounding box
         double minLat = Math.min(a.minLat, b.minLat);
@@ -157,6 +176,10 @@ public class GeofenceClusterer {
 
     // ── Helpers ──────────────────────────────────────────────────────────
 
+    /**
+     * Computes the maximum Haversine distance from the centroid to any corner
+     * of the cluster's bounding box.  Used to determine the geofence radius.
+     */
     private static double maxDistFromCenter(double centerLat, double centerLon, MergedCluster mc) {
         double d1 = haversine(centerLat, centerLon, mc.minLat, mc.minLon);
         double d2 = haversine(centerLat, centerLon, mc.minLat, mc.maxLon);
@@ -165,6 +188,12 @@ public class GeofenceClusterer {
         return Math.max(Math.max(d1, d2), Math.max(d3, d4));
     }
 
+    /**
+     * Haversine great-circle distance between two WGS-84 points, in meters.
+     *
+     * <p>Uses the standard formula:
+     * {@code d = 2 · R · arcsin(√(sin²(Δlat/2) + cos(lat1) · cos(lat2) · sin²(Δlon/2)))}
+     */
     private static double haversine(double lat1, double lon1, double lat2, double lon2) {
         double dLat = Math.toRadians(lat2 - lat1);
         double dLon = Math.toRadians(lon2 - lon1);
@@ -176,6 +205,10 @@ public class GeofenceClusterer {
 
     // ── Data classes ─────────────────────────────────────────────────────
 
+    /**
+     * Intermediate accumulator for all trees of a single genus that fall into
+     * the same 0.001° grid cell during the first clustering pass.
+     */
     private static class GridCluster {
         final String genusDe;
         final long latIdx, lonIdx;
@@ -191,6 +224,13 @@ public class GeofenceClusterer {
         }
     }
 
+    /**
+     * Result of the second (merge) pass: one or more adjacent
+     * {@link GridCluster}s combined into a single spatial cluster.
+     *
+     * <p>The {@code absorbed} flag marks clusters that have been merged into
+     * another {@link MergedCluster} and should be excluded from the final output.
+     */
     private static class MergedCluster {
         final String genusDe;
         final Set<String> gridKeys = new HashSet<>();
@@ -211,6 +251,7 @@ public class GeofenceClusterer {
             this.maxLon = gc.maxLon;
         }
 
+        /** Merges all statistics from {@code other} into this cluster and marks {@code other} as absorbed. */
         void absorb(MergedCluster other) {
             this.gridKeys.addAll(other.gridKeys);
             this.count += other.count;

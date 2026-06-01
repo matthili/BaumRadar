@@ -19,9 +19,23 @@ import java.util.Base64;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Manages Ed25519 key-pair generation, persistence, and file signing.
+ *
+ * <p>The data-processing pipeline signs every compressed database file so that
+ * the Android app can verify download integrity before importing.  Ed25519 is
+ * chosen for its compact 64-byte signatures and fast verification, making it
+ * well-suited for mobile devices.  Key material is encoded in Base64 for
+ * safe text-based storage and distribution via GitHub Pages.
+ *
+ * <p>BouncyCastle is registered as a JCE provider in a static initializer
+ * because the default JDK does not include Ed25519 support on all platforms.
+ */
 public class CryptoManager {
     private static final Logger logger = LoggerFactory.getLogger(CryptoManager.class);
 
+    // Register BouncyCastle once at class-load time so that KeyFactory and
+    // Signature instances can request the "BC" provider by name.
     static {
         Security.addProvider(new BouncyCastleProvider());
     }
@@ -29,6 +43,17 @@ public class CryptoManager {
     private PrivateKey privateKey;
     private PublicKey publicKey;
 
+    /**
+     * Loads an existing Ed25519 key pair from Base64-encoded files, or generates
+     * a new pair if the files do not yet exist.
+     *
+     * <p>Private and public keys are stored in PKCS#8 and X.509 DER format
+     * respectively, each Base64-encoded into a single line for portability.
+     *
+     * @param privFile destination/source for the Base64-encoded private key
+     * @param pubFile  destination/source for the Base64-encoded public key
+     * @throws Exception if key generation, encoding, or file I/O fails
+     */
     public void loadOrGenerateKeyPair(File privFile, File pubFile) throws Exception {
         if (privFile.exists() && pubFile.exists()) {
             logger.info("Loading existing key pair from disk...");
@@ -50,6 +75,15 @@ public class CryptoManager {
         }
     }
 
+    /**
+     * Exports the public key to a standalone file as a Base64 string.
+     *
+     * <p>This file can be bundled with the Android app so that signature
+     * verification works without a network round-trip for the key.
+     *
+     * @param file target file to write
+     * @throws Exception if encoding or file I/O fails
+     */
     public void savePublicKey(File file) throws Exception {
         byte[] encoded = publicKey.getEncoded();
         String base64 = Base64.getEncoder().encodeToString(encoded);
@@ -57,6 +91,17 @@ public class CryptoManager {
         logger.debug("Successfully exported Public Key base64 string.");
     }
 
+    /**
+     * Produces an Ed25519 detached signature for the given data file.
+     *
+     * <p>The file is read in 8 KiB chunks to keep memory usage constant
+     * regardless of file size.  The raw 64-byte signature is written to
+     * {@code sigFile} without any additional encoding.
+     *
+     * @param dataFile the file whose content is to be signed
+     * @param sigFile  destination for the raw Ed25519 signature bytes
+     * @throws Exception if signing or file I/O fails
+     */
     public void signFile(File dataFile, File sigFile) throws Exception {
         Signature sig = Signature.getInstance("Ed25519", "BC");
         sig.initSign(privateKey);

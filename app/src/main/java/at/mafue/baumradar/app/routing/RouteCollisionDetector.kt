@@ -3,7 +3,20 @@ package at.mafue.baumradar.app.routing
 import at.mafue.baumradar.app.data.GeofenceEntity
 import kotlin.math.*
 
+/**
+ * Geometrie-Modul für die Erkennung von Routenkollisionen mit Allergie-Hotspots.
+ *
+ * Stellt drei Hauptfunktionen bereit:
+ * - [countCollisions]: Zählt, wie viele Geofences eine Route durchquert
+ * - [findCollidingGeofences]: Liefert die betroffenen Geofences zurück
+ * - [computeDetourWaypoints]: Berechnet Ausweich-Wegpunkte senkrecht zur Fahrtrichtung
+ *
+ * Alle Berechnungen verwenden eine äquirektangulare Projektion (lokales metrisches Gitter),
+ * die für Entfernungen bis ca. 10 km bei europäischen Breitengraden ausreichend genau ist.
+ * Die Haversine-Formel wird nur für grobe Distanzvergleiche verwendet.
+ */
 object RouteCollisionDetector {
+    /** Erdradius in Metern – Grundlage für alle geographischen Berechnungen. */
     private const val EARTH_RADIUS_METERS = 6371000.0
 
     /**
@@ -70,9 +83,11 @@ object RouteCollisionDetector {
             val dy = Math.toRadians(p2.first - p1.first) * EARTH_RADIUS_METERS
             val segLen = sqrt(dx * dx + dy * dy)
 
-            if (segLen < 1.0) continue // Degeneriertes Segment überspringen
+            if (segLen < 1.0) continue // Degeneriertes Segment überspringen (Start ≈ Ende)
 
-            // 3. Senkrechte Richtung (zwei Möglichkeiten)
+            // 3. Senkrechte Richtung (Normalenvektor) – es gibt zwei Möglichkeiten:
+            //    (perpX1, perpY1) zeigt nach "links" und (perpX2, perpY2) nach "rechts"
+            //    relativ zur Fahrtrichtung
             val perpX1 = -dy / segLen
             val perpY1 = dx / segLen
             // Die andere Seite
@@ -114,7 +129,8 @@ object RouteCollisionDetector {
             
             // Einfache Heuristik: Abstand zwischen Mittelpunkt und Liniensegment
             val dist = pointToLineDistance(fence.lat, fence.lon, p1.first, p1.second, p2.first, p2.second)
-            // Füge 60m Toleranz hinzu, da man auch in über 50m Entfernung allergisch reagieren kann
+            // 60 m Toleranzpuffer: Allergene Pollen können bei leichtem Wind auch
+            // außerhalb des unmittelbaren Hotspot-Radius wirken
             if (dist <= fence.radius + 60.0) {
                 return true
             }
@@ -130,8 +146,17 @@ object RouteCollisionDetector {
     }
 
     /**
-     * Berechnet die minimale Distanz eines Punktes (ptLat/ptLon) zu einem Liniensegment (A, B).
-     * Näherung für sehr kleine Distanzen auf einer Sphäre (nutzt equirectangulare Projektion lokal).
+     * Berechnet die minimale Distanz eines Punktes (ptLat/ptLon) zu einem Liniensegment (A → B).
+     *
+     * Algorithmus:
+     * 1. Alle Koordinaten werden in ein lokales metrisches Gitter umgerechnet
+     *    (äquirektangulare Projektion, Referenzpunkt = ptLat/ptLon)
+     * 2. Im lokalen Gitter wird die klassische Punkt-zu-Linie-Distanz berechnet:
+     *    - Projektion des Punktes auf die Gerade durch A und B
+     *    - Clamp des Parameters t auf [0, 1] für das Segment
+     *    - Euklidische Distanz zum projizierten Punkt
+     *
+     * Diese Näherung ist für Entfernungen bis ca. 10 km ausreichend genau.
      */
     private fun pointToLineDistance(
         ptLat: Double, ptLon: Double,
@@ -172,6 +197,11 @@ object RouteCollisionDetector {
         return sqrt(projX * projX + projY * projY)
     }
 
+    /**
+     * Berechnet die Großkreis-Distanz zwischen zwei Punkten nach der Haversine-Formel.
+     *
+     * @return Distanz in Metern
+     */
     private fun haversineDistance(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
         val dLat = Math.toRadians(lat2 - lat1)
         val dLon = Math.toRadians(lon2 - lon1)

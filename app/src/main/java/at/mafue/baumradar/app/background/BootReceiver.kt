@@ -15,11 +15,18 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 /**
- * Re-registers geofences after the device reboots.
- * Android removes all geofences on reboot, so this receiver restores them
- * using the user's saved allergy profile.
+ * BroadcastReceiver, der nach einem Geräte-Neustart Geofences neu registriert.
  *
- * This is zero-cost at runtime: it only fires once per boot cycle.
+ * Android entfernt beim Neustart alle Geofences. Dieser Receiver stellt sie
+ * anhand des gespeicherten Allergieprofils wieder her.
+ *
+ * Standort-Strategie:
+ * 1. Zuerst wird `lastLocation` geprüft (gecacht, kein GPS-Wakeup)
+ * 2. Nur als Fallback wird ein frischer Low-Power-Standort angefordert
+ *
+ * Laufzeitkosten: Minimal – der Receiver wird nur einmal pro Boot-Zyklus ausgeführt.
+ * `goAsync()` erweitert die BroadcastReceiver-Laufzeit, damit die asynchrone
+ * Geofence-Registrierung abgeschlossen werden kann.
  */
 class BootReceiver : BroadcastReceiver() {
 

@@ -10,6 +10,15 @@ import at.mafue.baumradar.dataprocessor.utils.*;
 import com.fasterxml.jackson.databind.JsonNode;
 import java.util.UUID;
 
+/**
+ * City provider for <strong>Zürich, Switzerland</strong>.
+ *
+ * <p>Downloads the tree cadastre from the City of Zürich's OGD (Open
+ * Government Data) WFS endpoint as paginated GeoJSON.  The dataset uses
+ * Latin botanical names for the genus ({@code baumgattunglat}) and German
+ * common names for the species ({@code baumnamedeu}).  WFS pagination is
+ * controlled via {@code startIndex} and {@code maxFeatures} parameters.
+ */
 public class ZurichProvider extends AbstractGeoJsonProvider {
 
     @Override
@@ -55,6 +64,7 @@ public class ZurichProvider extends AbstractGeoJsonProvider {
         if (idStr.isEmpty()) idStr = UUID.randomUUID().toString();
         String id = getCityId() + "_" + idStr;
         
+        // The Zurich dataset stores the genus as a Latin name (e.g. "Acer")
         String genusDe = props.path("baumgattunglat").asText("");
         String artDe = props.path("baumnamedeu").asText("");
         

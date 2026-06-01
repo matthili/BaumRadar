@@ -19,6 +19,23 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.foundation.clickable
 
+/**
+ * Bildschirm zur Verwaltung heruntergeladener Städte-Baumdaten.
+ *
+ * Wird in zwei Modi verwendet:
+ * - **Wizard-Modus** (`isWizard = true`): Ersteinrichtung nach der Installation.
+ *   Zeigt eine Begrüßungsnachricht und einen "Weiter"-Button.
+ * - **Einstellungs-Modus** (`isWizard = false`): Spätere Verwaltung über den Städte-Tab.
+ *   Zeigt zusätzlich einen "Zur Stadt springen"-Button.
+ *
+ * Die verfügbaren Städte werden nach Ländern gruppiert und können per Toggle
+ * heruntergeladen oder gelöscht werden. Während eines Downloads wird ein
+ * modales Overlay mit Fortschrittsanzeige eingeblendet.
+ *
+ * @param isWizard       true = Ersteinrichtungs-Modus, false = Einstellungs-Modus
+ * @param onWizardComplete Callback bei Abschluss des Wizards
+ * @param onJumpToCity   Callback zum Navigieren zur gewählten Stadt auf der Karte
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CitySelectionScreen(
@@ -58,9 +75,11 @@ fun CitySelectionScreen(
                         )
                     }
 
+                    // Katalog nach Ländern gruppieren für die Anzeige in aufklappbaren Sektionen
                     val groupedCatalog = catalog.groupBy { it.country }
                     val expandedCountries = remember { mutableStateListOf<String>() }
 
+                    // Beim ersten Laden alle Länder-Sektionen aufklappen
                     LaunchedEffect(groupedCatalog) {
                         if (expandedCountries.isEmpty() && groupedCatalog.isNotEmpty()) {
                             expandedCountries.addAll(groupedCatalog.keys)
@@ -139,6 +158,8 @@ fun CitySelectionScreen(
                 }
             }
 
+            // Modales Download-Overlay: Blockiert die gesamte UI während eines Downloads,
+            // um versehentliche Doppel-Downloads zu verhindern
             if (downloadProgress != null) {
                 Surface(
                     color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f),

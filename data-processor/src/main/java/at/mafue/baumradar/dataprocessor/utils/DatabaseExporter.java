@@ -16,6 +16,18 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Writes tree and geofence data into a per-city SQLite database file.
+ *
+ * <p>Each city processed by the pipeline receives its own SQLite file.
+ * This class manages the JDBC connection lifecycle, creates the schema
+ * ({@code trees} and {@code geofences} tables), and provides high-throughput
+ * batch-insert methods that wrap records in explicit transactions.
+ *
+ * <p>On {@link #open()}, several SQLite PRAGMAs are set to maximize bulk-insert
+ * performance at the cost of crash-safety — acceptable here because the database
+ * is a disposable build artifact that can always be regenerated.
+ */
 public class DatabaseExporter {
     private static final Logger logger = LoggerFactory.getLogger(DatabaseExporter.class);
     private final String dbPath;
@@ -25,12 +37,21 @@ public class DatabaseExporter {
         this.dbPath = dbPath;
     }
 
+    /**
+     * Opens a JDBC connection to the SQLite file and configures PRAGMAs for
+     * maximum write throughput.
+     *
+     * @throws SQLException if the connection cannot be established
+     */
     public void open() throws SQLException {
         logger.info("Opening SQLite database at {}", dbPath);
         // SQLite connection string
         String url = "jdbc:sqlite:" + dbPath;
         connection = DriverManager.getConnection(url);
-        // Optimize SQLite pragmas for bulk insert
+        // Disable the rollback journal and synchronous writes — the database is a
+        // disposable build artifact, so durability guarantees are unnecessary.
+        // EXCLUSIVE locking prevents other processes from interfering during the
+        // bulk import, and an in-memory temp store avoids disk I/O for sorting.
         try (Statement stmt = connection.createStatement()) {
             stmt.execute("PRAGMA journal_mode = OFF;");
             stmt.execute("PRAGMA synchronous = 0;");
@@ -40,6 +61,14 @@ public class DatabaseExporter {
         }
     }
 
+    /**
+     * Drops and recreates the {@code trees} and {@code geofences} tables.
+     *
+     * <p>Existing tables are dropped unconditionally so that each pipeline
+     * run produces a clean database without leftover rows from previous imports.
+     *
+     * @throws SQLException if schema creation fails
+     */
     public void createTable() throws SQLException {
         String sqlTrees = "CREATE TABLE IF NOT EXISTS trees (" +
                      "id TEXT PRIMARY KEY NOT NULL, " +
@@ -67,6 +96,16 @@ public class DatabaseExporter {
         }
     }
 
+    /**
+     * Inserts a batch of geofence cluster records into the {@code geofences} table.
+     *
+     * <p>The entire batch is wrapped in an explicit transaction. On failure the
+     * transaction is rolled back and the exception is re-thrown so that the
+     * calling provider can decide how to handle the error.
+     *
+     * @param records list of geofence records to insert
+     * @throws SQLException if the batch insert or commit fails
+     */
     public void insertGeofences(List<GeofenceRecord> records) throws SQLException {
         if (records.isEmpty()) return;
         
@@ -95,6 +134,16 @@ public class DatabaseExporter {
         }
     }
 
+    /**
+     * Inserts a batch of tree records into the {@code trees} table.
+     *
+     * <p>Uses JDBC batch execution inside an explicit transaction for
+     * throughput. Auto-commit is temporarily disabled and restored in a
+     * {@code finally} block regardless of success or failure.
+     *
+     * @param records list of tree records to insert
+     * @throws SQLException if the batch insert or commit fails
+     */
     public void insertBatch(List<TreeRecord> records) throws SQLException {
         if (records.isEmpty()) return;
         
@@ -125,6 +174,7 @@ public class DatabaseExporter {
         }
     }
 
+    /** Closes the underlying JDBC connection if it is still open. */
     public void close() throws SQLException {
         if (connection != null && !connection.isClosed()) {
             connection.close();

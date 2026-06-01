@@ -8,10 +8,23 @@ import org.json.JSONArray
 import org.osmdroid.util.GeoPoint
 import java.io.IOException
 
+/**
+ * Geocoding-Client für den Nominatim-Service (OpenStreetMap).
+ *
+ * Wandelt Textadressen in geographische Koordinaten um (Forward-Geocoding).
+ * Nominatim ist ein kostenloser, offener Geocoding-Service, der aber
+ * strenge Nutzungsregeln hat:
+ * - Maximal 1 Anfrage pro Sekunde
+ * - Pflicht-User-Agent-Header (sonst wird die Anfrage abgelehnt)
+ * - Keine Massenabfragen
+ *
+ * Es wird stets nur das erste Ergebnis verwendet (`limit=1`).
+ */
 object NominatimGeocoder {
     private val client = OkHttpClient()
     private const val BASE_URL = "https://nominatim.openstreetmap.org/search?format=json&limit=1&q="
 
+    /** Löst eine Textadresse in geographische Koordinaten auf. */
     suspend fun getCoordinates(address: String): Result<GeoPoint> = withContext(Dispatchers.IO) {
         if (address.isBlank()) return@withContext Result.failure(Exception("Empty address"))
         try {
@@ -38,6 +51,9 @@ object NominatimGeocoder {
             val lat = firstResult.optDouble("lat")
             val lon = firstResult.optDouble("lon")
             
+            // optDouble() gibt NaN zurück, wenn der Wert ein String ist (kommt bei
+            // manchen Nominatim-Antworten vor). In diesem Fall wird getString() als
+            // Fallback verwendet und manuell geparst.
             if (lat.isNaN() || lon.isNaN()) {
                 val strLat = firstResult.getString("lat")
                 val strLon = firstResult.getString("lon")

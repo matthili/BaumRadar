@@ -13,14 +13,18 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 /**
- * Observes the app's process lifecycle and re-registers geofences when
- * the app comes to the foreground.
+ * Beobachtet den App-Lebenszyklus und registriert Geofences neu, wenn die App
+ * in den Vordergrund kommt.
  *
- * This covers the case where Android kills the app process (battery optimization,
- * force-stop, etc.) and all geofences are lost. When the user opens the app again,
- * geofences are silently restored.
+ * Hintergrund: Android kann den App-Prozess jederzeit beenden (Batterie-Optimierung,
+ * Force-Stop, etc.), wobei alle registrierten Geofences verloren gehen. Dieser Observer
+ * stellt sie beim nächsten Öffnen der App automatisch wieder her.
  *
- * Energy cost: zero extra – the user is already opening the app.
+ * Wird an die Activity-Lifecycle gebunden (nicht an ProcessLifecycleOwner), da
+ * nur eine einzige Activity existiert.
+ *
+ * Energiekosten: Null – der Nutzer hat die App bereits geöffnet, es wird nur
+ * der zuletzt bekannte Standort (lastLocation) verwendet, kein neuer GPS-Fix angefordert.
  */
 class GeofenceLifecycleObserver(private val context: Context) : DefaultLifecycleObserver {
 
