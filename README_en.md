@@ -5,6 +5,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Platform](https://img.shields.io/badge/Platform-Android-green.svg)](https://developer.android.com)
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.0-blue.svg)](https://kotlinlang.org)
+[![Java](https://img.shields.io/badge/Java-21-red.svg)](https://openjdk.org)
+[![Tests](https://img.shields.io/badge/Tests-passing-brightgreen.svg)](#-technical-documentation)
 [![Open Data](https://img.shields.io/badge/Open_Data-10_Cities-orange.svg)](#-multi-city-support)
 
 > **Baumradar is an Open-Data-based tool that allows you to explore trees in your vicinity and intentionally avoid them when navigating through the city – especially helpful if you suffer from tree pollen allergies (e.g., early bloomers).** Behind the scenes: an Open Data geodata pipeline that unifies tree cadastres from currently 10 cities, spatially clusters them, and distributes them with cryptographic signatures.

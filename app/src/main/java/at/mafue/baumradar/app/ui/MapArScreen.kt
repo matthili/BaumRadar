@@ -6,6 +6,7 @@ import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -46,6 +47,8 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import org.osmdroid.config.Configuration
 import org.osmdroid.events.MapEventsReceiver
 import org.osmdroid.util.GeoPoint
@@ -126,6 +129,8 @@ fun MapArScreen() {
 
     val isMapLoading by viewModel.isMapLoading.collectAsState()
     val isExplorationMode by viewModel.isExplorationMode.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
 
     if (permissionGranted) {
         Box(modifier = Modifier.fillMaxSize()) {
@@ -175,7 +180,17 @@ fun MapArScreen() {
 
                     val showAllGeofences by viewModel.showAllGeofences.collectAsState()
                     FloatingActionButton(
-                        onClick = { viewModel.showAllGeofences.value = !showAllGeofences },
+                        onClick = {
+                            val newState = !showAllGeofences
+                            viewModel.showAllGeofences.value = newState
+                            coroutineScope.launch {
+                                snackbarHostState.currentSnackbarData?.dismiss()
+                                snackbarHostState.showSnackbar(
+                                    message = if (newState) "Allergiezonen eingeblendet" else "Allergiezonen ausgeblendet",
+                                    duration = SnackbarDuration.Short
+                                )
+                            }
+                        },
                         containerColor = if (showAllGeofences) Color(0xFFFF9800) else Color.LightGray
                     ) {
                         Icon(Icons.Default.Warning, contentDescription = "Hotspots anzeigen", tint = Color.White)
@@ -322,12 +337,14 @@ fun MapArScreen() {
                 if (isExplorationMode) {
                     androidx.compose.material3.Surface(
                         color = Color(0xFF4CAF50),
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { viewModel.isExplorationMode.value = false },
                         shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
                         shadowElevation = 4.dp
                     ) {
                         Text(
-                            text = "ERKUNDUNGSMODUS\nAlle Bäume im Umkreis (100m)",
+                            text = "ERKUNDUNGSMODUS  ✕\nAlle Bäume im Umkreis (100m)",
                             color = Color.White,
                             modifier = Modifier.padding(12.dp),
                             style = androidx.compose.material3.MaterialTheme.typography.labelLarge,
@@ -558,6 +575,14 @@ fun MapArScreen() {
                     }
                 }
             }
+
+            // Snackbar für Feedback-Meldungen (z.B. Geofence-Toggle)
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 100.dp)
+            )
         }
     } else {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
