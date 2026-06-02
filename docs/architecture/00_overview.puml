@@ -33,7 +33,7 @@ rectangle "⚙️  Java-Backend (Data-Processor)\n· Einlesen & Normalisieren\n�
 
 rectangle "📦  GitHub Repository\nSignierte SQLite-Datenbanken\n+ catalog.json" as GH <<github>>
 
-rectangle "📱  Android-App (Kotlin / Compose)\n· Signaturprüfung (Zero Trust)\n· Offline-First (Room DB)\n· OSM-Karte + AR-Kompass-Pfeile\n· Allergiefreies Routing (OSRM)\n· Geofence-Annäherungswarnung" as App <<app>>
+rectangle "📱  Android-App (Kotlin / Compose)\n· Signaturprüfung\n· Offline-First (Room DB)\n· OSM-Karte + AR-Kompass-Pfeile\n· Allergiefreies Routing (OSRM)\n· Geofence-Annäherungswarnung" as App <<app>>
 
 actor "Nutzer:in\n(Allergie-Profil)" as User
 

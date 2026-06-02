@@ -7,7 +7,7 @@
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.0-blue.svg)](https://kotlinlang.org)
 [![Open Data](https://img.shields.io/badge/Open_Data-10_Städte-orange.svg)](#-multi-city-support)
 
-> **Baumradar ist ein Open-Data-basiertes Werkzeug, mit dem Bäume in der direkten Umgebung erkundet und bei der Fortbewegung durch die Stadt gezielt gemieden werden können – besonders hilfreich bei einer Baumpollen-Allergie (z. B. gegen Frühblüher).**
+> **Baumradar ist ein Open-Data-basiertes Werkzeug, mit dem Bäume in der direkten Umgebung erkundet und bei der Fortbewegung durch die Stadt gezielt gemieden werden können – besonders hilfreich bei einer Baumpollen-Allergie (z. B. gegen Frühblüher).** Im Hintergrund: eine Open-Data-Geodaten-Pipeline, die Baumkataster aus derzeit 10 Städten vereinheitlicht, räumlich clustert und signiert verteilt.
 
 ---
 
@@ -95,7 +95,7 @@ Beim ersten Start wird mindestens eine Stadt ausgewählt. Bei Reisen in eine neu
 ### 📴 Offline First
 Für jede Stadt wird eine komprimierte, aufbereitete SQLite-Datenbank heruntergeladen. Kartenanzeige, Erkundungsmodus und Hintergrund-Warnungen funktionieren danach **komplett ohne Internetverbindung**. Nur für die Routenberechnung (OSRM) wird kurzzeitig eine Verbindung benötigt.
 
-### 🔐 Open Data & Zero Trust
+### 🔐 Verifizierte Open Data (Ed25519-signiert)
 Die Daten werden vom Backend verarbeitet und kryptografisch mit **Ed25519** signiert. Bevor die App eine heruntergeladene Datenbank verwendet, wird die Signatur gegen einen fest eingebetteten Public Key geprüft. Erst bei erfolgreicher Prüfung werden die Daten importiert – damit ist die Authentizität und Unverfälschtheit der Daten sichergestellt.
 
 ---

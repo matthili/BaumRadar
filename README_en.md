@@ -3,10 +3,60 @@
 # Baumradar 🌳
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Platform](https://img.shields.io/badge/Platform-Android-green.svg)](https://developer.android.com)
+[![Kotlin](https://img.shields.io/badge/Kotlin-2.0-blue.svg)](https://kotlinlang.org)
+[![Open Data](https://img.shields.io/badge/Open_Data-10_Cities-orange.svg)](#-multi-city-support)
 
-Welcome to **Baumradar**! This open-source project combines a robust Java backend (data-processor) with a modern Android app.
+> **Baumradar is an Open-Data-based tool that allows you to explore trees in your vicinity and intentionally avoid them when navigating through the city – especially helpful if you suffer from tree pollen allergies (e.g., early bloomers).** Behind the scenes: an Open Data geodata pipeline that unifies tree cadastres from currently 10 cities, spatially clusters them, and distributes them with cryptographic signatures.
 
-**Baumradar is an Open-Data-based tool that allows you to explore trees in your vicinity and intentionally avoid them when navigating through the city – especially helpful if you suffer from tree pollen allergies (e.g., early bloomers).**
+---
+
+## 📐 System Architecture
+
+<p align="center">
+  <img src="docs/architecture/00_overview_en.png" alt="System Architecture Overview" width="420"/>
+</p>
+
+---
+
+## 📸 Screenshots
+
+<table>
+  <tr>
+    <td align="center" width="33%">
+      <img src="docs/screenshots/allergiezonen.jpg" width="250"/><br/>
+      <b>Allergy Hotspots</b><br/>
+      <sub>Red zones mark areas with allergy-relevant trees</sub>
+    </td>
+    <td align="center" width="33%">
+      <img src="docs/screenshots/unterschiedliche_routen_vorschlaege.jpg" width="250"/><br/>
+      <b>Intelligent Routing</b><br/>
+      <sub>Routes are ranked and sorted by hotspot collisions</sub>
+    </td>
+    <td align="center" width="33%">
+      <img src="docs/screenshots/erkundungsmodus_plus_virtueller_standort.jpg" width="250"/><br/>
+      <b>Exploration Mode</b><br/>
+      <sub>Show and identify all trees within a 100m radius</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="33%">
+      <img src="docs/screenshots/routen_fahrrad_fussgaenger.jpg" width="250"/><br/>
+      <b>Multi-Mode Routing</b><br/>
+      <sub>Walking, cycling, or driving – with allergen warnings</sub>
+    </td>
+    <td align="center" width="33%">
+      <img src="docs/screenshots/staedte_frei_waehlbar.jpg" width="250"/><br/>
+      <b>Multi-City Support</b><br/>
+      <sub>10 cities across AT, DE, and CH freely selectable</sub>
+    </td>
+    <td align="center" width="33%">
+      <img src="docs/screenshots/auswahl_baeume.jpg" width="250"/><br/>
+      <b>Allergy Profile</b><br/>
+      <sub>Mark tree species individually as "Warning" or "Avoid"</sub>
+    </td>
+  </tr>
+</table>
 
 ## 🌟 Detailed Features
 
@@ -37,7 +87,7 @@ Supported cities: **Vienna, Graz, Innsbruck, Linz** (Austria), **Berlin, Hamburg
 ### 📴 Offline First
 The app downloads a compressed, processed SQLite database for each city. Once downloaded, the map display, exploration mode, and background warnings work **completely without an internet connection**. Only the routing feature (route calculation via OSRM) briefly requires a connection.
 
-### 🔐 Open Data & Zero Trust
+### 🔐 Verified Open Data (Ed25519-signed)
 The data is processed by the backend and cryptographically signed using **Ed25519**. Before the app uses a downloaded database, it verifies the signature against a public key embedded in the app. Only after successful verification is the data imported. This ensures anyone can verify the data is authentic and untampered.
 
 ---
@@ -93,11 +143,31 @@ A long press on any point on the map opens a context menu:
 
 ## 📖 Technical Documentation
 
-Baumradar consists of two main parts and an open data structure. Here you can find detailed documentation for each area:
+Baumradar consists of two main parts and an open data structure:
 
-1. **[Android App Architecture](docs/app_architecture_en.md)**: Insights into the Kotlin app, Jetpack Compose UI, Room databases, the routing system, and background geofence notifications.
-2. **[Backend / Data-Processor](docs/backend_architecture_en.md)**: How the Java backend reads Open Data from various cities, translates it, clusters it, splits it into chunks, and signs it.
-3. **[Data Structure & Third-Party Usage](docs/data_structure_en.md)**: How you as an external developer can use the open, verified Baumradar data for your own app (e.g., iOS, Web) – with code examples.
+| Document | Description |
+|----------|-------------|
+| [**Android App Architecture**](docs/app_architecture_en.md) | Kotlin app, Jetpack Compose UI, Room databases, routing system, background geofences |
+| [**Backend / Data-Processor**](docs/backend_architecture_en.md) | Java backend: read Open Data, translate, cluster, split into chunks, sign |
+| [**Data Structure & Third-Party Usage**](docs/data_structure_en.md) | Use the open, verified tree data in your own apps (iOS, Web) – with code examples |
+
+### Architecture Diagrams
+
+<details>
+<summary>📊 Show all architecture diagrams</summary>
+
+| Diagram | Description |
+|---------|-------------|
+| [System Architecture](docs/architecture/01_system_architecture.png) | Overview of all system components |
+| [Data Ingestion](docs/architecture/02_data_ingestion.png) | How Open Data is read and processed |
+| [App Synchronization](docs/architecture/03_app_sync.png) | Download, signature verification, and DB merge |
+| [Routing & Collision](docs/architecture/04_routing_collision.png) | Allergy routing with geofence collision detection |
+| [Backend Classes](docs/architecture/05_backend_classes.png) | UML class diagram of the Data-Processor |
+| [Collision Activity](docs/architecture/06_collision_activity.png) | Activity diagram of the collision detection |
+| [Signature Verification](docs/signature_verification.png) | Ed25519 signature verification process |
+| [Update Process](docs/update_process.png) | Data update workflow |
+
+</details>
 
 ## 📜 License
 This project is published under the **MIT License**. See [LICENSE](LICENSE) for more details.

@@ -1,0 +1,44 @@
+@startuml
+skinparam backgroundColor transparent
+skinparam componentStyle rectangle
+skinparam shadowing false
+skinparam defaultFontName Inter
+skinparam padding 8
+skinparam roundCorner 12
+
+' White lines, arrows and labels for dark-mode compatibility
+skinparam ArrowColor white
+skinparam ArrowFontColor white
+skinparam actorBorderColor white
+skinparam actorFontColor white
+skinparam actorBackgroundColor transparent
+
+' Vertical layout (top to bottom instead of left to right)
+top to bottom direction
+
+skinparam rectangle {
+  BackgroundColor<<source>> #E8F5E9
+  BorderColor<<source>> #4CAF50
+  BackgroundColor<<backend>> #E3F2FD
+  BorderColor<<backend>> #1976D2
+  BackgroundColor<<github>> #F3E5F5
+  BorderColor<<github>> #7B1FA2
+  BackgroundColor<<app>> #FFF3E0
+  BorderColor<<app>> #F57C00
+}
+
+rectangle "🌐  Open Data Sources\n10 Cities · AT / DE / CH\nTree Cadastre Datasets" as Src <<source>>
+
+rectangle "⚙️  Java Backend (Data-Processor)\n· Ingest & Normalize\n· Genus Translation (DE/EN)\n· Spatial Clustering → Geofences\n· GZIP Compression + Chunk Split\n· Ed25519 Signature" as BE <<backend>>
+
+rectangle "📦  GitHub Repository\nSigned SQLite Databases\n+ catalog.json" as GH <<github>>
+
+rectangle "📱  Android App (Kotlin / Compose)\n· Signature Verification\n· Offline-First (Room DB)\n· OSM Map + AR Compass Arrows\n· Allergy-Free Routing (OSRM)\n· Geofence Proximity Warnings" as App <<app>>
+
+actor "User\n(Allergy Profile)" as User
+
+Src -down-> BE : ingest
+BE -down-> GH : publish
+GH -down-> App : download\n& verify
+User -right-> App
+@enduml
