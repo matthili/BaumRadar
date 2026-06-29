@@ -68,6 +68,13 @@ local.properties
 .antigravity/
 
 # ============================================================
+# Claude Code – lokale Agent-Dateien (nicht versionieren)
+# ============================================================
+.claude/
+CLAUDE.md
+CLAUDE.local.md
+
+# ============================================================
 # Open Data Datenbanken (docs/data/)
 # ============================================================
 # HINWEIS: Die generierten Baum-Datenbanken und der Katalog in
@@ -98,3 +105,8 @@ logs/
 # Große Tools / Binaries in docs
 # ============================================================
 /docs/architecture/plantuml.jar
+
+# ============================================================
+# Projekt-Doku (Soll nicht versioniert werden)
+# ============================================================
+PROJECT_BRIEFING.md
