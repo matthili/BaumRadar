@@ -64,18 +64,19 @@ public class ZurichProvider extends AbstractGeoJsonProvider {
         if (idStr.isEmpty()) idStr = UUID.randomUUID().toString();
         String id = getCityId() + "_" + idStr;
         
-        // The Zurich dataset stores the genus as a Latin name (e.g. "Acer")
-        String genusDe = props.path("baumgattunglat").asText("");
-        String artDe = props.path("baumnamedeu").asText("");
-        
-        if (genusDe.isEmpty() || genusDe.equalsIgnoreCase("null")) {
-            return null;
-        }
-        
+        // The dataset stores the genus as a Latin name (e.g. "Acer") → normalize it.
+        String latinGenus = props.path("baumgattunglat").asText("");
+        if (latinGenus.isEmpty() || latinGenus.equalsIgnoreCase("null")) return null;
+        String genusDe = Translator.germanGenusFromLatin(latinGenus);
+        if (genusDe.isEmpty()) return null;
         String genusEn = Translator.translateGenus(genusDe);
-        String artEn = "";
-        
-        return new TreeRecord(id, getCityId(), lat, lon, genusDe, genusEn, artDe, artEn);
+
+        String speciesDe = props.path("baumnamedeu").asText("");
+        if (speciesDe.equalsIgnoreCase("null")) speciesDe = "";
+        String speciesEn = props.path("baumnamelat").asText("");
+        if (speciesEn.equalsIgnoreCase("null")) speciesEn = "";
+
+        return new TreeRecord(id, getCityId(), lat, lon, genusDe, genusEn, speciesDe, speciesEn);
     }
 }
 

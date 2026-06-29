@@ -19,12 +19,12 @@ This file has the following structure:
   "version": 1,
   "cities": [
     {
-      "id": "vienna",
+      "id": "wien",
       "name": "Wien",
       "country": "Österreich",
       "boundingBox": [48.12, 16.18, 48.32, 16.58],
-      "dbUrl": "https://raw.githubusercontent.com/.../vienna.db.gz",
-      "sigUrl": "https://raw.githubusercontent.com/.../vienna.db.gz.sig"
+      "dbUrl": "https://raw.githubusercontent.com/.../wien.db.gz",
+      "sigUrl": "https://raw.githubusercontent.com/.../wien.db.gz.sig"
     },
     {
       "id": "berlin",
@@ -46,7 +46,7 @@ This file has the following structure:
 - `id`: Unique identifier for the city.
 - `boundingBox`: `[minLat, minLon, maxLat, maxLon]` – the geographic extent of the city.
 - `dbUrl`: Download URL for the compressed database. **Note:** For cities with `dbUrlChunks`, you must use the chunks (the `dbUrl` may point to a non-existent file).
-- `dbUrlChunks`: If the database exceeds 50MB (e.g., Berlin), it is split into multiple parts. These must be concatenated at the binary level in order.
+- `dbUrlChunks`: If the database exceeds 50MB, it is split into multiple parts. These must be concatenated at the binary level in order. (Currently every city fits in a single file, so this field is usually absent.)
 - `sigUrl`: URL of the Ed25519 signature.
 
 ---
@@ -54,10 +54,10 @@ This file has the following structure:
 ## Step 2: Download & Extract
 
 ### For files without chunks:
-1. Download `dbUrl` → e.g., `vienna.db.gz`
-2. Decompress the GZIP file → `vienna.db`
+1. Download `dbUrl` → e.g., `wien.db.gz`
+2. Decompress the GZIP file → `wien.db`
 
-### For files with chunks (e.g., Berlin):
+### For files with chunks (when `dbUrlChunks` is present):
 1. Download all chunk URLs in order (`.001`, `.002`, ...)
 2. Concatenate the files at the binary level → `berlin.db.gz`
 3. Decompress the GZIP file → `berlin.db`
@@ -69,7 +69,7 @@ This file has the following structure:
 To ensure the data is authentic and has not been tampered with, every database is signed by the backend using Ed25519.
 
 1. Download the **Ed25519 Public Key** from the repository: `docs/data/public_key.b64` (Base64-encoded, X.509 format).
-2. Download the signature file (e.g., `vienna.db.gz.sig`).
+2. Download the signature file (e.g., `wien.db.gz.sig`).
 3. Verify the `.db.gz` file (or the reassembled chunks, **before** decompression) against the signature.
 
 **Note on chunks:** The signature applies to the reassembled `.db.gz` file, not to individual chunks. You must first concatenate all chunks, then verify the complete file against the signature.
@@ -87,7 +87,7 @@ Contains every individual tree as its own row.
 | Column | Type | Description |
 |---|---|---|
 | `id` | TEXT (PK) | Unique ID of the tree |
-| `city_id` | TEXT | ID of the city (e.g., `"vienna"`) |
+| `city_id` | TEXT | ID of the city (e.g., `"wien"`) |
 | `lat` | REAL | WGS84 Latitude |
 | `lon` | REAL | WGS84 Longitude |
 | `genus_de` | TEXT | German genus name (e.g., `"Birke"`) |
@@ -124,16 +124,16 @@ import urllib.request
 
 # 1. Download and extract the database
 urllib.request.urlretrieve(
-    "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/vienna.db.gz",
-    "vienna.db.gz"
+    "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/wien.db.gz",
+    "wien.db.gz"
 )
 
-with gzip.open("vienna.db.gz", "rb") as f_in:
-    with open("vienna.db", "wb") as f_out:
+with gzip.open("wien.db.gz", "rb") as f_in:
+    with open("wien.db", "wb") as f_out:
         f_out.write(f_in.read())
 
 # 2. Open and query the database
-conn = sqlite3.connect("vienna.db")
+conn = sqlite3.connect("wien.db")
 cursor = conn.cursor()
 
 # All Birch trees in Vienna
@@ -170,7 +170,7 @@ conn.close()
 ```python
 import sqlite3
 
-conn = sqlite3.connect("vienna.db")
+conn = sqlite3.connect("wien.db")
 cursor = conn.cursor()
 
 cursor.execute("""
@@ -195,7 +195,7 @@ conn.close()
 
 ```kotlin
 // If you want to use the database directly in an Android app:
-val db = SQLiteDatabase.openDatabase("path/to/vienna.db", null, SQLiteDatabase.OPEN_READONLY)
+val db = SQLiteDatabase.openDatabase("path/to/wien.db", null, SQLiteDatabase.OPEN_READONLY)
 
 val cursor = db.rawQuery("""
     SELECT id, lat, lon, genus_de, species_de 
@@ -223,7 +223,7 @@ db.close()
 ```javascript
 // npm install better-sqlite3
 const Database = require('better-sqlite3');
-const db = new Database('vienna.db', { readonly: true });
+const db = new Database('wien.db', { readonly: true });
 
 // Top 10 most common tree species
 const rows = db.prepare(`

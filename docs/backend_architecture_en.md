@@ -16,15 +16,18 @@ at.mafue.baumradar.dataprocessor
 │   ├── CityProvider.java        # Interface: getCityId(), getName(), getCountry(), getBoundingBox(), processData()
 │   ├── AbstractGeoJsonProvider.java  # Base for GeoJSON-based cities (streaming parser, pagination, ZIP support)
 │   ├── AbstractCsvProvider.java      # Base for CSV-based cities (line-by-line parsing, header mapping)
-│   ├── austria/                      # ViennaProvider, LinzProvider (CSV)
-│   ├── germany/                      # BerlinProvider, HamburgProvider, FreiburgProvider, DortmundProvider (GeoJSON)
-│   └── switzerland/                  # ZurichProvider, BaselProvider (GeoJSON)
+│   ├── AbstractXlsxProvider.java     # Base for XLSX-based cities (e.g. Innsbruck)
+│   ├── austria/                      # Vienna, Linz (CSV); Innsbruck (XLSX); Graz (ArcGIS REST)
+│   ├── germany/                      # Berlin, Hamburg, Freiburg, Dortmund, Rostock, Würzburg, Leipzig (GeoJSON)
+│   │                                 #   + FrankfurtProvider (Frankfurt am Main, CSV/UTM32N)
+│   └── switzerland/                  # ZurichProvider, BaselProvider, ZugProvider (GeoJSON)
 └── utils/
     ├── DatabaseExporter.java    # SQLite creation: table setup, batch inserts, performance pragmas
     ├── CatalogBuilder.java      # Generates catalog.json with URLs, chunks, and bounding boxes
     ├── CryptoManager.java       # Ed25519 key management (load/generate), signature creation
-    ├── Translator.java          # Translation table: German genus names → English (e.g., "Birke" → "Birch")
-    └── UtmConverter.java        # UTM Zone 32N → WGS84 coordinate conversion (e.g., for Hamburg)
+    ├── Translator.java          # DE↔EN genus dict + Latin→German (germanGenusFromLatin)
+    ├── UtmConverter.java        # UTM Zone 32N/33N → WGS84 (Hamburg / Leipzig)
+    └── XlsxReader.java          # Lean XLSX parser (JDK zip + StAX, no dependency)
 ```
 
 ![Backend Class Diagram](architecture/05_backend_classes.png)
@@ -42,7 +45,7 @@ CryptoManager.loadOrGenerateKeyPair(privFile, pubFile)
 If an Ed25519 key pair already exists on disk (`private_key.b64`, `public_key.b64`), it is loaded. Otherwise, a new pair is generated and saved. The private key **never** leaves the backend; only the public key is committed.
 
 ### Step 2: Parallel City Processing
-All 8 registered `CityProvider` instances are processed simultaneously via `ExecutorService` (thread pool). Per city:
+All 15 registered `CityProvider` instances are processed simultaneously via `ExecutorService` (thread pool). Per city:
 
 1. **Download & Parse**: Depending on provider type:
    - `AbstractGeoJsonProvider`: Jackson streaming parser (`JsonFactory`), optionally with pagination (ArcGIS APIs return e.g., max. 5000 features per request) and ZIP extraction.
@@ -70,13 +73,13 @@ All 8 registered `CityProvider` instances are processed simultaneously via `Exec
 `CatalogBuilder.build()` creates a `catalog.json` containing for each city:
 ```json
 {
-  "id": "vienna",
+  "id": "wien",
   "name": "Wien",
   "country": "Österreich",
   "boundingBox": [48.12, 16.18, 48.32, 16.58],
-  "dbUrl": "https://raw.githubusercontent.com/.../vienna.db.gz",
-  "dbUrlChunks": ["...vienna.db.gz.001", "...vienna.db.gz.002"],
-  "sigUrl": "https://raw.githubusercontent.com/.../vienna.db.gz.sig"
+  "dbUrl": "https://raw.githubusercontent.com/.../wien.db.gz",
+  "dbUrlChunks": ["...wien.db.gz.001", "...wien.db.gz.002"],
+  "sigUrl": "https://raw.githubusercontent.com/.../wien.db.gz.sig"
 }
 ```
 

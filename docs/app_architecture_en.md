@@ -49,7 +49,7 @@ at.mafue.baumradar.app
 The `CityManager` is the core of data provisioning. It downloads a `catalog.json` from GitHub (cache-busted with timestamp) that lists all available cities with their download URLs.
 
 **Download workflow for a city:**
-1. If `dbUrlChunks` exist (e.g., Berlin > 50MB): Download all `.001`, `.002`, ... chunks and concatenate them into a single `.db.gz` file.
+1. If `dbUrlChunks` exist (triggered for a city DB > 50MB): Download all `.001`, `.002`, ... chunks and concatenate them into a single `.db.gz` file.
 2. If no chunks: Download the single `.db.gz` file.
 3. Download the `.db.gz.sig` signature file.
 4. **Signature verification**: `SignatureVerifier.verifyFile()` checks the `.db.gz` against the `.sig` using the hardcoded Ed25519 public key (`MCowBQYDK2VwAyEA...`). On failure: delete files, abort.

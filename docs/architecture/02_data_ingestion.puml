@@ -12,14 +12,14 @@ while (Für jeden CityProvider) is (Gibt weitere)
   if (Ist komprimiert? z.B. Hamburg) then (ja)
     :Entpacke ZIP Stream;
   else (nein)
-    :Öffne JSON/CSV Stream;
+    :Öffne Stream\n(GeoJSON / CSV / XLSX / ArcGIS-REST);
   endif
-  
-  :Parse Datensatz (Streaming);
-  :Wende Übersetzungen an (Bot. -> Deutsch/Englisch);
-  
+
+  :Parse Datensatz (Streaming / paginiert);
+  :Wende Übersetzungen an\n(Bot. -> Deutsch/Englisch, germanGenusFromLatin);
+
   if (Koordinaten UTM?) then (ja)
-    :UtmConverter (zu WGS84);
+    :UtmConverter (Zone 32N/33N -> WGS84);
   else (nein)
   endif
   

@@ -49,7 +49,7 @@ at.mafue.baumradar.app
 Der `CityManager` ist das Herzstück der Datenversorgung. Er lädt einen `catalog.json` von GitHub (cache-busted mit Timestamp), der alle verfügbaren Städte mit ihren Download-URLs auflistet.
 
 **Ablauf beim Download einer Stadt:**
-1. Falls `dbUrlChunks` vorhanden (z.B. Berlin > 50MB): Lade alle `.001`, `.002`, ... Chunks herunter und hänge sie binär aneinander zu einer `.db.gz` Datei.
+1. Falls `dbUrlChunks` vorhanden (greift bei einer Stadt-DB > 50MB): Lade alle `.001`, `.002`, ... Chunks herunter und hänge sie binär aneinander zu einer `.db.gz` Datei.
 2. Falls keine Chunks: Lade die einzelne `.db.gz` Datei herunter.
 3. Lade die `.db.gz.sig` Signaturdatei herunter.
 4. **Signaturprüfung**: `SignatureVerifier.verifyFile()` prüft die `.db.gz` gegen die `.sig` mit dem hardcodierten Ed25519 Public Key (`MCowBQYDK2VwAyEA...`). Bei Fehlschlag: Dateien löschen, Abbruch.

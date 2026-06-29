@@ -16,23 +16,32 @@ at.mafue.baumradar.dataprocessor
 │   ├── CityProvider.java        # Interface: getCityId(), getName(), getCountry(), getBoundingBox(), processData()
 │   ├── AbstractGeoJsonProvider.java  # Basis für GeoJSON-basierte Städte (Streaming-Parser, Pagination, ZIP-Support)
 │   ├── AbstractCsvProvider.java      # Basis für CSV-basierte Städte (Zeilenweises Parsing, Header-Mapping)
+│   ├── AbstractXlsxProvider.java     # Basis für XLSX-basierte Städte (z.B. Innsbruck)
 │   ├── austria/
 │   │   ├── ViennaProvider.java       # Wien: CSV vom OGD-Portal
-│   │   └── LinzProvider.java         # Linz: CSV vom OGD-Portal
+│   │   ├── LinzProvider.java         # Linz: CSV vom OGD-Portal
+│   │   ├── InnsbruckProvider.java    # Innsbruck: XLSX (data.gv.at)
+│   │   └── GrazProvider.java         # Graz: ArcGIS REST (paginiert, WGS84)
 │   ├── germany/
 │   │   ├── BerlinProvider.java       # Berlin: GeoJSON vom GDI Berlin WFS
 │   │   ├── HamburgProvider.java      # Hamburg: GeoJSON vom WFS, UTM32N → WGS84 Konvertierung
 │   │   ├── FreiburgProvider.java     # Freiburg: GeoJSON
-│   │   └── DortmundProvider.java     # Dortmund: GeoJSON
+│   │   ├── DortmundProvider.java     # Dortmund: GeoJSON
+│   │   ├── RostockProvider.java      # Rostock: GeoJSON (fertige DE+LAT-Gattungen)
+│   │   ├── WuerzburgProvider.java    # Würzburg: GeoJSON (Opendatasoft)
+│   │   ├── LeipzigProvider.java      # Leipzig: WFS-GeoJSON, UTM33N → WGS84
+│   │   └── FrankfurtProvider.java    # Frankfurt am Main: CSV, UTM32N → WGS84
 │   └── switzerland/
 │       ├── ZurichProvider.java       # Zürich: GeoJSON vom städtischen WFS
-│       └── BaselProvider.java        # Basel: GeoJSON
+│       ├── BaselProvider.java        # Basel: GeoJSON
+│       └── ZugProvider.java          # Zug: GeoJSON (bereits WGS84)
 └── utils/
     ├── DatabaseExporter.java    # SQLite-Erzeugung: Tabellen anlegen, Batch-Inserts, Pragmas für Performance
     ├── CatalogBuilder.java      # Erzeugt catalog.json mit URLs, Chunks und BoundingBoxen
     ├── CryptoManager.java       # Ed25519-Schlüsselverwaltung (laden/generieren), Signatur-Erzeugung
-    ├── Translator.java          # Übersetzungstabelle: Deutsche Gattungsnamen → Englisch (z.B. "Birke" → "Birch")
-    └── UtmConverter.java        # UTM Zone 32N → WGS84 Koordinaten-Umrechnung (z.B. für Hamburg)
+    ├── Translator.java          # DE↔EN-Gattungen + Latein→Deutsch (germanGenusFromLatin)
+    ├── UtmConverter.java        # UTM Zone 32N/33N → WGS84 (Hamburg bzw. Leipzig)
+    └── XlsxReader.java          # Schlanker XLSX-Parser (JDK zip + StAX, keine Abhängigkeit)
 ```
 
 ![Klassen-Diagramm Backend](architecture/05_backend_classes.png)
@@ -52,7 +61,7 @@ CryptoManager.loadOrGenerateKeyPair(privFile, pubFile)
 Falls bereits ein Ed25519-Schlüsselpaar auf der Festplatte liegt (`private_key.b64`, `public_key.b64`), wird es geladen. Andernfalls wird ein neues Paar generiert und gespeichert. Der Private Key verlässt **niemals** das Backend; nur der Public Key wird mit committet.
 
 ### Schritt 2: Parallele Stadt-Verarbeitung
-Alle 8 registrierten `CityProvider` werden gleichzeitig via `ExecutorService` (Thread-Pool) verarbeitet. Pro Stadt:
+Alle 15 registrierten `CityProvider` werden gleichzeitig via `ExecutorService` (Thread-Pool) verarbeitet. Pro Stadt:
 
 1. **Daten herunterladen & parsen**: Je nach Provider-Typ:
    - `AbstractGeoJsonProvider`: Jackson Streaming-Parser (`JsonFactory`), optional mit Pagination (ArcGIS-APIs liefern z.B. max. 5000 Features pro Request) und ZIP-Entpackung.
@@ -80,13 +89,13 @@ Alle 8 registrierten `CityProvider` werden gleichzeitig via `ExecutorService` (T
 `CatalogBuilder.build()` erzeugt eine `catalog.json`, die für jede Stadt folgende Informationen enthält:
 ```json
 {
-  "id": "vienna",
+  "id": "wien",
   "name": "Wien",
   "country": "Österreich",
   "boundingBox": [48.12, 16.18, 48.32, 16.58],
-  "dbUrl": "https://raw.githubusercontent.com/.../vienna.db.gz",
-  "dbUrlChunks": ["...vienna.db.gz.001", "...vienna.db.gz.002"],
-  "sigUrl": "https://raw.githubusercontent.com/.../vienna.db.gz.sig"
+  "dbUrl": "https://raw.githubusercontent.com/.../wien.db.gz",
+  "dbUrlChunks": ["...wien.db.gz.001", "...wien.db.gz.002"],
+  "sigUrl": "https://raw.githubusercontent.com/.../wien.db.gz.sig"
 }
 ```
 

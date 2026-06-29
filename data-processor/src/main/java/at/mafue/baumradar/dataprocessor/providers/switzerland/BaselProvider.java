@@ -64,23 +64,19 @@ public class BaselProvider extends AbstractGeoJsonProvider {
         if (idStr.isEmpty()) idStr = UUID.randomUUID().toString();
         String id = getCityId() + "_" + idStr;
         
-        String baumart_lateinisch = props.path("baumart_lateinisch").asText("");
-        String artDe = props.path("baumart_deutsch").asText("");
-        
-        String genusDe = "";
-        String artEn = "";
-        String genusEn = "";
-        
-        // Extract genus from the first word of the Latin species name
-        if (!baumart_lateinisch.isEmpty()) {
-            String[] parts = baumart_lateinisch.split(" ");
-            if (parts.length > 0) genusDe = parts[0];
-            genusEn = Translator.translateGenus(genusDe);
-        } else {
-            return null; // Without a genus, geofence clustering is not possible
-        }
+        String botanical = props.path("baumart_lateinisch").asText("");
+        if (botanical.isEmpty() || botanical.equalsIgnoreCase("null")) return null;
 
-        return new TreeRecord(id, getCityId(), lat, lon, genusDe, genusEn, artDe, artEn);
+        // Normalize to a clean German genus; keep the full German species name.
+        String genusDe = Translator.germanGenusFromLatin(botanical);
+        if (genusDe.isEmpty()) return null;
+        String genusEn = Translator.translateGenus(genusDe);
+
+        String speciesDe = props.path("baumart_deutsch").asText("");
+        if (speciesDe.equalsIgnoreCase("null")) speciesDe = "";
+        String speciesEn = botanical;
+
+        return new TreeRecord(id, getCityId(), lat, lon, genusDe, genusEn, speciesDe, speciesEn);
     }
 }
 

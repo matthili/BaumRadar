@@ -50,6 +50,38 @@ class UpdateManager(
     companion object {
         private const val GITHUB_API_URL =
             "https://api.github.com/repos/matthili/BaumRadar/releases/latest"
+
+        /**
+         * Entfernt ein optionales führendes „v"/„V" (case-insensitive) aus einem
+         * Versions-Tag. Aus „V1.5" oder „v1.5" wird „1.5"; „1.5" bleibt unverändert.
+         *
+         * Wichtig: Die Release-Tags dieses Projekts nutzen ein GROSSES „V" (z. B. „V1.5").
+         * Ein früheres `removePrefix("v")` entfernte nur das kleine „v", wodurch „V1.5"
+         * zu [5] geparst wurde und fälschlich als neuer galt (Endlos-Update-Schleife).
+         */
+        internal fun normalizeVersion(raw: String): String =
+            raw.trim().let { if (it.startsWith("v", ignoreCase = true)) it.substring(1) else it }
+
+        /**
+         * Vergleicht zwei Versionsangaben (Release-Tag oder reine Version) im
+         * Semantic-Versioning-Format (Major.Minor.Patch). Führende „v"/„V"-Präfixe
+         * werden entfernt, fehlende Teile als 0 behandelt.
+         *
+         * Beispiel: „V1.5" vs „1.1.1" → [1,5] vs [1,1,1] → true (1.5 ist neuer).
+         * „V1.5" vs „1.5" → gleich → false (kein Update).
+         */
+        internal fun isRemoteNewer(remoteTag: String, current: String): Boolean {
+            val remoteParts = normalizeVersion(remoteTag).split(".").mapNotNull { it.toIntOrNull() }
+            val currentParts = normalizeVersion(current).split(".").mapNotNull { it.toIntOrNull() }
+            val maxLen = maxOf(remoteParts.size, currentParts.size)
+            for (i in 0 until maxLen) {
+                val r = remoteParts.getOrElse(i) { 0 }
+                val c = currentParts.getOrElse(i) { 0 }
+                if (r > c) return true
+                if (r < c) return false
+            }
+            return false
+        }
     }
 
     private val client = OkHttpClient.Builder()
@@ -61,7 +93,7 @@ class UpdateManager(
      * Prüft, ob auf GitHub ein neueres Release als die aktuelle App-Version existiert.
      *
      * Der Versionsvergleich basiert auf Semantic Versioning (Major.Minor.Patch).
-     * Ein optionales „v"-Präfix im Tag-Namen wird automatisch entfernt.
+     * Ein optionales „v"/„V"-Präfix im Tag-Namen wird automatisch entfernt.
      *
      * @return [UpdateInfo] mit Download-URL und Release-Notes, oder null wenn kein Update
      *         verfügbar ist oder ein Fehler auftrat (z. B. kein Netzwerk).
@@ -79,8 +111,8 @@ class UpdateManager(
             val json = JSONObject(body)
 
             val tagName = json.getString("tag_name")
-            // Tag-Format: "v1.2.0" oder "1.2.0"
-            val remoteVersion = tagName.removePrefix("v")
+            // Tag-Format: "v1.2.0", "V1.2.0" oder "1.2.0"
+            val remoteVersion = normalizeVersion(tagName)
             val releaseNotes = json.optString("body", "Keine Details verfügbar.")
 
             // APK-Asset aus der Asset-Liste finden
@@ -97,7 +129,7 @@ class UpdateManager(
 
             if (apkUrl == null) return@withContext null
 
-            if (isNewerVersion(remoteVersion, currentVersionName)) {
+            if (isRemoteNewer(tagName, currentVersionName)) {
                 UpdateInfo(
                     versionName = remoteVersion,
                     downloadUrl = apkUrl,
@@ -217,24 +249,5 @@ class UpdateManager(
             }
             context.startActivity(intent)
         }
-    }
-
-    /**
-     * Vergleicht zwei Versionsnummern im Semantic-Versioning-Format (Major.Minor.Patch).
-     *
-     * Jeder Teil wird numerisch verglichen. Fehlende Teile werden als 0 behandelt.
-     * Beispiel: "1.2" wird zu [1, 2, 0] → ist neuer als "1.1.5" → [1, 1, 5].
-     */
-    private fun isNewerVersion(remote: String, current: String): Boolean {
-        val remoteParts = remote.split(".").mapNotNull { it.toIntOrNull() }
-        val currentParts = current.split(".").mapNotNull { it.toIntOrNull() }
-        val maxLen = maxOf(remoteParts.size, currentParts.size)
-        for (i in 0 until maxLen) {
-            val r = remoteParts.getOrElse(i) { 0 }
-            val c = currentParts.getOrElse(i) { 0 }
-            if (r > c) return true
-            if (r < c) return false
-        }
-        return false
     }
 }

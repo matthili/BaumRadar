@@ -66,23 +66,41 @@ public class DortmundProvider extends AbstractGeoJsonProvider {
         if (idStr.isEmpty()) idStr = UUID.randomUUID().toString();
         String id = getCityId() + "_" + idStr;
         
-        String art_botani = props.path("art_botani").asText("");
-        String artDe = props.path("art_deutsc").asText("");
-        
-        String genusDe = "";
-        
-        // Extract genus from the first word of the Latin botanical species name
-        if (!art_botani.isEmpty()) {
-            String[] parts = art_botani.split(" ");
-            if (parts.length > 0) genusDe = parts[0];
-        } else {
-            return null; // Cannot classify without a botanical name
-        }
-        
+        String botanical = props.path("art_botani").asText("");
+        if (botanical.isEmpty() || botanical.equalsIgnoreCase("null")) return null;
+
+        // Normalize the ALL-CAPS Latin name to a clean German genus; keep the
+        // full species names, nicely cased for display.
+        String genusDe = Translator.germanGenusFromLatin(botanical);
+        if (genusDe.isEmpty()) return null;
         String genusEn = Translator.translateGenus(genusDe);
-        String artEn = "";
-        
-        return new TreeRecord(id, getCityId(), lat, lon, genusDe, genusEn, artDe, artEn);
+
+        String speciesDe = titleCase(props.path("art_deutsc").asText(""));
+        String speciesEn = latinCase(botanical);
+
+        return new TreeRecord(id, getCityId(), lat, lon, genusDe, genusEn, speciesDe, speciesEn);
+    }
+
+    /** Capitalizes each word (also after '-' and '/'), lowercasing the rest. */
+    private static String titleCase(String s) {
+        if (s == null) return "";
+        s = s.trim();
+        if (s.isEmpty() || s.equalsIgnoreCase("null")) return "";
+        StringBuilder sb = new StringBuilder(s.length());
+        boolean cap = true;
+        for (char c : s.toLowerCase().toCharArray()) {
+            if (cap && Character.isLetter(c)) { sb.append(Character.toUpperCase(c)); cap = false; }
+            else { sb.append(c); if (c == ' ' || c == '-' || c == '/') cap = true; }
+        }
+        return sb.toString();
+    }
+
+    /** Botanical casing: first letter upper, rest lower ("ACER PLATANOIDES" → "Acer platanoides"). */
+    private static String latinCase(String s) {
+        if (s == null) return "";
+        s = s.trim().toLowerCase();
+        if (s.isEmpty()) return "";
+        return Character.toUpperCase(s.charAt(0)) + s.substring(1);
     }
 }
 

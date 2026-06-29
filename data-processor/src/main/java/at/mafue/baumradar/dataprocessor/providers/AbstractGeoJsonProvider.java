@@ -194,6 +194,14 @@ public abstract class AbstractGeoJsonProvider implements CityProvider {
             }
         }
         
+        // Guard against a transient download/parse failure silently producing an
+        // empty database (which would otherwise be compressed, signed, and published,
+        // overwriting good data). Abort instead so Main keeps the previous file.
+        if (inserted == 0) {
+            throw new RuntimeException("No trees parsed for " + getName()
+                + " — aborting so an empty database is not published.");
+        }
+
         // Build merged geofence clusters and export
         List<GeofenceRecord> geofences = clusterer.buildGeofences(getCityId());
         int geofenceInserted = 0;

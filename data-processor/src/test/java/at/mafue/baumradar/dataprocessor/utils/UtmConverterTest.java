@@ -120,4 +120,26 @@ public class UtmConverterTest {
         assertTrue("Higher easting should produce higher longitude",
                 east[1] > west[1]);
     }
+
+    /**
+     * Zone 33 central meridian (15° E) at the equator.
+     * UTM33: E 500000, N 0 → WGS84: 0.0° N, 15.0° E. Exercises the zone parameter.
+     */
+    @Test
+    public void testZone33_centralMeridian_Equator() {
+        double[] result = UtmConverter.utm33NToWgs84(500000.0, 0.0);
+        assertEquals("Equator latitude", 0.0, result[0], 0.0001);
+        assertEquals("Zone 33 central meridian", 15.0, result[1], 0.0001);
+    }
+
+    /**
+     * Real Leipzig tree coordinate (EPSG:25833): E 318838.41, N 5693396.95.
+     * Must reproject into Leipzig's area (~51.37° N, ~12.33° E).
+     */
+    @Test
+    public void testZone33_leipzig_area() {
+        double[] result = UtmConverter.utm33NToWgs84(318838.407366, 5693396.954682);
+        assertTrue("latitude near Leipzig", result[0] > 51.2 && result[0] < 51.5);
+        assertTrue("longitude near Leipzig", result[1] > 12.1 && result[1] < 12.6);
+    }
 }

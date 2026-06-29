@@ -65,53 +65,54 @@ public class HamburgProvider extends AbstractGeoJsonProvider {
     protected TreeRecord mapFeatureToTree(JsonNode feature) {
         JsonNode props = feature.path("properties");
         JsonNode geom = feature.path("geometry");
-        
+
         if (props.isMissingNode() || geom.isMissingNode()) return null;
-        // Hamburg uses both Point and MultiPoint geometries
-        if (!"MultiPoint".equals(geom.path("type").asText()) && !"Point".equals(geom.path("type").asText())) return null;
-        
+        // Hamburg uses both Point and MultiPoint geometries.
+        String type = geom.path("type").asText();
+        if (!"MultiPoint".equals(type) && !"Point".equals(type)) return null;
+
         JsonNode coords = geom.path("coordinates");
         if (coords.size() < 1) return null;
-        
-        // Extract easting/northing from the geometry; for MultiPoint, use the first point
-        double easting, northing;
-        if ("MultiPoint".equals(geom.path("type").asText())) {
+
+        // The portal now serves WGS-84 [lon, lat] (it previously delivered
+        // EPSG:25832 / UTM 32N — converting that today would corrupt every point).
+        double lon, lat;
+        if ("MultiPoint".equals(type)) {
             JsonNode firstPoint = coords.get(0);
             if (firstPoint.size() < 2) return null;
-            easting = firstPoint.get(0).asDouble();
-            northing = firstPoint.get(1).asDouble();
+            lon = firstPoint.get(0).asDouble();
+            lat = firstPoint.get(1).asDouble();
         } else {
             if (coords.size() < 2) return null;
-            easting = coords.get(0).asDouble();
-            northing = coords.get(1).asDouble();
+            lon = coords.get(0).asDouble();
+            lat = coords.get(1).asDouble();
         }
-        
-        // Convert from UTM zone 32N (EPSG:25832) to WGS-84 (EPSG:4326)
-        double[] latlon = UtmConverter.utm32NToWgs84(easting, northing);
-        double lat = latlon[0];
-        double lon = latlon[1];
-        
+        if (lat == 0 || lon == 0) return null;
+
         String idStr = feature.path("id").asText("");
+        if (idStr.isEmpty()) idStr = clean(props.path("baumid").asText(""));
         if (idStr.isEmpty()) idStr = UUID.randomUUID().toString();
         String id = getCityId() + "_" + idStr;
-        
-        // Hamburg provides German and Latin genus names; prefer German for display
-        String genusDe = props.path("gattung_deutsch").asText("");
-        if (genusDe.isEmpty() || genusDe.equalsIgnoreCase("null")) {
-            genusDe = props.path("gattung_latein").asText("");
+
+        // German genus directly; fall back to deriving it from the Latin genus.
+        String genusDe = clean(props.path("gattung_deutsch").asText(""));
+        if (genusDe.isEmpty()) {
+            genusDe = Translator.germanGenusFromLatin(clean(props.path("gattung_latein").asText("")));
         }
-        
-        if (genusDe.isEmpty() || genusDe.equalsIgnoreCase("null")) {
-            return null;
-        }
-        
-        String artDe = props.path("art_deutsch").asText("");
-        if (artDe.equalsIgnoreCase("null")) artDe = "";
-        
-        String artEn = "";
+        if (genusDe.isEmpty()) return null;
         String genusEn = Translator.translateGenus(genusDe);
 
-        return new TreeRecord(id, getCityId(), lat, lon, genusDe, genusEn, artDe, artEn);
+        String speciesDe = clean(props.path("art_deutsch").asText(""));
+        String speciesEn = clean(props.path("art_latein").asText(""));
+
+        return new TreeRecord(id, getCityId(), lat, lon, genusDe, genusEn, speciesDe, speciesEn);
+    }
+
+    /** Trims a JSON string value and maps the literal {@code "null"} to empty. */
+    private static String clean(String s) {
+        if (s == null) return "";
+        String t = s.trim();
+        return t.equalsIgnoreCase("null") ? "" : t;
     }
 }
 

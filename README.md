@@ -4,12 +4,12 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Platform](https://img.shields.io/badge/Platform-Android-green.svg)](https://developer.android.com)
-[![Kotlin](https://img.shields.io/badge/Kotlin-2.0-blue.svg)](https://kotlinlang.org)
+[![Kotlin](https://img.shields.io/badge/Kotlin-2.2-blue.svg)](https://kotlinlang.org)
 [![Java](https://img.shields.io/badge/Java-21-red.svg)](https://openjdk.org)
 [![Tests](https://img.shields.io/badge/Tests-passing-brightgreen.svg)](#-technische-dokumentation)
-[![Open Data](https://img.shields.io/badge/Open_Data-10_Städte-orange.svg)](#-multi-city-support)
+[![Open Data](https://img.shields.io/badge/Open_Data-15_Städte-orange.svg)](#-multi-city-support)
 
-> **Baumradar ist ein Open-Data-basiertes Werkzeug, mit dem Bäume in der direkten Umgebung erkundet und bei der Fortbewegung durch die Stadt gezielt gemieden werden können – besonders hilfreich bei einer Baumpollen-Allergie (z. B. gegen Frühblüher).** Im Hintergrund: eine Open-Data-Geodaten-Pipeline, die Baumkataster aus derzeit 10 Städten vereinheitlicht, räumlich clustert und signiert verteilt.
+> **Baumradar ist ein Open-Data-basiertes Werkzeug, mit dem Bäume in der direkten Umgebung erkundet und bei der Fortbewegung durch die Stadt gezielt gemieden werden können – besonders hilfreich bei einer Baumpollen-Allergie (z. B. gegen Frühblüher).** Im Hintergrund: eine Open-Data-Geodaten-Pipeline, die Baumkataster aus derzeit 15 Städten vereinheitlicht, räumlich clustert und signiert verteilt.
 
 ---
 
@@ -50,7 +50,7 @@
     <td align="center" width="33%">
       <img src="docs/screenshots/staedte_frei_waehlbar.jpg" width="250"/><br/>
       <b>Multi-City Support</b><br/>
-      <sub>10 Städte in AT, DE und CH frei wählbar</sub>
+      <sub>15 Städte in AT, DE und CH frei wählbar</sub>
     </td>
     <td align="center" width="33%">
       <img src="docs/screenshots/auswahl_baeume.jpg" width="250"/><br/>
@@ -90,7 +90,7 @@ Die berechnete Route kann per **GPX-Export** geteilt werden, z. B. an eine Navig
 Unterstützte Städte:
 | 🇦🇹 Österreich | 🇩🇪 Deutschland | 🇨🇭 Schweiz |
 |---|---|---|
-| Wien, Graz, Innsbruck, Linz | Berlin, Hamburg, Freiburg, Dortmund | Zürich, Basel |
+| Wien, Graz, Linz, Innsbruck | Berlin, Hamburg, Freiburg, Dortmund, Rostock, Würzburg, Leipzig, Frankfurt | Zürich, Basel, Zug |
 
 Beim ersten Start wird mindestens eine Stadt ausgewählt. Bei Reisen in eine neue Stadt schlägt die App automatisch vor, die lokalen Baumdaten herunterzuladen.
 
@@ -118,7 +118,7 @@ cd BaumRadar
 ./gradlew assembleDebug
 # Die APK findet sich unter app/build/outputs/apk/debug/
 ```
-**Voraussetzungen:** Android Studio (aktuelle Version), JDK 17, Android SDK 34.
+**Voraussetzungen:** Android Studio (aktuelle Version), JDK 21, Android SDK 34.
 
 ---
 

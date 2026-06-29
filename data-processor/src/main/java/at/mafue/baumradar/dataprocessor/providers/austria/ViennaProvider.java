@@ -105,14 +105,33 @@ public class ViennaProvider extends AbstractCsvProvider {
         String id = cols[idIdx].replaceAll("\"", "");
         if (id.isEmpty()) id = UUID.randomUUID().toString();
         
-        String gattungDe = cols[gattungIdx].replaceAll("\"", "");
-        String artDe = (artIdx != -1 && cols.length > artIdx) ? cols[artIdx].replaceAll("\"", "") : "";
-        
+        // The GATTUNG_ART column combines the botanical and German names, e.g.
+        //   "Celtis australis (Südlicher Zürgelbaum)".
+        // Derive a clean German genus from the botanical part (for allergy
+        // matching) while keeping the German species name (in parentheses) and
+        // the botanical name separately — so no detail is lost.
+        String raw = cols[gattungIdx].replaceAll("\"", "").trim();
+        if (raw.isEmpty() || raw.equalsIgnoreCase("unbekannt")) return null;
+
+        String botanical = raw;
+        String speciesDe = "";
+        int paren = raw.indexOf('(');
+        if (paren >= 0) {
+            botanical = raw.substring(0, paren).trim();
+            int close = raw.indexOf(')', paren);
+            speciesDe = raw.substring(paren + 1, close > paren ? close : raw.length()).trim();
+        }
+
+        String genusDe = Translator.germanGenusFromLatin(botanical);
+        if (genusDe.isEmpty()) return null;
+        String genusEn = Translator.translateGenus(genusDe);
+        String speciesEn = botanical;
+
         double lat = 0;
         double lon = 0;
-        
+
         if (shapeIdx != -1 && cols.length > shapeIdx) {
-            // Parse WKT POINT geometry: "POINT(lon lat)" format
+            // Parse WKT POINT geometry: "POINT (lon lat)" format
             String shape = cols[shapeIdx].replaceAll("\"", "");
             shape = shape.replace("POINT", "").replace("(", "").replace(")", "").trim();
             String[] coords = shape.split(" ");
@@ -132,15 +151,9 @@ public class ViennaProvider extends AbstractCsvProvider {
                 // Ignore
             }
         }
-        
-        // Skip trees without valid coordinates or with unknown/empty genus
-        if (lat != 0 && lon != 0 && !gattungDe.isEmpty() && !gattungDe.equalsIgnoreCase("unbekannt")) {
-            String gattungEn = Translator.translateGenus(gattungDe);
-            String artEn = artDe.isEmpty() ? "" : Translator.translateSpecies(artDe);
-            
-            return new TreeRecord(id, getCityId(), lat, lon, gattungDe, gattungEn, artDe, artEn);
-        }
-        return null;
+
+        if (lat == 0 || lon == 0) return null;
+        return new TreeRecord(id, getCityId(), lat, lon, genusDe, genusEn, speciesDe, speciesEn);
     }
 }
 

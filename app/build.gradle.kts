@@ -12,8 +12,11 @@ android {
         applicationId = "at.mafue.baumradar.app"
         minSdk = 29
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+        // versionCode muss bei jedem Release monoton steigen, sonst lehnt der
+        // Android-Paketinstaller das Sideload-Upgrade ab.
+        // Schema: major*10000 + minor*100 + patch  →  1.5.0 = 10500
+        versionCode = 10500
+        versionName = "1.5"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

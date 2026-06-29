@@ -1,9 +1,9 @@
 @startuml
 !theme plain
-title Data-Processor Package Structure
+title Data-Processor Package Structure (15 cities)
 
 package at.mafue.baumradar.dataprocessor {
-  
+
   class Main {
     - {static} BASE_URL: String
     - {static} PUB_KEY_FILE: String
@@ -52,22 +52,39 @@ package at.mafue.baumradar.dataprocessor {
       # processHeaders(headers: String[])
       # mapRowToTree(row: String[], lineNumber: long): TreeRecord
     }
+    abstract class AbstractXlsxProvider implements CityProvider {
+      # getXlsxUrl(): String
+      # processHeaders(headers: String[])
+      # mapRowToTree(row: String[], lineNumber: long): TreeRecord
+    }
+    note bottom of AbstractGeoJsonProvider
+      All three base classes abort if 0 trees
+      were parsed (transient-failure guard),
+      so an empty DB is never published.
+    end note
 
     package austria {
       class ViennaProvider extends AbstractCsvProvider
       class LinzProvider extends AbstractCsvProvider
+      class InnsbruckProvider extends AbstractXlsxProvider
+      class GrazProvider extends AbstractGeoJsonProvider
     }
-    
+
     package germany {
       class BerlinProvider extends AbstractGeoJsonProvider
       class HamburgProvider extends AbstractGeoJsonProvider
       class FreiburgProvider extends AbstractGeoJsonProvider
       class DortmundProvider extends AbstractGeoJsonProvider
+      class RostockProvider extends AbstractGeoJsonProvider
+      class WuerzburgProvider extends AbstractGeoJsonProvider
+      class LeipzigProvider extends AbstractGeoJsonProvider
+      class FrankfurtProvider extends AbstractCsvProvider
     }
-    
+
     package switzerland {
       class ZurichProvider extends AbstractGeoJsonProvider
       class BaselProvider extends AbstractGeoJsonProvider
+      class ZugProvider extends AbstractGeoJsonProvider
     }
   }
 
@@ -90,9 +107,15 @@ package at.mafue.baumradar.dataprocessor {
     class Translator {
       + {static} translateGenus(german: String): String
       + {static} translateSpecies(german: String): String
+      + {static} germanGenusFromLatin(botanical: String): String
     }
     class UtmConverter {
       + {static} utm32NToWgs84(easting: double, northing: double): double[]
+      + {static} utm33NToWgs84(easting: double, northing: double): double[]
+      + {static} utmNorthToWgs84(easting: double, northing: double, zone: int): double[]
+    }
+    class XlsxReader {
+      + {static} read(xlsxStream: InputStream): List<String[]>
     }
   }
 }
@@ -101,9 +124,16 @@ Main --> CityProvider : iterates (parallel via ExecutorService)
 Main --> DatabaseExporter : creates per city
 Main --> CryptoManager : loadOrGenerateKeyPair + signFile
 Main --> CatalogBuilder : builds catalog.json
+
 AbstractGeoJsonProvider ..> TreeRecord : creates
 AbstractCsvProvider ..> TreeRecord : creates
-AbstractGeoJsonProvider ..> UtmConverter : uses (optional, e.g. Hamburg)
-AbstractCsvProvider ..> Translator : translates genus/species
-AbstractGeoJsonProvider ..> Translator : translates genus/species
+AbstractXlsxProvider ..> TreeRecord : creates
+AbstractXlsxProvider ..> XlsxReader : decodes sheet (JDK zip + StAX)
+
+AbstractGeoJsonProvider ..> UtmConverter : uses (e.g. Hamburg 32N, Leipzig 33N)
+AbstractCsvProvider ..> UtmConverter : uses (e.g. Frankfurt 32N)
+
+AbstractGeoJsonProvider ..> Translator : genus/species (incl. germanGenusFromLatin)
+AbstractCsvProvider ..> Translator : genus/species
+AbstractXlsxProvider ..> Translator : genus/species
 @enduml

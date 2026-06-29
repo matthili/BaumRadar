@@ -26,7 +26,10 @@ import java.util.UUID;
  */
 public class BerlinProvider implements CityProvider {
 
-    private static final String WFS_BASE = "https://gdi.berlin.de/services/wfs/baumbestand?service=WFS&version=2.0.0&request=GetFeature&outputFormat=application/json";
+    // srsName=EPSG:4326 is REQUIRED: without it the WFS returns native EPSG:25833
+    // (UTM 33N) easting/northing, which were silently stored as lat/lon — placing
+    // every Berlin tree at an invalid position. The WFS reprojects to WGS-84 for us.
+    private static final String WFS_BASE = "https://gdi.berlin.de/services/wfs/baumbestand?service=WFS&version=2.0.0&request=GetFeature&outputFormat=application/json&srsName=EPSG:4326";
 
     @Override
     public String getCityId() {
@@ -97,36 +100,41 @@ public class BerlinProvider implements CityProvider {
     protected TreeRecord mapFeatureToTree(JsonNode feature, String layer) {
         JsonNode props = feature.path("properties");
         JsonNode geom = feature.path("geometry");
-        
+
         if (props.isMissingNode() || geom.isMissingNode()) return null;
         if (!"Point".equals(geom.path("type").asText())) return null;
-        
+
         JsonNode coords = geom.path("coordinates");
         if (coords.size() < 2) return null;
 
+        // WGS-84 [lon, lat] — requires srsName=EPSG:4326 on the WFS request
+        // (the native CRS is EPSG:25833 / UTM 33N).
         double lon = coords.get(0).asDouble();
         double lat = coords.get(1).asDouble();
-        
-        // Use default ID or generate
-        String idStr = props.path("gml_id").asText("");
+        if (lat == 0 || lon == 0) return null;
+
+        String idStr = clean(props.path("pitid").asText(""));
+        if (idStr.isEmpty()) idStr = clean(props.path("gisid").asText(""));
         if (idStr.isEmpty()) idStr = UUID.randomUUID().toString();
         String id = getCityId() + "_" + idStr;
-        
-        // Try multiple property names: the two layers use different field names
-        String gattungDe = props.path("gattung").asText("");
-        if (gattungDe.isEmpty() || gattungDe.equals("null")) gattungDe = props.path("baumart").asText("");
 
-        String artDe = props.path("art_deutsch").asText("");
-        if (artDe.isEmpty() || artDe.equals("null")) artDe = props.path("art").asText("");
+        // German genus directly (gattung_deutsch); fall back to the Latin genus.
+        String genusDe = clean(props.path("gattung_deutsch").asText(""));
+        if (genusDe.isEmpty()) genusDe = Translator.germanGenusFromLatin(clean(props.path("gattung").asText("")));
+        if (genusDe.isEmpty() || genusDe.equalsIgnoreCase("unbekannt")) return null;
+        String genusEn = Translator.translateGenus(genusDe);
 
-        if (gattungDe.isEmpty() || gattungDe.equalsIgnoreCase("null") || gattungDe.equalsIgnoreCase("unbekannt")) {
-            return null;
-        }
-        
-        String gattungEn = Translator.translateGenus(gattungDe);
-        String artEn = artDe.isEmpty() ? "" : Translator.translateSpecies(artDe);
-        
-        return new TreeRecord(id, getCityId(), lat, lon, gattungDe, gattungEn, artDe, artEn);
+        String speciesDe = clean(props.path("art_dtsch").asText(""));
+        String speciesEn = clean(props.path("art_bot").asText(""));
+
+        return new TreeRecord(id, getCityId(), lat, lon, genusDe, genusEn, speciesDe, speciesEn);
+    }
+
+    /** Trims a JSON string value and maps the literal {@code "null"} to empty. */
+    private static String clean(String s) {
+        if (s == null) return "";
+        String t = s.trim();
+        return t.equalsIgnoreCase("null") ? "" : t;
     }
 }
 

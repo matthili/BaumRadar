@@ -119,14 +119,17 @@ public class LinzProvider extends AbstractCsvProvider {
         }
         
         if (lat != 0 && lon != 0 && !nameDe.isEmpty()) {
-            // Linz provides Latin genus/species names; use the Latin form as the
-            // English "translation" since Latin botanical names are internationally understood.
-            String genusEn = gattungLat.isEmpty() ? Translator.translateGenus(nameDe) : gattungLat;
-            String speciesEn = artLat.isEmpty() ? "" : artLat;
+            // Derive a clean German genus from the Latin genus column ("Betula" →
+            // "Birke") for consistent allergy matching; keep the German name as the
+            // species and the Latin binomial ("Betula pendula") as species_en.
+            String genusDe = Translator.germanGenusFromLatin(gattungLat);
+            if (genusDe.isEmpty()) genusDe = nameDe;
+            String genusEn = Translator.translateGenus(genusDe);
+            String speciesEn = (gattungLat + " " + artLat).trim();
 
-            return new TreeRecord(id, getCityId(), lat, lon, nameDe, genusEn, "", speciesEn);
+            return new TreeRecord(id, getCityId(), lat, lon, genusDe, genusEn, nameDe, speciesEn);
         }
-        
+
         return null;
     }
 }

@@ -75,7 +75,14 @@ public class Main {
             new ZurichProvider(),
             new FreiburgProvider(),
             new DortmundProvider(),
-            new HamburgProvider()
+            new HamburgProvider(),
+            new RostockProvider(),
+            new WuerzburgProvider(),
+            new ZugProvider(),
+            new LeipzigProvider(),
+            new InnsbruckProvider(),
+            new FrankfurtProvider(),
+            new GrazProvider()
         );
         
         try {

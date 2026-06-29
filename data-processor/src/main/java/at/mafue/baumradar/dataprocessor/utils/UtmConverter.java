@@ -36,7 +36,32 @@ public class UtmConverter {
      * @return [latitude, longitude]
      */
     public static double[] utm32NToWgs84(double easting, double northing) {
-        int zone = 32;
+        return utmNorthToWgs84(easting, northing, 32);
+    }
+
+    /**
+     * Converts EPSG:25833 (UTM Zone 33N) to EPSG:4326 (WGS84 Lat/Lon).
+     *
+     * <p>Used by eastern-German open-data portals such as Leipzig, whose tree
+     * coordinates are provided in zone 33 (central meridian 15° E).
+     *
+     * @param easting  X coordinate
+     * @param northing Y coordinate
+     * @return [latitude, longitude]
+     */
+    public static double[] utm33NToWgs84(double easting, double northing) {
+        return utmNorthToWgs84(easting, northing, 33);
+    }
+
+    /**
+     * Converts a northern-hemisphere UTM coordinate in an arbitrary zone to WGS84.
+     *
+     * @param easting  X coordinate
+     * @param northing Y coordinate
+     * @param zone     UTM zone number (e.g. 32 or 33)
+     * @return [latitude, longitude]
+     */
+    public static double[] utmNorthToWgs84(double easting, double northing, int zone) {
         boolean northernHemisphere = true;
 
         // --- Derived ellipsoid parameters ---

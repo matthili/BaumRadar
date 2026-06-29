@@ -27,7 +27,7 @@ skinparam rectangle {
   BorderColor<<app>> #F57C00
 }
 
-rectangle "🌐  Open-Data-Quellen\n10 Städte · AT / DE / CH\nBaumkataster-Datensätze" as Src <<source>>
+rectangle "🌐  Open-Data-Quellen\n15 Städte · AT / DE / CH\nBaumkataster-Datensätze" as Src <<source>>
 
 rectangle "⚙️  Java-Backend (Data-Processor)\n· Einlesen & Normalisieren\n· Gattungs-Übersetzung (DE/EN)\n· Räumliches Clustering → Geofences\n· GZIP-Kompression + Chunk-Split\n· Ed25519-Signatur" as BE <<backend>>
 

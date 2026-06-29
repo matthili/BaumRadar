@@ -62,24 +62,20 @@ public class FreiburgProvider extends AbstractGeoJsonProvider {
         
         String id = getCityId() + "_" + UUID.randomUUID().toString();
         
-        String art_botani = props.path("baumart_botanisch").asText("");
-        String artDe = props.path("baumart_deutsch").asText("");
-        
-        String genusDe = "";
-        
-        // Extract genus from the first word of the Latin botanical species name
-        // e.g. "Acer platanoides" → genus = "Acer"
-        if (!art_botani.isEmpty()) {
-            String[] parts = art_botani.split(" ");
-            if (parts.length > 0) genusDe = parts[0];
-        } else {
-            return null; // Cannot classify without a botanical name
-        }
-        
+        String botanical = props.path("baumart_botanisch").asText("");
+        if (botanical.isEmpty() || botanical.equalsIgnoreCase("null")) return null;
+
+        // Normalize to a clean German genus for cross-city allergy matching;
+        // keep the full German species name unchanged.
+        String genusDe = Translator.germanGenusFromLatin(botanical);
+        if (genusDe.isEmpty()) return null;
         String genusEn = Translator.translateGenus(genusDe);
-        String artEn = "";
-        
-        return new TreeRecord(id, getCityId(), lat, lon, genusDe, genusEn, artDe, artEn);
+
+        String speciesDe = props.path("baumart_deutsch").asText("");
+        if (speciesDe.equalsIgnoreCase("null")) speciesDe = "";
+        String speciesEn = botanical;
+
+        return new TreeRecord(id, getCityId(), lat, lon, genusDe, genusEn, speciesDe, speciesEn);
     }
 }
 
