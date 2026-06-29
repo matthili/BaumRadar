@@ -1,0 +1,78 @@
+@startuml
+!theme plain
+actor User
+participant "AppContent\n(MainActivity)" as UI
+participant "UpdateManager" as UM
+participant "GitHub API" as GH
+participant "Android\nPackageManager" as PM
+participant "System\nSettings" as Settings
+
+== App-Start: Update-Prüfung ==
+
+UI -> UM : checkForUpdate()
+activate UM
+UM -> GH : GET /repos/matthili/BaumRadar/releases/latest
+GH --> UM : JSON (tag_name, assets[])
+UM -> UM : Vergleiche remote vs.\nBuildConfig.VERSION_NAME\n(Semantic Versioning)
+deactivate UM
+
+alt Keine neue Version
+  UM --> UI : null
+  UI -> UI : Nichts anzeigen
+else Neue Version verfügbar
+  UM --> UI : UpdateInfo(version, apkUrl, releaseNotes)
+
+  == Dialog: "Neue Version verfügbar!" ==
+
+  UI -> User : Zeigt Version + Release-Notes
+  User -> UI : "Aktualisieren"
+
+  == Berechtigungsprüfung ==
+
+  UI -> UM : canInstallPackages()
+  UM -> PM : canRequestPackageInstalls()
+  PM --> UM : true/false
+
+  alt Berechtigung fehlt
+    UM --> UI : false
+
+    note right of UI
+      Dialog erklärt in 4 Schritten:
+      1. "Einstellungen öffnen" tippen
+      2. "Aus dieser Quelle erlauben"
+      3. Zurück zu BaumRadar
+      4. Erneut "Aktualisieren" tippen
+    end note
+
+    UI -> User : Berechtigungs-Dialog
+    User -> UI : "Einstellungen öffnen"
+    UI -> UM : openInstallPermissionSettings()
+    UM -> Settings : ACTION_MANAGE_UNKNOWN_APP_SOURCES
+    Settings --> User : Schalter "Aus dieser Quelle erlauben"
+    User -> Settings : Aktiviert
+    User -> UI : Kehrt zurück, tippt erneut auf "Aktualisieren"
+  end
+
+  == APK herunterladen ==
+
+  UI -> UM : downloadApk(apkUrl)
+  activate UM
+  UM -> GH : GET BaumRadar.apk
+  GH --> UM : APK-Stream
+  UM -> UI : onProgress(0%...100%)
+  UI -> User : Fortschrittsbalken
+
+  UM -> UM : Speichere in cache/updates/
+  deactivate UM
+
+  == Installation starten ==
+
+  UI -> UM : installApk(apkFile)
+  UM -> UM : FileProvider.getUriForFile()
+  UM -> PM : ACTION_VIEW\n(application/vnd.android.package-archive)
+  PM -> User : Android-Installationsdialog
+  User -> PM : "Installieren"
+  PM -> PM : APK installieren & App neu starten
+end
+
+@enduml
