@@ -35,8 +35,9 @@ while (Für jeden CityProvider) is (Gibt weitere)
     :Lösche Original .gz;
   else (nein)
   endif
-  
-  :Füge Stadt zu CatalogBuilder hinzu;
+
+  :Ermittle Inhalts-Fingerprint\n(dataVersion, ID-unabhängig);
+  :Füge Stadt zu CatalogBuilder hinzu\n(inkl. dataVersion);
 endwhile
 
 :Schreibe catalog.json;

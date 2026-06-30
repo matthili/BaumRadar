@@ -17,16 +17,15 @@ at.mafue.baumradar.app
 │   ├── TreeDao.kt               # Room DAO (bounding-box queries, geofence lookups)
 │   ├── HistoryDao.kt            # Room DAO for route history
 │   ├── AllergyDataStore.kt      # Jetpack DataStore: selectedTrees & warnTrees Sets
-│   ├── CityManager.kt           # Catalog download, chunk reassembly, signature verification, DB merge
-│   └── CityCatalogEntry.kt      # Data class: id, name, country, dbUrl, dbUrlChunks, sigUrl, boundingBox
+│   ├── CityManager.kt           # Catalog download, chunk reassembly, signature verification, DB merge, data-version compare
+│   └── CityCatalogEntry.kt      # Data class: id, name, country, dbUrl, dbUrlChunks, sigUrl, boundingBox, dataVersion
 ├── security/
 │   └── SignatureVerifier.kt     # Ed25519 signature verification (BouncyCastle)
 ├── routing/
-│   ├── OsrmRoutingClient.kt    # HTTP request to OSRM, parsing, integrated collision detection
+│   ├── OsrmRoutingClient.kt    # HTTP request to OSRM, parsing, collision detection (contains the RouteResult data class)
 │   ├── RouteCollisionDetector.kt # Point-to-line distance (equirectangular projection)
 │   ├── NominatimGeocoder.kt     # Address resolution via OpenStreetMap Nominatim
-│   ├── GpxGenerator.kt         # GPX export & Share intent
-│   └── RouteResult.kt          # Data class (polyline, duration, distance, collisionCount)
+│   └── GpxGenerator.kt         # GPX export & Share intent
 ├── ui/
 │   ├── MapArScreen.kt           # Map Composable (OSMDroid), AR arrows, Routing UI, Long-Press dialog
 │   ├── MapViewModel.kt          # State: Location, Trees, Routes, Geofences, Exploration mode
@@ -37,9 +36,13 @@ at.mafue.baumradar.app
 │   ├── CitySelectionViewModel.kt # Catalog loading, download control
 │   ├── MainScreen.kt           # Tab navigation (Map, Profile, Cities)
 │   └── TaxonomyUtils.kt        # Trivial name extraction from tree lists
-└── background/
-    ├── GeofenceManager.kt       # Registers 99 closest geofences + 2km update zone with Android
-    └── GeofenceBroadcastReceiver.kt # Receives geofence events → push notification
+├── background/
+│   ├── GeofenceManager.kt       # Registers 99 closest geofences + 2km update zone with Android
+│   ├── GeofenceBroadcastReceiver.kt # Receives geofence events → push notification
+│   ├── GeofenceLifecycleObserver.kt # Restores geofences on every foreground transition
+│   └── BootReceiver.kt          # Re-arms geofences after device reboot (BOOT_COMPLETED)
+└── updater/
+    └── UpdateManager.kt         # App self-update via GitHub Releases (version compare, APK download, FileProvider install)
 ```
 
 ---
@@ -55,11 +58,13 @@ The `CityManager` is the core of data provisioning. It downloads a `catalog.json
 4. **Signature verification**: `SignatureVerifier.verifyFile()` checks the `.db.gz` against the `.sig` using the hardcoded Ed25519 public key (`MCowBQYDK2VwAyEA...`). On failure: delete files, abort.
 5. Decompress the GZIP to a raw `.db` SQLite file.
 6. `ATTACH DATABASE` to the Room database → `INSERT INTO trees SELECT * FROM new_city_db.trees` → `DETACH`.
-7. Mark the city as downloaded in SharedPreferences (`city_dn_<id>`).
+7. Mark the city as downloaded (`city_dn_<id>`) and store the data version (`city_ver_<id>`) in SharedPreferences.
 
 ![Synchronization Flow](architecture/03_app_sync.png)
 
 **Automatic city detection:** In `MapViewModel`, an `effectiveLocation` collector checks the position every 5 seconds. If the user is within the bounding box of a city not yet downloaded, a dialog appears: *"New region detected! Would you like to download the data for X?"*
+
+**Data refresh:** Every catalog entry carries a `dataVersion` – a content-based, id-independent fingerprint of the tree data (produced by the backend). The app remembers this version on download. On startup, `citiesNeedingDataUpdate()` compares the stored version against the current catalog version for each already-downloaded city; on a mismatch a dialog offers to re-download (the same download path, which replaces the old rows via `DELETE FROM trees WHERE city_id`). This delivers data corrections to existing users without a manual re-download.
 
 ---
 
@@ -126,6 +131,18 @@ This feature uses the **Google Play Services `GeofencingClient`** – an energy-
 **Permissions:**
 - `ACCESS_BACKGROUND_LOCATION` (Android 10+): Allows background location checks.
 - `POST_NOTIFICATIONS` (Android 13+): Allows push notifications.
+
+---
+
+## 6. App Self-Update
+
+On startup, `UpdateManager` (package `updater`) queries the GitHub Releases API for a newer version – comparing the release tag against `BuildConfig.VERSION_NAME` (`isRemoteNewer`, robust against a leading "V"). If a newer version exists, `MainActivity` shows a dialog with release notes and walks through:
+
+1. **Permission check:** `canInstallPackages()` checks `canRequestPackageInstalls()` on Android 8+. If missing, a dialog explains the setting and `openInstallPermissionSettings()` jumps straight to the app-specific "unknown sources" screen.
+2. **Download:** The APK is downloaded to `cacheDir/updates/` with a progress indicator.
+3. **Installation:** `installApk()` hands the file to the Android package installer via `FileProvider` (a `content://` URI).
+
+The app update takes priority over the tree-data refresh (Section 1) – the latter is only checked when no app update is pending. Manifest prerequisites: the `REQUEST_INSTALL_PACKAGES` permission and the FileProvider path `updates/` (`res/xml/file_paths.xml`).
 
 ---
 

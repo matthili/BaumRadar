@@ -7,6 +7,12 @@ participant "GitHub Pages" as Host
 participant "SignatureVerifier" as Crypto
 database "AppDatabase\n(Room)" as DB
 
+note over User, Manager
+  Ausgelöst durch manuellen Download ODER beim App-Start,
+  wenn citiesNeedingDataUpdate() eine veraltete dataVersion
+  einer bereits geladenen Stadt erkennt (Daten-Refresh).
+end note
+
 User -> UI : Klickt auf Download
 UI -> Manager : downloadAndMergeCity(city)
 activate Manager
@@ -38,6 +44,7 @@ alt Signatur gültig
   Manager -> DB : ATTACH DATABASE 'city.db'
   Manager -> DB : INSERT INTO trees SELECT *
   Manager -> DB : DETACH DATABASE
+  Manager -> Manager : Speichere city_dn_ + city_ver_\n(dataVersion für späteren Vergleich)
   Manager -> UI : true (Erfolg)
 else Signatur ungültig
   Manager -> Manager : Lösche fehlerhafte Dateien

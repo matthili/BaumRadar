@@ -1,6 +1,8 @@
-*(Für die deutsche Dokumentation, siehe [README.md](README.md))*
+<p align="center">
+  <img src="assets/logo/baumradar_git.png" alt="BaumRadar" width="560"/>
+</p>
 
-# Baumradar 🌳
+*(Für die deutsche Dokumentation, siehe [README.md](README.md))*
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Platform](https://img.shields.io/badge/Platform-Android-green.svg)](https://developer.android.com)
@@ -92,6 +94,9 @@ The app downloads a compressed, processed SQLite database for each city. Once do
 ### 🔐 Verified Open Data (Ed25519-signed)
 The data is processed by the backend and cryptographically signed using **Ed25519**. Before the app uses a downloaded database, it verifies the signature against a public key embedded in the app. Only after successful verification is the data imported. This ensures anyone can verify the data is authentic and untampered.
 
+### 🔄 Self-Update & Data Refresh
+On startup the app checks for updates: if a newer app version exists in the GitHub releases, it can download and install itself on request (explaining the required install permission and jumping straight to the relevant setting). It likewise detects updated or corrected **tree data** – each city carries a content-based data version, and already-downloaded cities are offered a refresh whenever their data changes.
+
 ---
 
 ## 🚀 Installation (Android App)
@@ -166,8 +171,7 @@ Baumradar consists of two main parts and an open data structure:
 | [Routing & Collision](docs/architecture/04_routing_collision.png) | Allergy routing with geofence collision detection |
 | [Backend Classes](docs/architecture/05_backend_classes.png) | UML class diagram of the Data-Processor |
 | [Collision Activity](docs/architecture/06_collision_activity.png) | Activity diagram of the collision detection |
-| [Signature Verification](docs/signature_verification.png) | Ed25519 signature verification process |
-| [Update Process](docs/update_process.png) | Data update workflow |
+| [App Self-Update](docs/architecture/07_app_update_flow.png) | In-app update flow via GitHub Releases |
 
 </details>
 

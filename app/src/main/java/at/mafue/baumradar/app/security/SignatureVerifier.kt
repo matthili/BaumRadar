@@ -8,7 +8,7 @@ import java.security.PublicKey
 import java.security.Security
 import java.security.Signature
 import java.security.spec.X509EncodedKeySpec
-import android.util.Base64
+import java.util.Base64
 
 /**
  * Verifiziert die kryptographische Integrität heruntergeladener Datenbank-Dateien.
@@ -49,7 +49,10 @@ object SignatureVerifier {
         publicKeyBase64: String
     ): Boolean {
         return try {
-            val decodedKey = Base64.decode(publicKeyBase64.trim(), Base64.DEFAULT)
+            // java.util.Base64 (statt android.util.Base64) hält diese Krypto-Klasse
+            // plattformunabhängig und damit rein-JVM-testbar. Der MIME-Decoder ist
+            // tolerant gegenüber Zeilenumbrüchen – wie das frühere Base64.DEFAULT.
+            val decodedKey = Base64.getMimeDecoder().decode(publicKeyBase64.trim())
             val keySpec = X509EncodedKeySpec(decodedKey)
             val keyFactory = KeyFactory.getInstance("Ed25519", "BC")
             val publicKey: PublicKey = keyFactory.generatePublic(keySpec)

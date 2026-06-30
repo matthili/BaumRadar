@@ -1,6 +1,8 @@
-*(For the English documentation, see [README_en.md](README_en.md))*
+<p align="center">
+  <img src="assets/logo/baumradar_git.png" alt="BaumRadar" width="560"/>
+</p>
 
-# 🌳 Baumradar
+*(For the English documentation, see [README_en.md](README_en.md))*
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Platform](https://img.shields.io/badge/Platform-Android-green.svg)](https://developer.android.com)
@@ -100,6 +102,9 @@ Für jede Stadt wird eine komprimierte, aufbereitete SQLite-Datenbank herunterge
 ### 🔐 Verifizierte Open Data (Ed25519-signiert)
 Die Daten werden vom Backend verarbeitet und kryptografisch mit **Ed25519** signiert. Bevor die App eine heruntergeladene Datenbank verwendet, wird die Signatur gegen einen fest eingebetteten Public Key geprüft. Erst bei erfolgreicher Prüfung werden die Daten importiert – damit ist die Authentizität und Unverfälschtheit der Daten sichergestellt.
 
+### 🔄 Selbst-Update & Daten-Aktualisierung
+Beim Start prüft die App auf Neuerungen: Gibt es im GitHub-Release eine neuere App-Version, lädt und installiert sie sich auf Wunsch selbst (mit Hinweis auf die nötige Installationsberechtigung und direktem Sprung in die passende Einstellung). Ebenso werden aktualisierte oder korrigierte **Baumdaten** erkannt – jede Stadt trägt eine inhaltsbasierte Daten-Version, und bereits geladenen Städten wird ein Refresh angeboten, sobald sich ihre Daten ändern.
+
 ---
 
 ## 🚀 Installation
@@ -166,8 +171,7 @@ Baumradar besteht aus zwei Hauptteilen und einer offenen Datenstruktur:
 | [Routing & Kollision](docs/architecture/04_routing_collision.png) | Allergie-Routing mit Geofence-Kollisionserkennung |
 | [Backend-Klassen](docs/architecture/05_backend_classes.png) | UML-Klassendiagramm des Data-Processors |
 | [Kollisions-Aktivität](docs/architecture/06_collision_activity.png) | Aktivitätsdiagramm der Kollisionserkennung |
-| [Signaturprüfung](docs/signature_verification.png) | Ed25519-Signatur-Verifizierungsprozess |
-| [Update-Prozess](docs/update_process.png) | Ablauf eines Daten-Updates |
+| [App-Selbst-Update](docs/architecture/07_app_update_flow.png) | Ablauf der In-App-Aktualisierung via GitHub Releases |
 
 </details>
 
