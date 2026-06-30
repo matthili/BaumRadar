@@ -7,9 +7,9 @@
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.2-blue.svg)](https://kotlinlang.org)
 [![Java](https://img.shields.io/badge/Java-21-red.svg)](https://openjdk.org)
 [![Tests](https://img.shields.io/badge/Tests-passing-brightgreen.svg)](#-technical-documentation)
-[![Open Data](https://img.shields.io/badge/Open_Data-15_Cities-orange.svg)](#-multi-city-support)
+[![Open Data](https://img.shields.io/badge/Open_Data-19_Cities-orange.svg)](#-multi-city-support)
 
-> **Baumradar is an Open-Data-based tool that allows you to explore trees in your vicinity and intentionally avoid them when navigating through the city – especially helpful if you suffer from tree pollen allergies (e.g., early bloomers).** Behind the scenes: an Open Data geodata pipeline that unifies tree cadastres from currently 15 cities, spatially clusters them, and distributes them with cryptographic signatures.
+> **Baumradar is an Open-Data-based tool that allows you to explore trees in your vicinity and intentionally avoid them when navigating through the city – especially helpful if you suffer from tree pollen allergies (e.g., early bloomers).** Behind the scenes: an Open Data geodata pipeline that unifies tree cadastres from currently 19 cities, spatially clusters them, and distributes them with cryptographic signatures.
 
 ---
 
@@ -50,7 +50,7 @@
     <td align="center" width="33%">
       <img src="docs/screenshots/staedte_frei_waehlbar.jpg" width="250"/><br/>
       <b>Multi-City Support</b><br/>
-      <sub>15 cities across AT, DE, and CH freely selectable</sub>
+      <sub>19 cities across AT, DE, and CH freely selectable</sub>
     </td>
     <td align="center" width="33%">
       <img src="docs/screenshots/auswahl_baeume.jpg" width="250"/><br/>
@@ -84,7 +84,7 @@ Open the "Plan Route" card at the top of the screen. Enter a start and destinati
 The calculated route can be shared via GPX export, e.g., to a navigation app.
 
 ### 🏙️ Multi-City Support
-Supported cities: **Vienna, Graz, Linz, Innsbruck** (Austria), **Berlin, Hamburg, Freiburg, Dortmund, Rostock, Würzburg, Leipzig, Frankfurt** (Germany), **Zurich, Basel, Zug** (Switzerland). On first launch, you select at least one city. When you later move to a new city, the app automatically suggests downloading the local tree data.
+Supported cities: **Vienna, Graz, Linz, Innsbruck** (Austria), **Berlin, Hamburg, Cologne, Frankfurt, Stuttgart, Dortmund, Leipzig, Gelsenkirchen, Bonn, Rostock, Würzburg, Freiburg** (Germany), **Zurich, Basel, Zug** (Switzerland). On first launch, you select at least one city. When you later move to a new city, the app automatically suggests downloading the local tree data.
 
 ### 📴 Offline First
 The app downloads a compressed, processed SQLite database for each city. Once downloaded, the map display, exploration mode, and background warnings work **completely without an internet connection**. Only the routing feature (route calculation via OSRM) briefly requires a connection.

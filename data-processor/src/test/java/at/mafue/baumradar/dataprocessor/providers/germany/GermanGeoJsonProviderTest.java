@@ -135,4 +135,74 @@ public class GermanGeoJsonProviderTest {
         assertEquals("Acer pseudoplatanus", t.speciesEn);
         assertTrue("German species kept & cased", t.speciesDe.startsWith("Berg-Ahorn"));
     }
+
+    @Test
+    public void koelnReprojectsUtm32AndDerivesGenus() throws Exception {
+        String json = "{ \"type\": \"Feature\","
+            + " \"geometry\": { \"type\": \"Point\", \"coordinates\": [ 352668.7715999996, 5652168.7839 ] },"
+            + " \"properties\": { \"Botanischer_Name\": \"Fraxinus excelsior \","
+            + " \"Deutscher_Name\": \"Gemeine Esche\", \"Baumnummer\": \"66-604-S-0298\" } }";
+        TreeRecord t = new KoelnProvider().mapFeatureToTree(feature(json));
+        assertNotNull(t);
+        assertEquals("Esche", t.genusDe);
+        assertEquals("Ash", t.genusEn);
+        assertEquals("Gemeine Esche", t.speciesDe);
+        assertEquals("Fraxinus excelsior", t.speciesEn);   // trailing space trimmed
+        assertTrue(t.id.startsWith("koeln_"));             // UUID (Baumnummer not unique)
+        assertTrue("reprojected lat near Cologne", t.latitude > 50.8 && t.latitude < 51.1);
+        assertTrue("reprojected lon near Cologne", t.longitude > 6.7 && t.longitude < 7.2);
+    }
+
+    @Test
+    public void stuttgartDerivesGenusFromBotanicalWfs() throws Exception {
+        String json = "{ \"type\": \"Feature\","
+            + " \"geometry\": { \"type\": \"Point\", \"coordinates\": [ 9.1534, 48.8411 ] },"
+            + " \"properties\": { \"BAID\": 61319, \"BAUMART\": \"Amerikanische Roteiche\","
+            + " \"BAUMART_BOT\": \"Quercus rubra\" } }";
+        TreeRecord t = new StuttgartProvider().mapFeatureToTree(feature(json));
+        assertNotNull(t);
+        assertEquals("Eiche", t.genusDe);
+        assertEquals("Oak", t.genusEn);
+        assertEquals("Amerikanische Roteiche", t.speciesDe);
+        assertEquals("Quercus rubra", t.speciesEn);
+        assertEquals("stuttgart_61319", t.id);
+        assertEquals(48.8411, t.latitude, 1e-7);
+        assertEquals(9.1534, t.longitude, 1e-7);
+    }
+
+    @Test
+    public void gelsenkirchenParsesEsriJsonAttributesAndXy() throws Exception {
+        // Esri JSON shape (f=json), NOT GeoJSON: attributes + geometry.x/y
+        String json = "{ \"attributes\": { \"OBJECTID\": 1, \"Baumart\": \"Platanus acerifolia\","
+            + " \"Baumart_dt\": \"Ahornblättrige Platane\" },"
+            + " \"geometry\": { \"x\": 7.0983120821029635, \"y\": 51.50705905127519 } }";
+        TreeRecord t = new GelsenkirchenProvider().mapFeatureToTree(feature(json));
+        assertNotNull(t);
+        assertEquals("Platane", t.genusDe);
+        assertEquals("Plane Tree", t.genusEn);
+        assertEquals("Ahornblättrige Platane", t.speciesDe);
+        assertEquals("Platanus acerifolia", t.speciesEn);
+        assertEquals("gelsenkirchen_1", t.id);
+        assertEquals(51.50705905127519, t.latitude, 1e-7);   // geometry.y → lat
+        assertEquals(7.0983120821029635, t.longitude, 1e-7); // geometry.x → lon
+    }
+
+    @Test
+    public void bonnTrimsPaddedNamesAndDerivesGenus() throws Exception {
+        // Source right-pads string fields heavily; the provider must trim them.
+        String json = "{ \"type\": \"Feature\","
+            + " \"geometry\": { \"type\": \"Point\", \"coordinates\": [ 7.1636804156, 50.6786305911 ] },"
+            + " \"properties\": { \"baum_id\": 2,"
+            + " \"lateinischer_name\": \"Sorbus intermedia                    \","
+            + " \"deutscher_name\": \"Schwedische Mehlbeere            \", \"alter\": 47 } }";
+        TreeRecord t = new BonnProvider().mapFeatureToTree(feature(json));
+        assertNotNull(t);
+        assertEquals("Mehlbeere", t.genusDe);
+        assertEquals("Whitebeam", t.genusEn);
+        assertEquals("Schwedische Mehlbeere", t.speciesDe);  // padding trimmed
+        assertEquals("Sorbus intermedia", t.speciesEn);      // padding trimmed
+        assertEquals("bonn_2", t.id);
+        assertEquals(50.6786305911, t.latitude, 1e-7);
+        assertEquals(7.1636804156, t.longitude, 1e-7);
+    }
 }

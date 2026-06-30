@@ -115,7 +115,21 @@ public class CryptoManager {
         }
         
         byte[] signatureBytes = sig.sign();
-        Files.write(sigFile.toPath(), signatureBytes);
+        // Retry the write: Windows can briefly memory-map a just-created file
+        // (ERROR_USER_MAPPED_FILE, e.g. via a virus scanner/indexer). Without a
+        // retry this would leave a fresh .db.gz next to a stale .sig.
+        java.io.IOException writeErr = null;
+        for (int attempt = 1; attempt <= 5; attempt++) {
+            try {
+                Files.write(sigFile.toPath(), signatureBytes);
+                writeErr = null;
+                break;
+            } catch (java.io.IOException e) {
+                writeErr = e;
+                try { Thread.sleep(500L * attempt); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+            }
+        }
+        if (writeErr != null) throw writeErr;
         logger.debug("Successfully generated Ed25519 signature.");
     }
 }

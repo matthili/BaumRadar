@@ -72,6 +72,52 @@ public class Translator {
         genusDict.put("Douglasie", "Douglas Fir");
         genusDict.put("Eibe", "Yew");
         genusDict.put("Urweltmammutbaum", "Dawn Redwood");
+        // Less common genera unified by the extended Latin→German table below
+        genusDict.put("Hartriegel", "Dogwood");
+        genusDict.put("Maulbeere", "Mulberry");
+        genusDict.put("Felsenbirne", "Serviceberry");
+        genusDict.put("Blauglockenbaum", "Foxglove Tree");
+        genusDict.put("Holunder", "Elder");
+        genusDict.put("Hemlocktanne", "Hemlock");
+        genusDict.put("Eisenholzbaum", "Persian Ironwood");
+        genusDict.put("Geweihbaum", "Kentucky Coffeetree");
+        genusDict.put("Zeder", "Cedar");
+        genusDict.put("Mammutbaum", "Giant Sequoia");
+        genusDict.put("Hibiskus", "Hibiscus");
+        genusDict.put("Kuchenbaum", "Katsura");
+        genusDict.put("Flieder", "Lilac");
+        genusDict.put("Quitte", "Quince");
+        genusDict.put("Ölweide", "Oleaster");
+        genusDict.put("Sumpfzypresse", "Bald Cypress");
+        genusDict.put("Mispel", "Medlar");
+        genusDict.put("Wacholder", "Juniper");
+        genusDict.put("Goldregen", "Laburnum");
+        genusDict.put("Lebensbaum", "Arborvitae");
+        genusDict.put("Bienenbaum", "Bee Bee Tree");
+        genusDict.put("Taschentuchbaum", "Dove Tree");
+        genusDict.put("Zypresse", "Cypress");
+        genusDict.put("Tamariske", "Tamarisk");
+        genusDict.put("Seidenbaum", "Silk Tree");
+        genusDict.put("Essigbaum", "Sumac");
+        genusDict.put("Buchsbaum", "Box");
+        genusDict.put("Papiermaulbeere", "Paper Mulberry");
+        genusDict.put("Perückenstrauch", "Smoke Tree");
+        genusDict.put("Sicheltanne", "Japanese Cedar");
+        genusDict.put("Korkbaum", "Amur Cork Tree");
+        genusDict.put("Feige", "Fig");
+        genusDict.put("Schneeball", "Viburnum");
+        genusDict.put("Guttaperchabaum", "Hardy Rubber Tree");
+        genusDict.put("Persimone", "Persimmon");
+        genusDict.put("Pfaffenhütchen", "Spindle");
+        genusDict.put("Hanfpalme", "Windmill Palm");
+        genusDict.put("Glanzmispel", "Photinia");
+        genusDict.put("Araukarie", "Monkey Puzzle");
+        genusDict.put("Zwergmispel", "Cotoneaster");
+        genusDict.put("Kopfeibe", "Plum Yew");
+        genusDict.put("Flusszeder", "Incense Cedar");
+        genusDict.put("Kreuzdorn", "Buckthorn");
+        genusDict.put("Zelkove", "Zelkova");
+        genusDict.put("Flügelnuss", "Wingnut");
 
         // Botanical (Latin) genus → German genus. Used by providers whose source
         // data ships only scientific names (e.g. Würzburg, Zug, Leipzig, Innsbruck),
@@ -117,6 +163,55 @@ public class Translator {
         latinGenusDict.put("Taxus", "Eibe");
         latinGenusDict.put("Tilia", "Linde");
         latinGenusDict.put("Ulmus", "Ulme");
+        // Extended tail: rarer genera that previously fell back to their Latin name.
+        latinGenusDict.put("Albizia", "Seidenbaum");
+        latinGenusDict.put("Amelanchier", "Felsenbirne");
+        latinGenusDict.put("Araucaria", "Araukarie");
+        latinGenusDict.put("Broussonetia", "Papiermaulbeere");
+        latinGenusDict.put("Buxus", "Buchsbaum");
+        latinGenusDict.put("Calocedrus", "Flusszeder");
+        latinGenusDict.put("Cedrus", "Zeder");
+        latinGenusDict.put("Cephalotaxus", "Kopfeibe");
+        latinGenusDict.put("Cercidiphyllum", "Kuchenbaum");
+        latinGenusDict.put("Cornus", "Hartriegel");
+        latinGenusDict.put("Cotinus", "Perückenstrauch");
+        latinGenusDict.put("Cotoneaster", "Zwergmispel");
+        latinGenusDict.put("Cryptomeria", "Sicheltanne");
+        latinGenusDict.put("Cupressus", "Zypresse");
+        latinGenusDict.put("Cydonia", "Quitte");
+        latinGenusDict.put("Davidia", "Taschentuchbaum");
+        latinGenusDict.put("Diospyros", "Persimone");
+        latinGenusDict.put("Elaeagnus", "Ölweide");
+        latinGenusDict.put("Eucommia", "Guttaperchabaum");
+        latinGenusDict.put("Euodia", "Bienenbaum");
+        latinGenusDict.put("Euonymus", "Pfaffenhütchen");
+        latinGenusDict.put("Ficus", "Feige");
+        latinGenusDict.put("Gymnocladus", "Geweihbaum");
+        latinGenusDict.put("Hibiscus", "Hibiskus");
+        latinGenusDict.put("Juniperus", "Wacholder");
+        latinGenusDict.put("Laburnum", "Goldregen");
+        latinGenusDict.put("Mespilus", "Mispel");
+        latinGenusDict.put("Morus", "Maulbeere");
+        latinGenusDict.put("Parrotia", "Eisenholzbaum");
+        latinGenusDict.put("Paulownia", "Blauglockenbaum");
+        latinGenusDict.put("Phellodendron", "Korkbaum");
+        latinGenusDict.put("Photinia", "Glanzmispel");
+        latinGenusDict.put("Platycladus", "Lebensbaum");
+        latinGenusDict.put("Pterocarya", "Flügelnuss");
+        latinGenusDict.put("Rhamnus", "Kreuzdorn");
+        latinGenusDict.put("Rhus", "Essigbaum");
+        latinGenusDict.put("Sambucus", "Holunder");
+        latinGenusDict.put("Sequoia", "Mammutbaum");
+        latinGenusDict.put("Sequoiadendron", "Mammutbaum");
+        latinGenusDict.put("Syringa", "Flieder");
+        latinGenusDict.put("Tamarix", "Tamariske");
+        latinGenusDict.put("Taxodium", "Sumpfzypresse");
+        latinGenusDict.put("Tetradium", "Bienenbaum");
+        latinGenusDict.put("Thuja", "Lebensbaum");
+        latinGenusDict.put("Trachycarpus", "Hanfpalme");
+        latinGenusDict.put("Tsuga", "Hemlocktanne");
+        latinGenusDict.put("Viburnum", "Schneeball");
+        latinGenusDict.put("Zelkova", "Zelkove");
 
         // We can leave specific species generally as they are or translate common ones.
         // If not found, we fallback to the German name.

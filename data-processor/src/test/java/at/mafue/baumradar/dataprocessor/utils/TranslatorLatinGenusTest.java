@@ -45,4 +45,17 @@ public class TranslatorLatinGenusTest {
         assertEquals("Birch", Translator.translateGenus(Translator.germanGenusFromLatin("Betula pendula")));
         assertEquals("Linden", Translator.translateGenus(Translator.germanGenusFromLatin("Tilia cordata")));
     }
+
+    @Test
+    public void mapsExtendedTailGenera() {
+        assertEquals("Quitte", Translator.germanGenusFromLatin("Cydonia oblonga"));
+        assertEquals("Hartriegel", Translator.germanGenusFromLatin("Cornus mas"));
+        assertEquals("Maulbeere", Translator.germanGenusFromLatin("Morus alba"));
+        assertEquals("Holunder", Translator.germanGenusFromLatin("Sambucus nigra"));
+        assertEquals("Wacholder", Translator.germanGenusFromLatin("Juniperus communis"));
+        assertEquals("Zeder", Translator.germanGenusFromLatin("Cedrus libani"));
+        // English round-trips for the newly added German names
+        assertEquals("Quince", Translator.translateGenus(Translator.germanGenusFromLatin("Cydonia oblonga")));
+        assertEquals("Elder", Translator.translateGenus(Translator.germanGenusFromLatin("Sambucus nigra")));
+    }
 }

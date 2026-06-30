@@ -18,15 +18,15 @@ at.mafue.baumradar.dataprocessor
 │   ├── AbstractCsvProvider.java      # Base for CSV-based cities (line-by-line parsing, header mapping)
 │   ├── AbstractXlsxProvider.java     # Base for XLSX-based cities (e.g. Innsbruck)
 │   ├── austria/                      # Vienna, Linz (CSV); Innsbruck (XLSX); Graz (ArcGIS REST)
-│   ├── germany/                      # Berlin, Hamburg, Freiburg, Dortmund, Rostock, Würzburg, Leipzig (GeoJSON)
-│   │                                 #   + FrankfurtProvider (Frankfurt am Main, CSV/UTM32N)
+│   ├── germany/                      # Berlin, Hamburg, Köln, Stuttgart, Freiburg, Dortmund, Rostock, Würzburg, Leipzig, Bonn (GeoJSON)
+│   │                                 #   + FrankfurtProvider (CSV/UTM32N), GelsenkirchenProvider (ArcGIS Esri-JSON); Köln/Leipzig reproject UTM
 │   └── switzerland/                  # ZurichProvider, BaselProvider, ZugProvider (GeoJSON)
 └── utils/
     ├── DatabaseExporter.java    # SQLite creation: table setup, batch inserts, performance pragmas
     ├── CatalogBuilder.java      # Generates catalog.json with URLs, chunks, and bounding boxes
     ├── CryptoManager.java       # Ed25519 key management (load/generate), signature creation
     ├── Translator.java          # DE↔EN genus dict + Latin→German (germanGenusFromLatin)
-    ├── UtmConverter.java        # UTM Zone 32N/33N → WGS84 (Hamburg / Leipzig)
+    ├── UtmConverter.java        # UTM Zone 32N/33N → WGS84 (Cologne, Frankfurt / Leipzig)
     └── XlsxReader.java          # Lean XLSX parser (JDK zip + StAX, no dependency)
 ```
 
@@ -45,7 +45,7 @@ CryptoManager.loadOrGenerateKeyPair(privFile, pubFile)
 If an Ed25519 key pair already exists on disk (`private_key.b64`, `public_key.b64`), it is loaded. Otherwise, a new pair is generated and saved. The private key **never** leaves the backend; only the public key is committed.
 
 ### Step 2: Parallel City Processing
-All 15 registered `CityProvider` instances are processed simultaneously via `ExecutorService` (thread pool). Per city:
+All 19 registered `CityProvider` instances are processed simultaneously via `ExecutorService` (thread pool). Per city:
 
 1. **Download & Parse**: Depending on provider type:
    - `AbstractGeoJsonProvider`: Jackson streaming parser (`JsonFactory`), optionally with pagination (ArcGIS APIs return e.g., max. 5000 features per request) and ZIP extraction.

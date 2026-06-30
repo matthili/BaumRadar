@@ -82,7 +82,11 @@ public class Main {
             new LeipzigProvider(),
             new InnsbruckProvider(),
             new FrankfurtProvider(),
-            new GrazProvider()
+            new GrazProvider(),
+            new KoelnProvider(),
+            new StuttgartProvider(),
+            new GelsenkirchenProvider(),
+            new BonnProvider()
         );
         
         try {
@@ -114,18 +118,29 @@ public class Main {
                         
                         exporter.close();
                         
-                        // Compress DB to .gz
+                        // Compress DB to .gz (retry on transient Windows file locks)
                         File gzFile = new File(outDir, dbFileName + ".gz");
-                        if (gzFile.exists()) gzFile.delete();
-                        try (FileInputStream fis = new FileInputStream(dbFile);
-                             FileOutputStream fos = new FileOutputStream(gzFile);
-                             GZIPOutputStream gzos = new GZIPOutputStream(fos)) {
-                            byte[] buffer = new byte[8192];
-                            int len;
-                            while ((len = fis.read(buffer)) > 0) {
-                                gzos.write(buffer, 0, len);
+                        java.io.IOException gzErr = null;
+                        for (int attempt = 1; attempt <= 5; attempt++) {
+                            try {
+                                if (gzFile.exists()) gzFile.delete();
+                                try (FileInputStream fis = new FileInputStream(dbFile);
+                                     FileOutputStream fos = new FileOutputStream(gzFile);
+                                     GZIPOutputStream gzos = new GZIPOutputStream(fos)) {
+                                    byte[] buffer = new byte[8192];
+                                    int len;
+                                    while ((len = fis.read(buffer)) > 0) {
+                                        gzos.write(buffer, 0, len);
+                                    }
+                                }
+                                gzErr = null;
+                                break;
+                            } catch (java.io.IOException e) {
+                                gzErr = e;
+                                try { Thread.sleep(500L * attempt); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
                             }
                         }
+                        if (gzErr != null) throw gzErr;
                         
                         // Delete uncompressed DB
                         dbFile.delete();

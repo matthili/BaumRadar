@@ -14,9 +14,14 @@ import java.util.UUID;
  * City provider for <strong>Dortmund, Germany</strong>.
  *
  * <p>Downloads the tree cadastre from Dortmund's Opendatasoft-based open-data
- * portal as paginated GeoJSON exports.  Property field names are truncated
+ * portal as a single GeoJSON export.  Property field names are truncated
  * (e.g. {@code art_botani} instead of {@code art_botanisch}), which is a
  * common artifact of Shapefile-origin datasets with 10-character field limits.
+ *
+ * <p>The export is fetched in one request (pagination disabled): Opendatasoft's
+ * {@code /exports/geojson} endpoint rejects {@code offset + limit > 10000}, so a
+ * paginated fetch silently capped Dortmund at 10&nbsp;000 of its ~155&nbsp;000
+ * trees. {@link WuerzburgProvider} uses the same single-shot approach.
  *
  * <p>The genus is derived from the first word of the botanical species name,
  * following the same convention as {@link FreiburgProvider}.
@@ -43,9 +48,16 @@ public class DortmundProvider extends AbstractGeoJsonProvider {
         return new double[]{51.42, 7.33, 51.58, 7.62};
     }
 
+    /** The Opendatasoft export returns the whole dataset in one response;
+     *  limit/offset paging is capped at 10000 and must not be used. */
+    @Override
+    protected boolean supportsPagination() {
+        return false;
+    }
+
     @Override
     protected String getGeoJsonUrl(int offset) {
-        return "https://open-data.dortmund.de/api/explore/v2.1/catalog/datasets/baumkataster/exports/geojson?lang=de&timezone=Europe%2FBerlin&limit=" + BATCH_SIZE + "&offset=" + offset;
+        return "https://open-data.dortmund.de/api/explore/v2.1/catalog/datasets/baumkataster/exports/geojson?lang=de&timezone=Europe%2FBerlin";
     }
 
     @Override

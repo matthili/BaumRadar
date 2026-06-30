@@ -24,13 +24,17 @@ at.mafue.baumradar.dataprocessor
 │   │   └── GrazProvider.java         # Graz: ArcGIS REST (paginiert, WGS84)
 │   ├── germany/
 │   │   ├── BerlinProvider.java       # Berlin: GeoJSON vom GDI Berlin WFS
-│   │   ├── HamburgProvider.java      # Hamburg: GeoJSON vom WFS, UTM32N → WGS84 Konvertierung
+│   │   ├── HamburgProvider.java      # Hamburg: GeoJSON vom WFS (liefert bereits WGS84)
 │   │   ├── FreiburgProvider.java     # Freiburg: GeoJSON
-│   │   ├── DortmundProvider.java     # Dortmund: GeoJSON
+│   │   ├── DortmundProvider.java     # Dortmund: GeoJSON (Opendatasoft Single-Shot, sonst 10k-Limit)
 │   │   ├── RostockProvider.java      # Rostock: GeoJSON (fertige DE+LAT-Gattungen)
-│   │   ├── WuerzburgProvider.java    # Würzburg: GeoJSON (Opendatasoft)
+│   │   ├── WuerzburgProvider.java    # Würzburg: GeoJSON (Opendatasoft Single-Shot)
 │   │   ├── LeipzigProvider.java      # Leipzig: WFS-GeoJSON, UTM33N → WGS84
-│   │   └── FrankfurtProvider.java    # Frankfurt am Main: CSV, UTM32N → WGS84
+│   │   ├── FrankfurtProvider.java    # Frankfurt am Main: CSV, UTM32N → WGS84
+│   │   ├── KoelnProvider.java         # Köln: WFS-GeoJSON, UTM32N → WGS84 (große Seiten)
+│   │   ├── StuttgartProvider.java      # Stuttgart: GeoServer-WFS-GeoJSON (srsName=4326)
+│   │   ├── GelsenkirchenProvider.java  # Gelsenkirchen: ArcGIS-REST Esri-JSON (attributes/geometry.x,y)
+│   │   └── BonnProvider.java           # Bonn: GeoJSON Single-Shot (bereits WGS84)
 │   └── switzerland/
 │       ├── ZurichProvider.java       # Zürich: GeoJSON vom städtischen WFS
 │       ├── BaselProvider.java        # Basel: GeoJSON
@@ -40,7 +44,7 @@ at.mafue.baumradar.dataprocessor
     ├── CatalogBuilder.java      # Erzeugt catalog.json mit URLs, Chunks und BoundingBoxen
     ├── CryptoManager.java       # Ed25519-Schlüsselverwaltung (laden/generieren), Signatur-Erzeugung
     ├── Translator.java          # DE↔EN-Gattungen + Latein→Deutsch (germanGenusFromLatin)
-    ├── UtmConverter.java        # UTM Zone 32N/33N → WGS84 (Hamburg bzw. Leipzig)
+    ├── UtmConverter.java        # UTM Zone 32N/33N → WGS84 (Köln/Frankfurt bzw. Leipzig)
     └── XlsxReader.java          # Schlanker XLSX-Parser (JDK zip + StAX, keine Abhängigkeit)
 ```
 
@@ -61,7 +65,7 @@ CryptoManager.loadOrGenerateKeyPair(privFile, pubFile)
 Falls bereits ein Ed25519-Schlüsselpaar auf der Festplatte liegt (`private_key.b64`, `public_key.b64`), wird es geladen. Andernfalls wird ein neues Paar generiert und gespeichert. Der Private Key verlässt **niemals** das Backend; nur der Public Key wird mit committet.
 
 ### Schritt 2: Parallele Stadt-Verarbeitung
-Alle 15 registrierten `CityProvider` werden gleichzeitig via `ExecutorService` (Thread-Pool) verarbeitet. Pro Stadt:
+Alle 19 registrierten `CityProvider` werden gleichzeitig via `ExecutorService` (Thread-Pool) verarbeitet. Pro Stadt:
 
 1. **Daten herunterladen & parsen**: Je nach Provider-Typ:
    - `AbstractGeoJsonProvider`: Jackson Streaming-Parser (`JsonFactory`), optional mit Pagination (ArcGIS-APIs liefern z.B. max. 5000 Features pro Request) und ZIP-Entpackung.

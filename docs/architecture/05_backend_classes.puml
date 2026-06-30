@@ -1,6 +1,6 @@
 @startuml
 !theme plain
-title Data-Processor Package Structure (15 cities)
+title Data-Processor Package Structure (19 cities)
 
 package at.mafue.baumradar.dataprocessor {
 
@@ -79,6 +79,10 @@ package at.mafue.baumradar.dataprocessor {
       class WuerzburgProvider extends AbstractGeoJsonProvider
       class LeipzigProvider extends AbstractGeoJsonProvider
       class FrankfurtProvider extends AbstractCsvProvider
+      class KoelnProvider extends AbstractGeoJsonProvider
+      class StuttgartProvider extends AbstractGeoJsonProvider
+      class GelsenkirchenProvider extends AbstractGeoJsonProvider
+      class BonnProvider extends AbstractGeoJsonProvider
     }
 
     package switzerland {
@@ -130,7 +134,7 @@ AbstractCsvProvider ..> TreeRecord : creates
 AbstractXlsxProvider ..> TreeRecord : creates
 AbstractXlsxProvider ..> XlsxReader : decodes sheet (JDK zip + StAX)
 
-AbstractGeoJsonProvider ..> UtmConverter : uses (e.g. Hamburg 32N, Leipzig 33N)
+AbstractGeoJsonProvider ..> UtmConverter : uses (e.g. Köln 32N, Leipzig 33N)
 AbstractCsvProvider ..> UtmConverter : uses (e.g. Frankfurt 32N)
 
 AbstractGeoJsonProvider ..> Translator : genus/species (incl. germanGenusFromLatin)
