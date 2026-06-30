@@ -11,6 +11,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -40,12 +41,15 @@ public class CatalogBuilder {
      *       the archive was split by {@link at.mafue.baumradar.dataprocessor.Main}</li>
      * </ul>
      *
-     * @param outputFile the target catalog JSON file
-     * @param providers  list of city providers whose metadata is included
-     * @param baseUrl    base URL prefix prepended to all file references
+     * @param outputFile   the target catalog JSON file
+     * @param providers    list of city providers whose metadata is included
+     * @param baseUrl      base URL prefix prepended to all file references
+     * @param dataVersions per-city content fingerprint ({@code cityId → version});
+     *                     emitted as {@code dataVersion} so the app can detect stale data
      * @throws IOException if writing the file fails
      */
-    public static void build(File outputFile, List<CityProvider> providers, String baseUrl) throws IOException {
+    public static void build(File outputFile, List<CityProvider> providers, String baseUrl,
+                             Map<String, String> dataVersions) throws IOException {
         StringBuilder sb = new StringBuilder();
         sb.append("{\n");
         sb.append("  \"version\": 1,\n");
@@ -92,7 +96,9 @@ public class CatalogBuilder {
                 }
                 sb.append("],\n");
             }
-            sb.append("      \"sigUrl\": \"").append(sigUrl).append("\"\n");
+            sb.append("      \"sigUrl\": \"").append(sigUrl).append("\",\n");
+            String dataVersion = dataVersions == null ? null : dataVersions.get(p.getCityId());
+            sb.append("      \"dataVersion\": \"").append(dataVersion == null ? "" : dataVersion).append("\"\n");
             sb.append("    }");
             if (i < providers.size() - 1) {
                 sb.append(",");

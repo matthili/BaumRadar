@@ -24,7 +24,8 @@ This file has the following structure:
       "country": "Österreich",
       "boundingBox": [48.12, 16.18, 48.32, 16.58],
       "dbUrl": "https://raw.githubusercontent.com/.../wien.db.gz",
-      "sigUrl": "https://raw.githubusercontent.com/.../wien.db.gz.sig"
+      "sigUrl": "https://raw.githubusercontent.com/.../wien.db.gz.sig",
+      "dataVersion": "b251aa80a5bfa32b"
     },
     {
       "id": "berlin",
@@ -36,7 +37,8 @@ This file has the following structure:
         "https://...berlin.db.gz.001",
         "https://...berlin.db.gz.002"
       ],
-      "sigUrl": "https://raw.githubusercontent.com/.../berlin.db.gz.sig"
+      "sigUrl": "https://raw.githubusercontent.com/.../berlin.db.gz.sig",
+      "dataVersion": "3ef9e2987d904281"
     }
   ]
 }
@@ -48,6 +50,7 @@ This file has the following structure:
 - `dbUrl`: Download URL for the compressed database. **Note:** For cities with `dbUrlChunks`, you must use the chunks (the `dbUrl` may point to a non-existent file).
 - `dbUrlChunks`: If the database exceeds 50MB, it is split into multiple parts. These must be concatenated at the binary level in order. (Currently every city fits in a single file, so this field is usually absent.)
 - `sigUrl`: URL of the Ed25519 signature.
+- `dataVersion`: Content fingerprint of the tree data (16 hex chars, id-independent). Changes only when the data actually changes. The app remembers the version on download and offers a refresh once the catalog reports a newer one.
 
 ---
 

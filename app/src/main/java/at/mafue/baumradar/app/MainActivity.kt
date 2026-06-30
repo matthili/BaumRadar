@@ -12,6 +12,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -28,6 +29,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import at.mafue.baumradar.app.background.GeofenceLifecycleObserver
+import at.mafue.baumradar.app.data.CityCatalogEntry
 import at.mafue.baumradar.app.ui.theme.BaumRadarTheme
 import at.mafue.baumradar.app.updater.UpdateInfo
 import at.mafue.baumradar.app.updater.UpdateManager
@@ -100,12 +102,25 @@ fun AppContent() {
     var isDownloading by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
 
-    // Einmalige Prüfung beim App-Start
+    // --- Daten-Update (aktualisierte Baumdaten für bereits geladene Städte) ---
+    var staleCities by remember { mutableStateOf<List<CityCatalogEntry>>(emptyList()) }
+    var showDataUpdateDialog by remember { mutableStateOf(false) }
+    var isRefreshingData by remember { mutableStateOf(false) }
+    var dataRefreshStatus by remember { mutableStateOf("") }
+
+    // Einmalige Prüfung beim App-Start: zuerst App-Update, sonst Baumdaten-Update.
     LaunchedEffect(Unit) {
         val info = updateManager.checkForUpdate()
         if (info != null) {
             updateInfo = info
             showUpdateDialog = true
+        } else {
+            // Kein App-Update nötig → prüfen, ob für geladene Städte neue Baumdaten vorliegen.
+            val stale = cityManager.citiesNeedingDataUpdate(cityManager.getCatalog())
+            if (stale.isNotEmpty()) {
+                staleCities = stale
+                showDataUpdateDialog = true
+            }
         }
     }
 
@@ -269,6 +284,90 @@ fun AppContent() {
                             style = MaterialTheme.typography.bodyMedium
                         )
                     }
+                }
+            },
+            confirmButton = {}
+        )
+    }
+
+    // --- Daten-Update-Dialog: aktualisierte Baumdaten für bereits geladene Städte ---
+    if (showDataUpdateDialog && staleCities.isNotEmpty()) {
+        AlertDialog(
+            onDismissRequest = { showDataUpdateDialog = false },
+            icon = {
+                Icon(
+                    Icons.Default.Refresh,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            },
+            title = {
+                Text("Aktualisierte Baumdaten")
+            },
+            text = {
+                Column {
+                    Text(
+                        "Für diese bereits geladenen Städte stehen aktualisierte Baumdaten bereit:",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        staleCities.joinToString(", ") { it.name },
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        "Jetzt herunterladen, um die neuesten Korrekturen und Bäume zu erhalten.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    showDataUpdateDialog = false
+                    val toUpdate = staleCities
+                    isRefreshingData = true
+                    coroutineScope.launch {
+                        for (c in toUpdate) {
+                            dataRefreshStatus = c.name
+                            cityManager.downloadAndMergeCity(c) { msg ->
+                                dataRefreshStatus = "${c.name}: $msg"
+                            }
+                        }
+                        isRefreshingData = false
+                        dataRefreshStatus = ""
+                    }
+                }) {
+                    Text("Jetzt aktualisieren")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDataUpdateDialog = false }) {
+                    Text("Später")
+                }
+            }
+        )
+    }
+
+    // --- Daten-Refresh-Overlay: läuft, während Städte neu geladen werden ---
+    if (isRefreshingData) {
+        AlertDialog(
+            onDismissRequest = { /* Nicht abbrechbar */ },
+            title = { Text("Baumdaten werden aktualisiert…") },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        dataRefreshStatus.ifEmpty { "Bitte warten…" },
+                        style = MaterialTheme.typography.bodyMedium,
+                        textAlign = TextAlign.Center
+                    )
                 }
             },
             confirmButton = {}

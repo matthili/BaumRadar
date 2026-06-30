@@ -7,7 +7,8 @@
       "country": "Österreich",
       "boundingBox": [48.11, 16.16, 48.33, 16.58],
       "dbUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/wien.db.gz",
-      "sigUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/wien.db.gz.sig"
+      "sigUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/wien.db.gz.sig",
+      "dataVersion": "b251aa80a5bfa32b"
     },
     {
       "id": "linz",
@@ -15,7 +16,8 @@
       "country": "Österreich",
       "boundingBox": [48.24, 14.24, 48.36, 14.36],
       "dbUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/linz.db.gz",
-      "sigUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/linz.db.gz.sig"
+      "sigUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/linz.db.gz.sig",
+      "dataVersion": "e4f9b0757ca32af2"
     },
     {
       "id": "berlin",
@@ -23,7 +25,8 @@
       "country": "Deutschland",
       "boundingBox": [52.34, 13.08, 52.68, 13.76],
       "dbUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/berlin.db.gz",
-      "sigUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/berlin.db.gz.sig"
+      "sigUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/berlin.db.gz.sig",
+      "dataVersion": "3ef9e2987d904281"
     },
     {
       "id": "basel",
@@ -31,7 +34,8 @@
       "country": "Schweiz",
       "boundingBox": [47.53, 7.57, 47.6, 7.68],
       "dbUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/basel.db.gz",
-      "sigUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/basel.db.gz.sig"
+      "sigUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/basel.db.gz.sig",
+      "dataVersion": "db3737747663e329"
     },
     {
       "id": "zurich",
@@ -39,7 +43,8 @@
       "country": "Schweiz",
       "boundingBox": [47.32, 8.44, 47.43, 8.62],
       "dbUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/zurich.db.gz",
-      "sigUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/zurich.db.gz.sig"
+      "sigUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/zurich.db.gz.sig",
+      "dataVersion": "9d20f7ac5de439dc"
     },
     {
       "id": "freiburg",
@@ -47,7 +52,8 @@
       "country": "Deutschland",
       "boundingBox": [47.95, 7.78, 48.06, 7.93],
       "dbUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/freiburg.db.gz",
-      "sigUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/freiburg.db.gz.sig"
+      "sigUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/freiburg.db.gz.sig",
+      "dataVersion": "5df0eb74cba7524f"
     },
     {
       "id": "dortmund",
@@ -55,7 +61,8 @@
       "country": "Deutschland",
       "boundingBox": [51.42, 7.33, 51.58, 7.62],
       "dbUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/dortmund.db.gz",
-      "sigUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/dortmund.db.gz.sig"
+      "sigUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/dortmund.db.gz.sig",
+      "dataVersion": "ac66c010c3f8f31c"
     },
     {
       "id": "hamburg",
@@ -63,7 +70,8 @@
       "country": "Deutschland",
       "boundingBox": [53.39, 9.73, 53.73, 10.32],
       "dbUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/hamburg.db.gz",
-      "sigUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/hamburg.db.gz.sig"
+      "sigUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/hamburg.db.gz.sig",
+      "dataVersion": "d57561a4168e822a"
     },
     {
       "id": "rostock",
@@ -71,7 +79,8 @@
       "country": "Deutschland",
       "boundingBox": [54.05, 11.95, 54.2, 12.25],
       "dbUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/rostock.db.gz",
-      "sigUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/rostock.db.gz.sig"
+      "sigUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/rostock.db.gz.sig",
+      "dataVersion": "3db2762214e1fc76"
     },
     {
       "id": "wuerzburg",
@@ -79,7 +88,8 @@
       "country": "Deutschland",
       "boundingBox": [49.74, 9.88, 49.84, 10.0],
       "dbUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/wuerzburg.db.gz",
-      "sigUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/wuerzburg.db.gz.sig"
+      "sigUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/wuerzburg.db.gz.sig",
+      "dataVersion": "1c13901a57adfb01"
     },
     {
       "id": "zug",
@@ -87,7 +97,8 @@
       "country": "Schweiz",
       "boundingBox": [47.13, 8.44, 47.2, 8.54],
       "dbUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/zug.db.gz",
-      "sigUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/zug.db.gz.sig"
+      "sigUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/zug.db.gz.sig",
+      "dataVersion": "e50c50a8c7b680f9"
     },
     {
       "id": "leipzig",
@@ -95,7 +106,8 @@
       "country": "Deutschland",
       "boundingBox": [51.23, 12.2, 51.45, 12.55],
       "dbUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/leipzig.db.gz",
-      "sigUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/leipzig.db.gz.sig"
+      "sigUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/leipzig.db.gz.sig",
+      "dataVersion": "02088d16b5f94dbe"
     },
     {
       "id": "innsbruck",
@@ -103,7 +115,8 @@
       "country": "Österreich",
       "boundingBox": [47.2, 11.3, 47.32, 11.46],
       "dbUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/innsbruck.db.gz",
-      "sigUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/innsbruck.db.gz.sig"
+      "sigUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/innsbruck.db.gz.sig",
+      "dataVersion": "76bf4c16cc7911ca"
     },
     {
       "id": "frankfurt",
@@ -111,7 +124,8 @@
       "country": "Deutschland",
       "boundingBox": [50.01, 8.45, 50.24, 8.83],
       "dbUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/frankfurt.db.gz",
-      "sigUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/frankfurt.db.gz.sig"
+      "sigUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/frankfurt.db.gz.sig",
+      "dataVersion": "4c99bda19cd51160"
     },
     {
       "id": "graz",
@@ -119,7 +133,8 @@
       "country": "Österreich",
       "boundingBox": [47.0, 15.35, 47.13, 15.54],
       "dbUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/graz.db.gz",
-      "sigUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/graz.db.gz.sig"
+      "sigUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/graz.db.gz.sig",
+      "dataVersion": "c2aba649f29bd10a"
     },
     {
       "id": "koeln",
@@ -127,7 +142,8 @@
       "country": "Deutschland",
       "boundingBox": [50.83, 6.77, 51.1, 7.16],
       "dbUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/koeln.db.gz",
-      "sigUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/koeln.db.gz.sig"
+      "sigUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/koeln.db.gz.sig",
+      "dataVersion": "aa28619f5cc416d1"
     },
     {
       "id": "stuttgart",
@@ -135,7 +151,8 @@
       "country": "Deutschland",
       "boundingBox": [48.69, 9.04, 48.87, 9.32],
       "dbUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/stuttgart.db.gz",
-      "sigUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/stuttgart.db.gz.sig"
+      "sigUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/stuttgart.db.gz.sig",
+      "dataVersion": "cabef471613826ad"
     },
     {
       "id": "gelsenkirchen",
@@ -143,7 +160,8 @@
       "country": "Deutschland",
       "boundingBox": [51.48, 6.97, 51.62, 7.15],
       "dbUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/gelsenkirchen.db.gz",
-      "sigUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/gelsenkirchen.db.gz.sig"
+      "sigUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/gelsenkirchen.db.gz.sig",
+      "dataVersion": "e8edfa7693ede179"
     },
     {
       "id": "bonn",
@@ -151,7 +169,8 @@
       "country": "Deutschland",
       "boundingBox": [50.62, 7.02, 50.77, 7.21],
       "dbUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/bonn.db.gz",
-      "sigUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/bonn.db.gz.sig"
+      "sigUrl": "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/bonn.db.gz.sig",
+      "dataVersion": "6b93bf792bdf3d0f"
     }
   ]
 }

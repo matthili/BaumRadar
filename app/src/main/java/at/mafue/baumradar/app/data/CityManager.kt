@@ -27,6 +27,10 @@ import java.util.zip.GZIPInputStream
  *                        die die GitHub-Dateigrößenbeschränkung umgehen
  * @property sigUrl       URL zur Ed25519-Signaturdatei für die Integritätsprüfung
  * @property boundingBox  Geographische Begrenzung [minLat, minLon, maxLat, maxLon]
+ * @property dataVersion  Inhaltsbasierter Fingerprint der Baumdaten (ID-unabhängig).
+ *                        Ändert sich nur, wenn sich die Daten tatsächlich ändern;
+ *                        dient der App zur Erkennung veralteter lokaler Daten.
+ *                        null/leer, falls der Katalog (noch) keine Version liefert.
  */
 data class CityCatalogEntry(
     val id: String,
@@ -35,7 +39,8 @@ data class CityCatalogEntry(
     val dbUrl: String,
     val dbUrlChunks: List<String>?,
     val sigUrl: String,
-    val boundingBox: List<Double>? // minX, minY, maxX, maxY
+    val boundingBox: List<Double>?, // minX, minY, maxX, maxY
+    val dataVersion: String?
 )
 
 /**
@@ -107,7 +112,8 @@ class CityManager(private val context: Context) {
                 dbUrl = obj.getString("dbUrl"),
                 dbUrlChunks = chunksList,
                 sigUrl = obj.getString("sigUrl"),
-                boundingBox = boxList
+                boundingBox = boxList,
+                dataVersion = obj.optString("dataVersion", "").ifEmpty { null }
             ))
         }
         result
@@ -187,7 +193,12 @@ class CityManager(private val context: Context) {
             sigFile.delete()
             
             val prefs = context.getSharedPreferences("city_prefs", Context.MODE_PRIVATE)
-            prefs.edit().putBoolean("city_dn_${city.id}", true).apply()
+            // Download-Status UND die Daten-Version merken, damit später erkannt
+            // werden kann, ob auf dem Server aktualisierte Baumdaten bereitstehen.
+            prefs.edit()
+                .putBoolean("city_dn_${city.id}", true)
+                .putString("city_ver_${city.id}", city.dataVersion ?: "")
+                .apply()
 
             true
         } catch (e: Exception) {
@@ -202,12 +213,54 @@ class CityManager(private val context: Context) {
         val helper = appDb.openHelper.writableDatabase
         helper.execSQL("DELETE FROM trees WHERE city_id = '$cityId'")
         val prefs = context.getSharedPreferences("city_prefs", Context.MODE_PRIVATE)
-        prefs.edit().remove("city_dn_$cityId").apply()
+        prefs.edit().remove("city_dn_$cityId").remove("city_ver_$cityId").apply()
     }
 
     fun isCityDownloaded(cityId: String): Boolean {
         val prefs = context.getSharedPreferences("city_prefs", Context.MODE_PRIVATE)
         return prefs.getBoolean("city_dn_$cityId", false)
+    }
+
+    /**
+     * Liefert die beim letzten Download gespeicherte Daten-Version einer Stadt,
+     * oder null, wenn die Stadt nicht (oder vor Einführung der Versionierung) geladen wurde.
+     */
+    fun downloadedDataVersion(cityId: String): String? {
+        val prefs = context.getSharedPreferences("city_prefs", Context.MODE_PRIVATE)
+        return prefs.getString("city_ver_$cityId", null)
+    }
+
+    /**
+     * Ermittelt bereits heruntergeladene Städte, deren lokale Baumdaten veraltet sind –
+     * d. h. deren gespeicherte [downloadedDataVersion] von der aktuellen
+     * [CityCatalogEntry.dataVersion] im Katalog abweicht.
+     *
+     * Städte, die vor Einführung der Versionierung geladen wurden (keine gespeicherte
+     * Version), gelten als veraltet, sobald der Katalog eine Version liefert – so erhalten
+     * Bestandsnutzer:innen einmalig die korrigierten Daten.
+     *
+     * @param catalog die aktuelle Katalogliste (typischerweise aus [getCatalog])
+     * @return Liste der Städte mit veralteten Daten (leer, wenn alles aktuell ist)
+     */
+    fun citiesNeedingDataUpdate(catalog: List<CityCatalogEntry>): List<CityCatalogEntry> {
+        return catalog.filter { city ->
+            isDataStale(isCityDownloaded(city.id), downloadedDataVersion(city.id), city.dataVersion)
+        }
+    }
+
+    companion object {
+        /**
+         * Reine Vergleichslogik für [citiesNeedingDataUpdate] (ohne Android-Context, damit testbar).
+         *
+         * Eine Stadt gilt als „veraltet", wenn sie heruntergeladen ist, der Katalog eine
+         * nicht-leere [remoteVersion] liefert und diese von der lokal gespeicherten
+         * [localVersion] abweicht. Ein `null` als [localVersion] (Stadt vor Einführung der
+         * Versionierung geladen) zählt als veraltet → einmaliges Refresh für Bestandsdaten.
+         */
+        internal fun isDataStale(downloaded: Boolean, localVersion: String?, remoteVersion: String?): Boolean {
+            if (!downloaded || remoteVersion.isNullOrEmpty()) return false
+            return localVersion != remoteVersion
+        }
     }
     
     /** Prüft, ob mindestens eine Stadt heruntergeladen wurde (für die Wizard-Logik). */

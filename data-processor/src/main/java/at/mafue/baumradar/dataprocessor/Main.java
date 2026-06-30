@@ -101,6 +101,10 @@ public class Main {
             // Each city provider runs in its own thread so that network I/O from
             // different open-data portals overlaps, significantly reducing wall-clock time.
             ExecutorService executor = Executors.newFixedThreadPool(providers.size());
+
+            // Per-city content fingerprint (id-independent), written into the catalog as
+            // "dataVersion" so the app can detect when a downloaded city's data went stale.
+            java.util.Map<String, String> dataVersions = new java.util.concurrent.ConcurrentHashMap<>();
             
             for (CityProvider provider : providers) {
                 executor.submit(() -> {
@@ -115,7 +119,10 @@ public class Main {
                         exporter.createTable();
                         
                         provider.processData(exporter);
-                        
+
+                        // Snapshot the id-independent content fingerprint before closing.
+                        dataVersions.put(provider.getCityId(), exporter.getContentVersion());
+
                         exporter.close();
                         
                         // Compress DB to .gz (retry on transient Windows file locks)
@@ -203,7 +210,7 @@ public class Main {
 
             logger.info("3. Generating Catalog...");
             File catalogFile = new File(outDir, "catalog.json");
-            CatalogBuilder.build(catalogFile, providers, BASE_URL);
+            CatalogBuilder.build(catalogFile, providers, BASE_URL, dataVersions);
             logger.info("   Catalog created at {}", catalogFile.getAbsolutePath());
 
             logger.info("Done! All cities processed and ready in {}", outDir.getAbsolutePath());

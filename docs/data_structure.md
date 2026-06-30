@@ -24,7 +24,8 @@ Diese Datei hat folgende Struktur:
       "country": "Österreich",
       "boundingBox": [48.12, 16.18, 48.32, 16.58],
       "dbUrl": "https://raw.githubusercontent.com/.../wien.db.gz",
-      "sigUrl": "https://raw.githubusercontent.com/.../wien.db.gz.sig"
+      "sigUrl": "https://raw.githubusercontent.com/.../wien.db.gz.sig",
+      "dataVersion": "b251aa80a5bfa32b"
     },
     {
       "id": "berlin",
@@ -36,7 +37,8 @@ Diese Datei hat folgende Struktur:
         "https://...berlin.db.gz.001",
         "https://...berlin.db.gz.002"
       ],
-      "sigUrl": "https://raw.githubusercontent.com/.../berlin.db.gz.sig"
+      "sigUrl": "https://raw.githubusercontent.com/.../berlin.db.gz.sig",
+      "dataVersion": "3ef9e2987d904281"
     }
   ]
 }
@@ -48,6 +50,7 @@ Diese Datei hat folgende Struktur:
 - `dbUrl`: Download-URL für die komprimierte Datenbank. **Achtung:** Bei Städten mit `dbUrlChunks` musst du die Chunks verwenden (die `dbUrl` zeigt dann auf eine nicht existierende Datei).
 - `dbUrlChunks`: Falls die Datenbank > 50MB ist, ist sie in mehrere Teile aufgesplittet. Diese müssen in der richtigen Reihenfolge binär zusammengesetzt werden. (Aktuell passt jede Stadt in eine Datei, sodass dieses Feld in der Regel fehlt.)
 - `sigUrl`: URL der Ed25519-Signatur.
+- `dataVersion`: Inhaltsbasierter Fingerprint der Baumdaten (16 Hex-Zeichen, ID-unabhängig). Ändert sich nur, wenn sich die Daten tatsächlich ändern. Die App merkt sich die Version beim Download und bietet ein Refresh an, sobald der Katalog eine neuere Version meldet.
 
 ---
 

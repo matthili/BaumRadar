@@ -7,6 +7,10 @@ import at.mafue.baumradar.dataprocessor.providers.switzerland.*;
 import at.mafue.baumradar.dataprocessor.models.*;
 import at.mafue.baumradar.dataprocessor.utils.*;
 
+import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -33,8 +37,26 @@ public class DatabaseExporter {
     private final String dbPath;
     private Connection connection;
 
+    /**
+     * Running, order-independent content fingerprint over all inserted trees:
+     * the sum (mod 2^256) of the per-row SHA-256 hashes. The tree {@code id} is
+     * deliberately <em>excluded</em> so that cities whose ids are random UUIDs
+     * (e.g. Köln, Würzburg, Stuttgart, Bonn) still yield a <em>stable</em> version
+     * across runs when their underlying data is unchanged — only an actual change
+     * in position, genus, species, or tree count moves the fingerprint.
+     */
+    private static final BigInteger FP_MOD = BigInteger.ONE.shiftLeft(256);
+    private final MessageDigest rowDigest;
+    private BigInteger fpSum = BigInteger.ZERO;
+    private long fpCount = 0;
+
     public DatabaseExporter(String dbPath) {
         this.dbPath = dbPath;
+        try {
+            this.rowDigest = MessageDigest.getInstance("SHA-256");
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 unavailable", e);
+        }
     }
 
     /**
@@ -161,6 +183,7 @@ public class DatabaseExporter {
                 pstmt.setString(7, record.speciesDe);
                 pstmt.setString(8, record.speciesEn);
                 pstmt.addBatch();
+                accumulateFingerprint(record);
             }
             pstmt.executeBatch();
             connection.commit();
@@ -172,6 +195,33 @@ public class DatabaseExporter {
         } finally {
             connection.setAutoCommit(true);
         }
+    }
+
+    /** Folds one tree record into the order-independent content fingerprint
+     *  (id-independent: only lat/lon/genus/species count). */
+    private void accumulateFingerprint(TreeRecord r) {
+        String canon = r.latitude + "|" + r.longitude + "|"
+            + (r.genusDe == null ? "" : r.genusDe) + "|"
+            + (r.speciesDe == null ? "" : r.speciesDe);
+        byte[] h = rowDigest.digest(canon.getBytes(StandardCharsets.UTF_8));
+        fpSum = fpSum.add(new BigInteger(1, h)).mod(FP_MOD);
+        fpCount++;
+    }
+
+    /**
+     * Returns a short (16 hex chars) content version over all inserted trees.
+     *
+     * <p>Order-independent and id-independent: stable across runs for unchanged
+     * data even when row ids are random UUIDs, but changes whenever any tree's
+     * position, genus, species, or the total tree count changes. Written into the
+     * catalog as {@code dataVersion} so the app can detect when a downloaded
+     * city's data has become stale and offer a refresh.
+     */
+    public String getContentVersion() {
+        BigInteger mixed = fpSum.add(BigInteger.valueOf(fpCount)).mod(FP_MOD);
+        String hex = mixed.toString(16);
+        while (hex.length() < 16) hex = "0" + hex;
+        return hex.substring(hex.length() - 16);
     }
 
     /** Closes the underlying JDBC connection if it is still open. */
