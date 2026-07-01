@@ -13,14 +13,21 @@ import com.google.android.gms.location.LocationServices
 import android.annotation.SuppressLint
 
 /**
- * Gruppiert Baumarten nach botanischer Gattung (Genus) für die Profilansicht.
+ * Gruppiert Baumarten nach deutscher Gattung (Genus) für die Profilansicht.
  *
- * Jede Gattung (z. B. "Acer") enthält eine Liste ihrer Unterarten (z. B. "Acer platanoides").
- * Der Trivialname (z. B. "Ahorn") wird aus den Klammer-Bezeichnungen der Artenliste extrahiert.
+ * Seit der Backend-Harmonisierung trägt jeder Baum eine saubere deutsche Gattung
+ * ({@code genusDe}, z. B. "Ahorn") und – separat – seinen Artnamen ({@code speciesDe}
+ * z. B. "Spitz-Ahorn", {@code speciesEn} = botanisch). Eine [GenusGroup] bündelt daher
+ * alle Arten einer Gattung; die Allergie-Auswahl erfolgt auf Gattungsebene (passend zu
+ * den nach {@code genus_de} geclusterten Geofences), die Artenliste ist informativ.
+ *
+ * @property genusDe     Deutscher Gattungsname (Auswahl-Schlüssel), z. B. "Ahorn"
+ * @property genusEn     Englischer Gattungsname, z. B. "Maple"
+ * @property speciesList Eindeutige Arten dieser Gattung (für die aufklappbare Detailansicht)
  */
 data class GenusGroup(
-    val genusLatin: String,
-    val genusTrivial: String,
+    val genusDe: String,
+    val genusEn: String,
     val speciesList: List<TreeSpeciesDTO>
 )
 
@@ -50,19 +57,18 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
         } else {
             val lowerQuery = query.trim().lowercase()
             groupedMap.values.mapNotNull { group ->
-                val matchesParent = group.genusLatin.lowercase().contains(lowerQuery) ||
-                                    group.genusTrivial.lowercase().contains(lowerQuery)
-                
-                if (matchesParent) {
-                    // Wenn die Haupt-Gattung passt (z.B. "Acer"), zeige alle Unterarten
+                val matchesGenus = group.genusDe.lowercase().contains(lowerQuery) ||
+                                   group.genusEn.lowercase().contains(lowerQuery)
+
+                if (matchesGenus) {
+                    // Gattung passt (z. B. "Ahorn"/"Maple") → alle Arten zeigen
                     group
                 } else {
-                    // Wenn nur spezielle Unterarten passen (z.B. "Eschen-Ahorn"), filtere den Rest der Gattung weg
+                    // Sonst nur die passenden Arten behalten (z. B. "Spitz-Ahorn")
                     val matchingChildren = group.speciesList.filter { s ->
-                        s.genusDe?.lowercase()?.contains(lowerQuery) == true ||
-                        s.speciesDe?.lowercase()?.contains(lowerQuery) == true
+                        s.speciesDe?.lowercase()?.contains(lowerQuery) == true ||
+                        s.speciesEn?.lowercase()?.contains(lowerQuery) == true
                     }
-                    
                     if (matchingChildren.isNotEmpty()) {
                         group.copy(speciesList = matchingChildren)
                     } else {
@@ -108,18 +114,21 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
                 name.isNotBlank() && invalidPrefixes.none { name.startsWith(it) }
             }
 
-            // Gruppierung: Das erste Wort des deutschen Gattungsnamens ist der
-            // lateinische Gattungsname (z. B. "Acer platanoides (Spitz-Ahorn)" → "Acer")
+            // Gruppierung nach der (bereits harmonisierten) deutschen Gattung, z. B. "Ahorn".
             val tempGrouped = validSpecies
-                .groupBy { it.genusDe!!.split(" ").first() }
+                .groupBy { it.genusDe!! }
                 .toSortedMap()
 
-            val structuredGroups = tempGrouped.mapValues { (latinGenus, list) ->
-                val trivialName = TaxonomyUtils.extractTrivialName(list)
+            val structuredGroups = tempGrouped.mapValues { (genusDe, list) ->
                 GenusGroup(
-                    genusLatin = latinGenus,
-                    genusTrivial = trivialName,
+                    genusDe = genusDe,
+                    // genusEn ist pro Gattung konstant; ersten nicht-leeren Wert nehmen.
+                    genusEn = list.firstOrNull { !it.genusEn.isNullOrBlank() }?.genusEn ?: genusDe,
+                    // Nur echte Arten (mit deutschem oder botanischem Namen), eindeutig & sortiert.
                     speciesList = list
+                        .filter { !it.speciesDe.isNullOrBlank() || !it.speciesEn.isNullOrBlank() }
+                        .distinctBy { (it.speciesDe ?: "") + "|" + (it.speciesEn ?: "") }
+                        .sortedBy { (it.speciesDe ?: it.speciesEn ?: "").lowercase() }
                 )
             }
             

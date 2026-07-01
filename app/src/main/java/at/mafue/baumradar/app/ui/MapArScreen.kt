@@ -44,6 +44,9 @@ import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -96,12 +99,38 @@ fun MapArScreen() {
 
     val launcher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
-    ) { permissions ->
+    ) {
         permissionRequested = true
-        permissionGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] ?: false
-        if (permissionGranted) {
+        // Nicht auf die Ergebnis-Map verlassen (liefert bei mitgesendeter Hintergrund-
+        // Berechtigung auf manchen Geräten fälschlich false) – den echten Systemzustand prüfen.
+        val granted = ContextCompat.checkSelfPermission(
+            context, Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+        permissionGranted = granted
+        if (granted) {
             viewModel.startTracking()
         }
+    }
+
+    // Berechtigungen können auch außerhalb des Callbacks erteilt werden (System-Dialog auf
+    // manchen Geräten, oder die App-Einstellungen). Beim Zurückkehren in den Vordergrund den
+    // tatsächlichen Zustand neu prüfen, damit der Hinweis sofort verschwindet – ohne Neustart
+    // oder Tab-Wechsel.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME && !permissionGranted) {
+                val granted = ContextCompat.checkSelfPermission(
+                    context, Manifest.permission.ACCESS_FINE_LOCATION
+                ) == PackageManager.PERMISSION_GRANTED
+                if (granted) {
+                    permissionGranted = true
+                    viewModel.startTracking()
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     LaunchedEffect(Unit) {
@@ -594,14 +623,17 @@ fun MapArScreen() {
                     tint = MaterialTheme.colorScheme.primary
                 )
                 Text(
-                    "Standortberechtigung benötigt",
+                    "Berechtigungen benötigt",
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
                 Text(
-                    "BaumRadar benötigt Zugriff auf deinen Standort\nfür die Karte und AR-Ansicht.",
+                    "Damit BaumRadar voll funktioniert, braucht die App:\n\n" +
+                    "📍  Standort – für die Karte, die AR-Ansicht und das Finden naher Bäume\n\n" +
+                    "🔔  Benachrichtigungen – für die Annäherungs-Warnung vor allergenen Bäumen\n\n" +
+                    "📦  „Apps aus unbekannten Quellen“ – nur für die automatische App-Aktualisierung (wird erst beim Update abgefragt)",
                     style = MaterialTheme.typography.bodyMedium,
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Start,
                     modifier = Modifier.padding(horizontal = 32.dp, vertical = 8.dp)
                 )
                 Spacer(modifier = Modifier.height(16.dp))
@@ -749,7 +781,10 @@ fun MapViewContent(viewModel: MapViewModel) {
                     if (rawDe.contains("(") && !rawDe.contains(")")) "$rawDe)" else rawDe
                 }
                 marker.title = title
-                
+                // Zweite Zeile der Sprechblase: der botanische (lateinische) Name,
+                // z. B. "Pyrus calleryana 'Chanticleer'". Leer lassen, wenn nicht vorhanden.
+                marker.snippet = tree.speciesEn?.takeIf { it.isNotBlank() }
+
                 val drawable = ContextCompat.getDrawable(context, at.mafue.baumradar.app.R.drawable.ic_pin)?.mutate()
                 drawable?.setTint(android.graphics.Color.YELLOW)
                 marker.icon = drawable

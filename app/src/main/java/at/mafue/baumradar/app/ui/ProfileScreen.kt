@@ -96,97 +96,90 @@ fun ProfileScreen() {
 
         LazyColumn(modifier = Modifier.fillMaxSize()) {
             filteredTrees.forEach { group ->
-                val isExpanded = expandedStates[group.genusLatin] == true || searchQuery.isNotBlank()
-                // TriState-Logik: Zähle, wie viele Arten der Gattung ausgewählt sind,
-                // um den richtigen Checkbox-Zustand (On/Off/Indeterminate) zu bestimmen
-                val selectedCount = group.speciesList.count { it.genusDe?.let { de -> selectedTrees.contains(de) } == true }
-                
-                val triState = when {
-                    selectedCount == 0 -> ToggleableState.Off
-                    selectedCount == group.speciesList.size -> ToggleableState.On
-                    else -> ToggleableState.Indeterminate
-                }
+                val hasSpecies = group.speciesList.isNotEmpty()
+                val isExpanded = hasSpecies && (expandedStates[group.genusDe] == true || searchQuery.isNotBlank())
+                // Auswahl ist gattungsweit – passend zu den nach genus_de geclusterten Geofences.
+                val isWarned = warnTrees.contains(group.genusDe)
+                val isAvoided = selectedTrees.contains(group.genusDe)
 
-                item(key = "header_${group.genusLatin}") {
+                item(key = "header_${group.genusDe}") {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { expandedStates[group.genusLatin] = !isExpanded }
-                            .padding(16.dp),
+                            .clickable { expandedStates[group.genusDe] = !(expandedStates[group.genusDe] == true) }
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        TriStateCheckbox(
-                            state = triState,
-                            onClick = {
-                                val newState = triState != ToggleableState.On
-                                viewModel.toggleGenusGroup(group.genusLatin, newState)
+                        Column(modifier = Modifier.weight(1f)) {
+                            val primaryGenus = if (currentIsEn && group.genusEn.isNotBlank()) group.genusEn else group.genusDe
+                            val secondaryGenus = if (currentIsEn) group.genusDe
+                                                 else group.genusEn.takeIf { it.isNotBlank() && it != group.genusDe }
+                            Text(text = primaryGenus, style = MaterialTheme.typography.titleMedium)
+                            if (!secondaryGenus.isNullOrBlank()) {
+                                Text(
+                                    text = secondaryGenus,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                             }
-                        )
-                        Spacer(modifier = Modifier.width(16.dp))
-                        
-                        val title = if (group.genusTrivial.isNotEmpty()) {
-                            "${group.genusLatin} (${group.genusTrivial})"
-                        } else {
-                            group.genusLatin
                         }
-                        
-                        Text(
-                            text = title, 
-                            style = MaterialTheme.typography.titleMedium,
-                            modifier = Modifier.weight(1f)
-                        )
-                        Icon(
-                            imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                            contentDescription = if (isExpanded) "Einklappen" else "Ausklappen",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+
+                        // Warnung (Geofence-Benachrichtigung) – für die gesamte Gattung
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(end = 8.dp)) {
+                            Text("Warnung ⚠️", style = MaterialTheme.typography.labelSmall)
+                            Checkbox(
+                                checked = isWarned,
+                                onCheckedChange = { viewModel.toggleWarnSelection(group.genusDe) }
+                            )
+                        }
+                        // Umfahren (Routing) – für die gesamte Gattung
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(end = 4.dp)) {
+                            Text("Umfahren 🚫", style = MaterialTheme.typography.labelSmall)
+                            Checkbox(
+                                checked = isAvoided,
+                                onCheckedChange = { viewModel.toggleSpeciesSelection(group.genusDe) }
+                            )
+                        }
+
+                        if (hasSpecies) {
+                            Icon(
+                                imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                contentDescription = if (isExpanded) "Einklappen" else "Ausklappen",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        } else {
+                            Spacer(modifier = Modifier.width(24.dp))
+                        }
                     }
                     Divider()
                 }
 
                 if (isExpanded) {
-                    items(group.speciesList, key = { it.genusDe ?: it.hashCode().toString() }) { species ->
-                        val isSelected = species.genusDe?.let { selectedTrees.contains(it) } == true
-                        val isWarn = species.genusDe?.let { warnTrees.contains(it) } == true
-                        val rawName = if (currentIsEn && !species.genusEn.isNullOrEmpty()) {
-                            species.genusEn
-                        } else {
-                            species.genusDe ?: ""
-                        }
-                        
-                        val displayName = if (rawName.contains("(") && !rawName.contains(")")) "$rawName)" else rawName
-
-                        Row(
+                    // Eindeutiger Key aus Gattung + beiden Artnamen (die DAO-Query liefert DISTINCT-Tupel).
+                    items(
+                        group.speciesList,
+                        key = { "sp_${group.genusDe}|${it.speciesDe ?: ""}|${it.speciesEn ?: ""}" }
+                    ) { species ->
+                        val primary = if (currentIsEn) (species.speciesEn?.takeIf { it.isNotBlank() } ?: species.speciesDe)
+                                      else (species.speciesDe?.takeIf { it.isNotBlank() } ?: species.speciesEn)
+                        val secondary = if (currentIsEn) species.speciesDe?.takeIf { it.isNotBlank() && it != primary }
+                                        else species.speciesEn?.takeIf { it.isNotBlank() && it != primary }
+                        Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                                .padding(start = 40.dp, end = 16.dp, top = 6.dp, bottom = 6.dp)
                         ) {
-                            Text(
-                                text = displayName, 
-                                style = MaterialTheme.typography.bodyLarge,
-                                modifier = Modifier.weight(1f)
-                            )
-                            
-                            // Warn Button
-                            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(end = 8.dp)) {
-                                Text("Warnung ⚠️", style = MaterialTheme.typography.labelSmall)
-                                Checkbox(
-                                    checked = isWarn,
-                                    onCheckedChange = { species.genusDe?.let { viewModel.toggleWarnSelection(it) } }
-                                )
-                            }
-                            
-                            // Avoid Button
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text("Umfahren 🚫", style = MaterialTheme.typography.labelSmall)
-                                Checkbox(
-                                    checked = isSelected,
-                                    onCheckedChange = { species.genusDe?.let { viewModel.toggleSpeciesSelection(it) } }
+                            Text(text = "• ${primary ?: ""}", style = MaterialTheme.typography.bodyMedium)
+                            if (!secondary.isNullOrBlank()) {
+                                Text(
+                                    text = secondary,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(start = 12.dp)
                                 )
                             }
                         }
-                        Divider(modifier = Modifier.padding(start = 16.dp))
+                        Divider(modifier = Modifier.padding(start = 40.dp))
                     }
                 }
             }
