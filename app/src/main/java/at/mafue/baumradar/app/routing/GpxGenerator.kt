@@ -7,6 +7,7 @@ import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.TimeZone
 
 /**
  * Generiert und teilt GPX-Dateien (GPS Exchange Format) für berechnete Routen.
@@ -17,14 +18,29 @@ import java.util.Locale
  */
 object GpxGenerator {
 
-    /** Erzeugt einen GPX-1.1-konformen XML-String aus einem Routenergebnis. */
-    fun generateGpxString(route: RouteResult): String {
+    /**
+     * Erzeugt einen GPX-1.1-konformen XML-String aus einem Routenergebnis.
+     *
+     * @param now Erstellungszeitpunkt für den `<time>`-Metadaten-Stempel; injizierbar,
+     *   damit der Test die (immer UTC-)Formatierung deterministisch prüfen kann.
+     */
+    fun generateGpxString(route: RouteResult, now: Date = Date()): String {
         val sb = java.lang.StringBuilder()
         sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
-        sb.append("<gpx version=\"1.1\" creator=\"BaumRadar\" xmlns=\"http://www.topografix.com/GPX/1/1\">\n")
+        sb.append(
+            "<gpx version=\"1.1\" creator=\"BaumRadar\"" +
+                " xmlns=\"http://www.topografix.com/GPX/1/1\"" +
+                " xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"" +
+                " xsi:schemaLocation=\"http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd\">\n"
+        )
         sb.append("  <metadata>\n")
         sb.append("    <name>BaumRadar Allergie-Route</name>\n")
-        val timestamp = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).format(Date())
+        // Der `<time>`-Stempel MUSS in UTC stehen: das 'Z' im Muster kennzeichnet Zulu-Zeit.
+        // Ohne explizite UTC-Zeitzone würde SimpleDateFormat die lokale Gerätezeit nehmen
+        // und sie fälschlich als UTC auszeichnen (Offset-Fehler, z. B. +2 h in Wien).
+        val timestamp = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).apply {
+            timeZone = TimeZone.getTimeZone("UTC")
+        }.format(now)
         sb.append("    <time>$timestamp</time>\n")
         sb.append("  </metadata>\n")
         sb.append("  <trk>\n")

@@ -3,11 +3,13 @@ package at.mafue.baumradar.app.ui
 import android.app.Application
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.*
@@ -94,7 +96,11 @@ fun ProfileScreen() {
             singleLine = true
         )
 
-        LazyColumn(modifier = Modifier.fillMaxSize()) {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
             filteredTrees.forEach { group ->
                 val hasSpecies = group.speciesList.isNotEmpty()
                 val isExpanded = hasSpecies && (expandedStates[group.genusDe] == true || searchQuery.isNotBlank())
@@ -102,84 +108,117 @@ fun ProfileScreen() {
                 val isWarned = warnTrees.contains(group.genusDe)
                 val isAvoided = selectedTrees.contains(group.genusDe)
 
-                item(key = "header_${group.genusDe}") {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { expandedStates[group.genusDe] = !(expandedStates[group.genusDe] == true) }
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                item(key = "genus_${group.genusDe}") {
+                    // Jede Gattung als eigene, getönte, abgerundete Karte
+                    Card(
+                        modifier = Modifier.fillMaxWidth().animateContentSize(),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        )
                     ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            val primaryGenus = if (currentIsEn && group.genusEn.isNotBlank()) group.genusEn else group.genusDe
-                            val secondaryGenus = if (currentIsEn) group.genusDe
-                                                 else group.genusEn.takeIf { it.isNotBlank() && it != group.genusDe }
-                            Text(text = primaryGenus, style = MaterialTheme.typography.titleMedium)
-                            if (!secondaryGenus.isNullOrBlank()) {
-                                Text(
-                                    text = secondaryGenus,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-
-                        // Warnung (Geofence-Benachrichtigung) – für die gesamte Gattung
-                        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(end = 8.dp)) {
-                            Text("Warnung ⚠️", style = MaterialTheme.typography.labelSmall)
-                            Checkbox(
-                                checked = isWarned,
-                                onCheckedChange = { viewModel.toggleWarnSelection(group.genusDe) }
-                            )
-                        }
-                        // Umfahren (Routing) – für die gesamte Gattung
-                        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(end = 4.dp)) {
-                            Text("Umfahren 🚫", style = MaterialTheme.typography.labelSmall)
-                            Checkbox(
-                                checked = isAvoided,
-                                onCheckedChange = { viewModel.toggleSpeciesSelection(group.genusDe) }
-                            )
-                        }
-
-                        if (hasSpecies) {
-                            Icon(
-                                imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                                contentDescription = if (isExpanded) "Einklappen" else "Ausklappen",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        } else {
-                            Spacer(modifier = Modifier.width(24.dp))
-                        }
-                    }
-                    Divider()
-                }
-
-                if (isExpanded) {
-                    // Eindeutiger Key aus Gattung + beiden Artnamen (die DAO-Query liefert DISTINCT-Tupel).
-                    items(
-                        group.speciesList,
-                        key = { "sp_${group.genusDe}|${it.speciesDe ?: ""}|${it.speciesEn ?: ""}" }
-                    ) { species ->
-                        val primary = if (currentIsEn) (species.speciesEn?.takeIf { it.isNotBlank() } ?: species.speciesDe)
-                                      else (species.speciesDe?.takeIf { it.isNotBlank() } ?: species.speciesEn)
-                        val secondary = if (currentIsEn) species.speciesDe?.takeIf { it.isNotBlank() && it != primary }
-                                        else species.speciesEn?.takeIf { it.isNotBlank() && it != primary }
-                        Column(
+                        Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(start = 40.dp, end = 16.dp, top = 6.dp, bottom = 6.dp)
+                                .clickable { expandedStates[group.genusDe] = !(expandedStates[group.genusDe] == true) }
+                                .padding(horizontal = 16.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(text = "• ${primary ?: ""}", style = MaterialTheme.typography.bodyMedium)
-                            if (!secondary.isNullOrBlank()) {
-                                Text(
-                                    text = secondary,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(start = 12.dp)
+                            Column(modifier = Modifier.weight(1f)) {
+                                val primaryGenus = if (currentIsEn && group.genusEn.isNotBlank()) group.genusEn else group.genusDe
+                                val secondaryGenus = if (currentIsEn) group.genusDe
+                                                     else group.genusEn.takeIf { it.isNotBlank() && it != group.genusDe }
+                                Text(text = primaryGenus, style = MaterialTheme.typography.titleMedium)
+                                if (!secondaryGenus.isNullOrBlank()) {
+                                    Text(
+                                        text = secondaryGenus,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+
+                            // Warnung (Geofence-Benachrichtigung) – für die gesamte Gattung
+                            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(end = 8.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        Icons.Default.Notifications,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(14.dp),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Spacer(modifier = Modifier.width(3.dp))
+                                    Text("Warnung", style = MaterialTheme.typography.labelSmall)
+                                }
+                                Checkbox(
+                                    checked = isWarned,
+                                    onCheckedChange = { viewModel.toggleWarnSelection(group.genusDe) }
                                 )
                             }
+                            // Umfahren (Routing) – für die gesamte Gattung
+                            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(end = 4.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        Icons.Default.Clear,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(14.dp),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Spacer(modifier = Modifier.width(3.dp))
+                                    Text("Umfahren", style = MaterialTheme.typography.labelSmall)
+                                }
+                                Checkbox(
+                                    checked = isAvoided,
+                                    onCheckedChange = { viewModel.toggleSpeciesSelection(group.genusDe) }
+                                )
+                            }
+
+                            if (hasSpecies) {
+                                Icon(
+                                    imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                    contentDescription = if (isExpanded) "Einklappen" else "Ausklappen",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            } else {
+                                Spacer(modifier = Modifier.width(24.dp))
+                            }
                         }
-                        Divider(modifier = Modifier.padding(start = 40.dp))
+
+                        if (isExpanded) {
+                            HorizontalDivider(
+                                modifier = Modifier.padding(horizontal = 16.dp),
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                            )
+                            // Eindeutiger Key nicht mehr nötig (kein LazyColumn-items mehr); DISTINCT-Tupel bleiben stabil.
+                            group.speciesList.forEachIndexed { index, species ->
+                                val primary = if (currentIsEn) (species.speciesEn?.takeIf { it.isNotBlank() } ?: species.speciesDe)
+                                              else (species.speciesDe?.takeIf { it.isNotBlank() } ?: species.speciesEn)
+                                val secondary = if (currentIsEn) species.speciesDe?.takeIf { it.isNotBlank() && it != primary }
+                                                else species.speciesEn?.takeIf { it.isNotBlank() && it != primary }
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(start = 24.dp, end = 16.dp, top = 6.dp, bottom = 6.dp)
+                                ) {
+                                    Text(text = "• ${primary ?: ""}", style = MaterialTheme.typography.bodyMedium)
+                                    if (!secondary.isNullOrBlank()) {
+                                        Text(
+                                            text = secondary,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.padding(start = 12.dp)
+                                        )
+                                    }
+                                }
+                                if (index < group.speciesList.lastIndex) {
+                                    HorizontalDivider(
+                                        modifier = Modifier.padding(start = 24.dp, end = 16.dp),
+                                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(6.dp))
+                        }
                     }
                 }
             }

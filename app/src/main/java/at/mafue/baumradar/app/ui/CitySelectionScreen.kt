@@ -3,7 +3,6 @@ package at.mafue.baumradar.app.ui
 import android.app.Application
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -18,6 +17,8 @@ import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.animation.animateContentSize
 
 /**
  * Bildschirm zur Verwaltung heruntergeladener Städte-Baumdaten.
@@ -86,59 +87,90 @@ fun CitySelectionScreen(
                         }
                     }
 
-                    LazyColumn(modifier = Modifier.weight(1f)) {
+                    LazyColumn(
+                        modifier = Modifier.weight(1f),
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(20.dp)
+                    ) {
                         groupedCatalog.forEach { (country, cities) ->
-                            item {
-                                val isExpanded = expandedCountries.contains(country)
-                                Surface(
-                                    modifier = Modifier.fillMaxWidth().clickable {
-                                        if (isExpanded) expandedCountries.remove(country)
-                                        else expandedCountries.add(country)
-                                    },
-                                    color = MaterialTheme.colorScheme.surfaceVariant
-                                ) {
-                                    Row(
-                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Text(
-                                            text = country, 
-                                            style = MaterialTheme.typography.titleMedium,
-                                            modifier = Modifier.weight(1f)
-                                        )
-                                        Icon(
-                                            imageVector = if (isExpanded) androidx.compose.material.icons.Icons.Default.KeyboardArrowUp else androidx.compose.material.icons.Icons.Default.KeyboardArrowDown,
-                                            contentDescription = if (isExpanded) "Einklappen" else "Ausklappen"
-                                        )
-                                    }
-                                }
-                            }
-                            if (expandedCountries.contains(country)) {
-                                items(cities) { city ->
-                                    val isDownloaded = downloaded.contains(city.id)
+                            val isExpanded = expandedCountries.contains(country)
+                            item(key = "country_$country") {
+                                Column(modifier = Modifier.animateContentSize()) {
+                                    // Sektions-Label: schlanker, farbiger Text statt grauem Vollbreiten-Balken
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .padding(16.dp),
+                                            .clickable {
+                                                if (isExpanded) expandedCountries.remove(country)
+                                                else expandedCountries.add(country)
+                                            }
+                                            .padding(horizontal = 4.dp, vertical = 6.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Column(modifier = Modifier.weight(1f)) {
-                                            Text(text = city.name, style = MaterialTheme.typography.titleMedium)
-                                            Text(text = if (isDownloaded) "Installiert" else "Nicht installiert", style = MaterialTheme.typography.bodySmall)
-                                        }
-                                        
-                                        if (isDownloaded && !isWizard) {
-                                            IconButton(onClick = { onJumpToCity(city) }) {
-                                                Icon(Icons.Default.Place, contentDescription = "Zur Stadt springen")
-                                            }
-                                        }
-                                        Switch(
-                                            checked = isDownloaded,
-                                            onCheckedChange = { viewModel.toggleCity(city) },
-                                            enabled = downloadProgress == null
+                                        Text(
+                                            text = country,
+                                            style = MaterialTheme.typography.titleSmall,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                        Icon(
+                                            imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                            contentDescription = if (isExpanded) "Einklappen" else "Ausklappen",
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
-                                    Divider()
+
+                                    if (isExpanded) {
+                                        Spacer(modifier = Modifier.height(6.dp))
+                                        // Getönte, abgerundete Karte für alle Städte eines Landes
+                                        Card(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            shape = RoundedCornerShape(20.dp),
+                                            colors = CardDefaults.cardColors(
+                                                containerColor = MaterialTheme.colorScheme.surfaceVariant
+                                            )
+                                        ) {
+                                            cities.forEachIndexed { index, city ->
+                                                val isDownloaded = downloaded.contains(city.id)
+                                                Row(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    Column(modifier = Modifier.weight(1f)) {
+                                                        Text(
+                                                            text = city.name,
+                                                            style = MaterialTheme.typography.titleMedium
+                                                        )
+                                                        Text(
+                                                            text = if (isDownloaded) "Installiert" else "Nicht installiert",
+                                                            style = MaterialTheme.typography.bodySmall,
+                                                            color = if (isDownloaded) MaterialTheme.colorScheme.primary
+                                                                    else MaterialTheme.colorScheme.onSurfaceVariant
+                                                        )
+                                                    }
+
+                                                    if (isDownloaded && !isWizard) {
+                                                        IconButton(onClick = { onJumpToCity(city) }) {
+                                                            Icon(Icons.Default.Place, contentDescription = "Zur Stadt springen")
+                                                        }
+                                                    }
+                                                    Switch(
+                                                        checked = isDownloaded,
+                                                        onCheckedChange = { viewModel.toggleCity(city) },
+                                                        enabled = downloadProgress == null
+                                                    )
+                                                }
+                                                if (index < cities.lastIndex) {
+                                                    HorizontalDivider(
+                                                        modifier = Modifier.padding(horizontal = 16.dp),
+                                                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }

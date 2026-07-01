@@ -16,6 +16,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -23,13 +25,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Clear
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -38,6 +38,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.drawText
@@ -62,6 +64,15 @@ import org.osmdroid.views.overlay.Polyline
 import org.osmdroid.views.overlay.Polygon
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 import at.mafue.baumradar.app.routing.GpxGenerator
+import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.drawable.BitmapDrawable
+import at.mafue.baumradar.app.data.TreeEntity
+import org.osmdroid.events.MapListener
+import org.osmdroid.events.ScrollEvent
+import org.osmdroid.events.ZoomEvent
 
 /**
  * Kombinierter Karten- und AR-Bildschirm – das Herzstück der App-Oberfläche.
@@ -75,6 +86,7 @@ import at.mafue.baumradar.app.routing.GpxGenerator
  * wird ein erklärender Bildschirm mit einem Button zur Berechtigungsanfrage angezeigt.
  * Nach dauerhafter Ablehnung wird stattdessen zu den Systemeinstellungen weitergeleitet.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MapArScreen() {
     val context = LocalContext.current.applicationContext as Application
@@ -160,6 +172,7 @@ fun MapArScreen() {
     val isExplorationMode by viewModel.isExplorationMode.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
+    var showRouteSheet by remember { mutableStateOf(false) }
 
     if (permissionGranted) {
         Box(modifier = Modifier.fillMaxSize()) {
@@ -187,8 +200,8 @@ fun MapArScreen() {
                 if (virtualLocation != null) {
                     ExtendedFloatingActionButton(
                         onClick = { viewModel.virtualLocation.value = null },
-                        containerColor = Color(0xFFFF5252),
-                        contentColor = Color.White,
+                        containerColor = MaterialTheme.colorScheme.error.copy(alpha = 0.92f),
+                        contentColor = MaterialTheme.colorScheme.onError,
                         icon = { Icon(androidx.compose.material.icons.Icons.Default.Clear, contentDescription = "Beenden") },
                         text = { Text("Virtueller Standort", style = androidx.compose.material3.MaterialTheme.typography.labelLarge) }
                     )
@@ -200,36 +213,38 @@ fun MapArScreen() {
                     horizontalAlignment = Alignment.End,
                     verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(16.dp)
                 ) {
-                    FloatingActionButton(
-                        onClick = { viewModel.triggerRecenter() },
-                        containerColor = Color.White
+                    // Route planen öffnen – als Bottom-Sheet, damit der obere Kartenbereich
+                    // (die geradeaus zeigenden AR-Pfeile) frei bleibt.
+                    MapToolFab(
+                        ImageVector.vectorResource(at.mafue.baumradar.app.R.drawable.ic_directions),
+                        "Route planen",
+                        active = showRouteSheet
                     ) {
-                        Icon(Icons.Default.Place, contentDescription = "Zentrieren", tint = Color.Black)
+                        showRouteSheet = true
                     }
 
+                    // Karte auf den eigenen Standort zentrieren (momentane Aktion)
+                    MapToolFab(Icons.Default.Place, "Zentrieren", active = false) {
+                        viewModel.triggerRecenter()
+                    }
+
+                    // Allergiezonen ein-/ausblenden (grün = aktiv)
                     val showAllGeofences by viewModel.showAllGeofences.collectAsState()
-                    FloatingActionButton(
-                        onClick = {
-                            val newState = !showAllGeofences
-                            viewModel.showAllGeofences.value = newState
-                            coroutineScope.launch {
-                                snackbarHostState.currentSnackbarData?.dismiss()
-                                snackbarHostState.showSnackbar(
-                                    message = if (newState) "Allergiezonen eingeblendet" else "Allergiezonen ausgeblendet",
-                                    duration = SnackbarDuration.Short
-                                )
-                            }
-                        },
-                        containerColor = if (showAllGeofences) Color(0xFFFF9800) else Color.LightGray
-                    ) {
-                        Icon(Icons.Default.Warning, contentDescription = "Hotspots anzeigen", tint = Color.White)
+                    MapToolFab(Icons.Default.Warning, "Allergiezonen anzeigen", active = showAllGeofences) {
+                        val newState = !showAllGeofences
+                        viewModel.showAllGeofences.value = newState
+                        coroutineScope.launch {
+                            snackbarHostState.currentSnackbarData?.dismiss()
+                            snackbarHostState.showSnackbar(
+                                message = if (newState) "Allergiezonen eingeblendet" else "Allergiezonen ausgeblendet",
+                                duration = SnackbarDuration.Short
+                            )
+                        }
                     }
 
-                    FloatingActionButton(
-                        onClick = { viewModel.isExplorationMode.value = !isExplorationMode },
-                        containerColor = if (isExplorationMode) Color(0xFF4CAF50) else Color.LightGray
-                    ) {
-                        Icon(Icons.Default.Search, contentDescription = "Erkundungsmodus", tint = Color.White)
+                    // Erkundungsmodus – alle Bäume im Umkreis (grün = aktiv)
+                    MapToolFab(Icons.Default.Search, "Erkundungsmodus", active = isExplorationMode) {
+                        viewModel.isExplorationMode.value = !isExplorationMode
                     }
                 }
             }
@@ -340,21 +355,18 @@ fun MapArScreen() {
 
                     FloatingActionButton(
                         onClick = { viewModel.clearRoute() },
-                        containerColor = Color(0xFFFF5252)
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError
                     ) {
-                        Icon(Icons.Default.Clear, contentDescription = "Route löschen", tint = Color.White)
+                        Icon(Icons.Default.Clear, contentDescription = "Route löschen")
                     }
                 }
             }
 
-            // Search UI Overlay
-            val startAddr by viewModel.startAddress.collectAsState()
-            val endAddr by viewModel.endAddress.collectAsState()
+            // Kontextuelle Overlays am oberen Rand: Erkundungs-Banner, Routing-Fehler und
+            // Ergebnis-Chips. Das Eingabeformular liegt jetzt im Bottom-Sheet (FAB rechts unten).
             val routingErr by viewModel.routingError.collectAsState()
-            val history by viewModel.routeHistory.collectAsState()
-            var historyExpanded by remember { mutableStateOf(false) }
-            var searchExpanded by remember { mutableStateOf(false) }
-            
+
             Column(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
@@ -382,138 +394,6 @@ fun MapArScreen() {
                     }
                 }
                 
-                Card(
-                    elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-                ) {
-                    Column(modifier = Modifier.fillMaxWidth()) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(8.dp),
-                            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Route planen",
-                                style = MaterialTheme.typography.titleMedium,
-                                modifier = Modifier.padding(start = 8.dp)
-                            )
-                            IconButton(onClick = { searchExpanded = !searchExpanded }) {
-                                Icon(
-                                    imageVector = if (searchExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                                    contentDescription = "Suche einklappen/ausklappen"
-                                )
-                            }
-                        }
-                    
-                        AnimatedVisibility(visible = searchExpanded) {
-                            Column(modifier = Modifier.padding(12.dp)) {
-                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                                    OutlinedTextField(
-                                        value = startAddr,
-                                        onValueChange = { viewModel.startAddress.value = it },
-                                        label = { Text("Startadresse") },
-                                        modifier = Modifier.weight(1f),
-                                        singleLine = true
-                                    )
-                                    IconButton(onClick = { historyExpanded = !historyExpanded }) {
-                                        Icon(Icons.Default.Menu, contentDescription = "Historie")
-                                    }
-                                    
-                                    DropdownMenu(
-                                        expanded = historyExpanded,
-                                        onDismissRequest = { historyExpanded = false }
-                                    ) {
-                                        if (history.isEmpty()) {
-                                            DropdownMenuItem(text = { Text("Keine Historie") }, onClick = { historyExpanded = false })
-                                        } else {
-                                            history.forEach { item ->
-                                                DropdownMenuItem(
-                                                    text = { Text("${item.startAddress} -> ${item.endAddress}", maxLines = 1) },
-                                                    onClick = {
-                                                        viewModel.startAddress.value = item.startAddress
-                                                        viewModel.endAddress.value = item.endAddress
-                                                        historyExpanded = false
-                                                        viewModel.calculateGeocodedRoute()
-                                                        searchExpanded = false
-                                                    }
-                                                )
-                                            }
-                                            HorizontalDivider()
-                                            DropdownMenuItem(
-                                                text = { Text("Historie leeren", color = Color.Red) },
-                                                leadingIcon = { Icon(Icons.Default.Delete, tint = Color.Red, contentDescription = null) },
-                                                onClick = { 
-                                                    viewModel.clearHistory() 
-                                                    historyExpanded = false
-                                                }
-                                            )
-                                        }
-                                    }
-                                }
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    OutlinedTextField(
-                                        value = endAddr,
-                                        onValueChange = { viewModel.endAddress.value = it },
-                                        label = { Text("Zieladresse") },
-                                        modifier = Modifier.weight(1f),
-                                        singleLine = true
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Button(
-                                        onClick = { 
-                                            viewModel.calculateGeocodedRoute()
-                                            searchExpanded = false
-                                        },
-                                        modifier = Modifier.height(56.dp)
-                                    ) {
-                                        Icon(Icons.Default.Search, contentDescription = "Suchen")
-                                    }
-                                }
-                                
-                                val currentProfile by viewModel.routingProfile.collectAsState()
-                                Spacer(modifier = Modifier.height(16.dp))
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceEvenly
-                                ) {
-                                    val profiles = listOf("foot" to "Zu Fuß", "bike" to "Fahrrad", "driving" to "Mobil")
-                                    profiles.forEach { (key, label) ->
-                                        if (currentProfile == key) {
-                                            Button(
-                                                onClick = { },
-                                                modifier = Modifier.weight(1f).padding(horizontal = 4.dp),
-                                                contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)
-                                            ) { 
-                                                Text(label, maxLines = 1, style = MaterialTheme.typography.labelMedium) 
-                                            }
-                                        } else {
-                                            OutlinedButton(
-                                                onClick = { 
-                                                    viewModel.routingProfile.value = key 
-                                                    val start = viewModel.routeStart.value
-                                                    val end = viewModel.routeEnd.value
-                                                    if (start != null && end != null) {
-                                                        viewModel.calculateRoute(start, end)
-                                                    }
-                                                },
-                                                modifier = Modifier.weight(1f).padding(horizontal = 4.dp),
-                                                contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)
-                                            ) { 
-                                                Text(label, maxLines = 1, style = MaterialTheme.typography.labelMedium) 
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        if (isRouting) {
-                            LinearProgressIndicator(modifier = Modifier.fillMaxWidth().height(2.dp))
-                        }
-                    }
-                }
                 
                 if (routingErr != null) {
                     Spacer(modifier = Modifier.height(8.dp))
@@ -543,8 +423,8 @@ fun MapArScreen() {
                             val contentCol = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
                             
                             val title = when {
-                                alt.collisionCount == 0 -> "Allergiefrei \uD83D\uDFE2"
-                                else -> "Route ${index + 1} \u26A0\uFE0F"
+                                alt.collisionCount == 0 -> "Allergiefrei"
+                                else -> "Route ${index + 1}"
                             }
                             val subtitle = buildString {
                                 append("${(alt.durationSec / 60).toInt()} min")
@@ -559,13 +439,19 @@ fun MapArScreen() {
                                 color = containerCol,
                                 onClick = { 
                                     viewModel.selectedRouteIndex.value = index
-                                    searchExpanded = false
                                 }
                             ) {
                                 Row(
                                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                                    verticalAlignment = Alignment.CenterVertically
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)
                                 ) {
+                                    Icon(
+                                        imageVector = if (alt.collisionCount == 0) Icons.Default.CheckCircle else Icons.Default.Warning,
+                                        contentDescription = null,
+                                        tint = contentCol,
+                                        modifier = Modifier.size(20.dp)
+                                    )
                                     Column {
                                         Text(title, style = MaterialTheme.typography.labelLarge, color = contentCol)
                                         Text(subtitle, style = MaterialTheme.typography.labelSmall, color = contentCol)
@@ -602,6 +488,14 @@ fun MapArScreen() {
                             }
                         }
                     }
+                }
+            }
+
+            // Routen-Planung als modales Bottom-Sheet (über den FAB rechts unten geöffnet).
+            // Ersetzt das früher dauerhaft oben eingeblendete Eingabefeld.
+            if (showRouteSheet) {
+                ModalBottomSheet(onDismissRequest = { showRouteSheet = false }) {
+                    RoutePlanningSheetContent(viewModel) { showRouteSheet = false }
                 }
             }
 
@@ -704,11 +598,18 @@ fun MapViewContent(viewModel: MapViewModel) {
 
     var lastRecenter by remember { mutableStateOf(0) }
     var isMapCentered by remember { mutableStateOf(false) }
+    // Zoom-abhängiges Clustering: ein Zähler, der bei Wechsel der ganzzahligen Zoomstufe
+    // erhöht wird und so ein Neu-Bündeln der Baum-Marker auslöst.
+    val zoomTick = remember { mutableStateOf(0) }
+    val lastZoomInt = remember { mutableStateOf(Int.MIN_VALUE) }
     AndroidView(
         modifier = Modifier.fillMaxSize(),
         factory = { ctx ->
             MapView(ctx).apply {
                 setMultiTouchControls(true)
+                // osmdroids weiße +/- Zoom-Buttons ausblenden – Pinch-Zoom bleibt aktiv und
+                // passt besser zum reduzierten Glas-Look der FABs.
+                zoomController.setVisibility(org.osmdroid.views.CustomZoomButtonsController.Visibility.NEVER)
                 controller.setZoom(16.0)
                 
                 val mapEventsOverlay = MapEventsOverlay(object : MapEventsReceiver {
@@ -728,6 +629,19 @@ fun MapViewContent(viewModel: MapViewModel) {
                 val myLocOverlay = MyLocationNewOverlay(this)
                 myLocOverlay.enableMyLocation()
                 overlays.add(myLocOverlay)
+
+                // Bei Wechsel der (ganzzahligen) Zoomstufe neu clustern – nicht bei jedem Pixel-Zoom.
+                addMapListener(object : MapListener {
+                    override fun onZoom(event: ZoomEvent?): Boolean {
+                        val zi = (event?.zoomLevel ?: zoomLevelDouble).toInt()
+                        if (zi != lastZoomInt.value) {
+                            lastZoomInt.value = zi
+                            zoomTick.value++
+                        }
+                        return false
+                    }
+                    override fun onScroll(event: ScrollEvent?): Boolean = false
+                })
             }
         },
         update = { map ->
@@ -769,28 +683,11 @@ fun MapViewContent(viewModel: MapViewModel) {
                 map.overlays.add(virtMarker)
             }
 
-            // Add trees
-            trees.forEach { tree ->
-                val marker = Marker(map)
-                marker.position = GeoPoint(tree.lat, tree.lon)
-                
-                val title = if (!tree.speciesDe.isNullOrEmpty() && tree.genusDe?.contains(tree.speciesDe) == false) {
-                    "${tree.genusDe} (${tree.speciesDe})"
-                } else {
-                    val rawDe = tree.genusDe ?: "Unbekannter Baum"
-                    if (rawDe.contains("(") && !rawDe.contains(")")) "$rawDe)" else rawDe
-                }
-                marker.title = title
-                // Zweite Zeile der Sprechblase: der botanische (lateinische) Name,
-                // z. B. "Pyrus calleryana 'Chanticleer'". Leer lassen, wenn nicht vorhanden.
-                marker.snippet = tree.speciesEn?.takeIf { it.isNotBlank() }
-
-                val drawable = ContextCompat.getDrawable(context, at.mafue.baumradar.app.R.drawable.ic_pin)?.mutate()
-                drawable?.setTint(android.graphics.Color.YELLOW)
-                marker.icon = drawable
-                
-                marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                map.overlays.add(marker)
+            // Bäume rendern – dicht beieinander liegende werden zoom-abhängig zu grünen
+            // Zähl-Bubbles gebündelt. zoomTick lesen, damit bei einem Zoom-Stufenwechsel
+            // neu geclustert wird (der update-Block reagiert dann auf die Zustandsänderung).
+            if (zoomTick.value >= 0) {
+                addTreeMarkers(map, trees, context)
             }
 
             // Geofence-Kreise zeichnen: Die Vereinigung aus Routing-Geofences und
@@ -853,10 +750,11 @@ fun MapViewContent(viewModel: MapViewModel) {
 /**
  * AR-ähnliches Overlay, das Richtungspfeile zu nahen allergenen Bäumen zeichnet.
  *
- * Für jeden der 15 nächsten Bäume wird geprüft, ob er außerhalb des
- * simulierten Sichtfelds (60°) liegt. Falls ja, wird ein halbtransparenter
- * roter Pfeil am Rand eines virtuellen Kreises gezeichnet, der in die
- * Richtung des Baumes zeigt. Die Distanz wird als Beschriftung angezeigt.
+ * Für jeden der 15 nächsten Bäume wird ein halbtransparenter roter Pfeil am Rand
+ * eines virtuellen Kreises um die Bildschirmmitte gezeichnet, der in die Richtung
+ * des Baumes zeigt; die Distanz steht als Beschriftung daneben. Auch (fast)
+ * geradeaus liegende Bäume bekommen einen Pfeil (12-Uhr-Position) – genau die
+ * braucht man beim Zugehen.
  *
  * Die Pfeilrichtung ergibt sich aus der Differenz zwischen Kompass-Azimut
  * und dem Bearing zum Baum (relativeBearing).
@@ -872,10 +770,6 @@ fun ArOverlay(viewModel: MapViewModel) {
 
     val myLat = location!!.latitude
     val myLon = location!!.longitude
-
-    // Field of View parameters
-    val fov = 60f // Total FOV of screen
-    val halfFov = fov / 2f
 
     // Nur die 15 nächsten Bäume berücksichtigen, um die Canvas-Darstellung
     // übersichtlich zu halten (zu viele Pfeile wären unleserlich)
@@ -898,32 +792,274 @@ fun ArOverlay(viewModel: MapViewModel) {
             if (relativeBearing > 180) relativeBearing -= 360
             if (relativeBearing < -180) relativeBearing += 360
 
-            // If it's outside the FOV, draw an arrow on the edge
-            if (Math.abs(relativeBearing) > halfFov) {
-                // Map relative bearing to screen edge
-                // We'll draw an arrow in a circle around the center of the screen pointing towards the tree
-                rotate(degrees = relativeBearing, pivot = Offset(centerW, centerH)) {
-                    // Draw at top of the rotated canvas (which means it's pointing in `relativeBearing` direction)
-                    val arrowTop = Offset(centerW, centerH - radius)
-                    
-                    val path = Path().apply {
-                        moveTo(arrowTop.x, arrowTop.y)
-                        lineTo(arrowTop.x - 20f, arrowTop.y + 40f)
-                        lineTo(arrowTop.x + 20f, arrowTop.y + 40f)
-                        close()
+            // Pfeil auf einem virtuellen Kreis um die Bildschirmmitte, der in Richtung
+            // des Baumes zeigt – für JEDEN nahen Baum, auch die (fast) geradeaus
+            // liegenden (12-Uhr-Position). Genau die braucht man beim Zugehen; früher
+            // wurden Bäume „im Sichtfeld" (±30°) ausgelassen – ohne Kamerabild auf der
+            // Karte unlogisch und verwirrend, weil der Pfeil beim Zugehen verschwand.
+            rotate(degrees = relativeBearing, pivot = Offset(centerW, centerH)) {
+                // Oben auf dem (um relativeBearing gedrehten) Canvas = Zielrichtung
+                val arrowTop = Offset(centerW, centerH - radius)
+
+                val path = Path().apply {
+                    moveTo(arrowTop.x, arrowTop.y)
+                    lineTo(arrowTop.x - 20f, arrowTop.y + 40f)
+                    lineTo(arrowTop.x + 20f, arrowTop.y + 40f)
+                    close()
+                }
+                drawPath(path, Color.Red.copy(alpha = 0.4f)) // Transparenz, damit Karten-Tooltips lesbar bleiben
+
+                // Distanz-Label dreht mit dem Pfeil mit (kopfüber bei Bäumen hinter einem –
+                // bewusst so gelassen: ruhiger als ständiges Nachdrehen).
+                val distStr = "${distance.toInt()}m"
+                drawText(
+                    textMeasurer = textMeasurer,
+                    text = distStr,
+                    topLeft = Offset(arrowTop.x - 30f, arrowTop.y + 50f)
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Fügt die Bäume als Karten-Overlays hinzu und bündelt dicht beieinander liegende zu
+ * grünen Zähl-Bubbles. Das Raster ist zoom-abhängig (höherer Zoom → kleinere Zellen →
+ * weniger Bündelung); ein Tap auf eine Bubble zoomt hinein und löst sie auf.
+ */
+private fun addTreeMarkers(map: MapView, trees: List<TreeEntity>, context: Context) {
+    if (trees.isEmpty()) return
+    val degPerTile = 360.0 / Math.pow(2.0, map.zoomLevelDouble)
+    val cellLat = degPerTile * (72.0 / 256.0)                         // ~72px-Rasterzelle
+    val cosLat = Math.max(0.2, Math.cos(Math.toRadians(map.mapCenter.latitude)))
+    val cellLon = cellLat / cosLat                                    // auf dem Schirm ~quadratisch
+
+    val buckets = HashMap<Long, MutableList<TreeEntity>>()
+    for (t in trees) {
+        val gx = Math.floor(t.lat / cellLat).toLong()
+        val gy = Math.floor(t.lon / cellLon).toLong()
+        val key = (gx shl 32) xor (gy and 0xffffffffL)
+        buckets.getOrPut(key) { mutableListOf() }.add(t)
+    }
+
+    for (group in buckets.values) {
+        if (group.size == 1) {
+            map.overlays.add(makeTreeMarker(map, group[0], context))
+        } else {
+            val avgLat = group.sumOf { it.lat } / group.size
+            val avgLon = group.sumOf { it.lon } / group.size
+            val cluster = Marker(map)
+            cluster.position = GeoPoint(avgLat, avgLon)
+            cluster.icon = makeClusterIcon(context, group.size)
+            cluster.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+            cluster.setInfoWindow(null)
+            cluster.setOnMarkerClickListener { m, mv ->
+                mv.controller.animateTo(m.position)
+                mv.controller.setZoom(mv.zoomLevelDouble + 2.0)
+                true
+            }
+            map.overlays.add(cluster)
+        }
+    }
+}
+
+/** Einzelner Baum-Marker (gelber Pin) mit Sprechblase (Titel + botanischer Name). */
+private fun makeTreeMarker(map: MapView, tree: TreeEntity, context: Context): Marker {
+    val marker = Marker(map)
+    marker.position = GeoPoint(tree.lat, tree.lon)
+    val title = if (!tree.speciesDe.isNullOrEmpty() && tree.genusDe?.contains(tree.speciesDe) == false) {
+        "${tree.genusDe} (${tree.speciesDe})"
+    } else {
+        val rawDe = tree.genusDe ?: "Unbekannter Baum"
+        if (rawDe.contains("(") && !rawDe.contains(")")) "$rawDe)" else rawDe
+    }
+    marker.title = title
+    marker.snippet = tree.speciesEn?.takeIf { it.isNotBlank() }
+    val drawable = ContextCompat.getDrawable(context, at.mafue.baumradar.app.R.drawable.ic_pin)?.mutate()
+    drawable?.setTint(android.graphics.Color.YELLOW)
+    marker.icon = drawable
+    marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+    return marker
+}
+
+/** Grüne, runde Zähl-Bubble für einen Cluster (Größe wächst leicht mit der Anzahl). */
+private fun makeClusterIcon(context: Context, count: Int): BitmapDrawable {
+    val d = context.resources.displayMetrics.density
+    val sizeDp = (36f + Math.min(count, 200) * 0.12f).coerceAtMost(60f)
+    val size = (sizeDp * d).toInt().coerceAtLeast(1)
+    val bmp = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bmp)
+    val c = size / 2f
+    val p = Paint(Paint.ANTI_ALIAS_FLAG)
+    p.color = android.graphics.Color.argb(90, 76, 175, 80)   // Blattgrün, halbtransparenter Ring
+    canvas.drawCircle(c, c, c, p)
+    p.color = android.graphics.Color.rgb(46, 107, 46)        // dunkles Marken-Grün
+    canvas.drawCircle(c, c, c * 0.72f, p)
+    p.color = android.graphics.Color.WHITE
+    p.textAlign = Paint.Align.CENTER
+    p.isFakeBoldText = true
+    p.textSize = size * (if (count > 99) 0.30f else 0.36f)
+    val label = if (count > 999) "999+" else count.toString()
+    val fm = p.fontMetrics
+    canvas.drawText(label, c, c - (fm.ascent + fm.descent) / 2f, p)
+    return BitmapDrawable(context.resources, bmp)
+}
+
+/**
+ * Einheitlicher, glasig-transluzenter Karten-Werkzeug-FAB.
+ *
+ * Inaktiv: neutrale, halbtransparente Oberfläche (die Karte scheint dezent durch).
+ * Aktiv: Marken-Grün (`primary`). Ersetzt die früher bunt gemischten FAB-Farben.
+ */
+@Composable
+private fun MapToolFab(
+    icon: ImageVector,
+    contentDescription: String,
+    active: Boolean,
+    onClick: () -> Unit
+) {
+    FloatingActionButton(
+        onClick = onClick,
+        containerColor = if (active) MaterialTheme.colorScheme.primary
+                         else MaterialTheme.colorScheme.surface.copy(alpha = 0.82f),
+        contentColor = if (active) MaterialTheme.colorScheme.onPrimary
+                       else MaterialTheme.colorScheme.onSurface,
+        elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 3.dp, pressedElevation = 6.dp)
+    ) {
+        Icon(icon, contentDescription = contentDescription)
+    }
+}
+
+/**
+ * Inhalt des Routen-Planungs-Bottom-Sheets: Start-/Zieladresse (mit Verlaufs-Menü),
+ * Fortbewegungsart und Such-Button. Früher ein dauerhaft oben eingeblendetes Feld –
+ * jetzt per FAB rechts unten aufrufbar, damit der obere Kartenbereich für die
+ * geradeaus zeigenden AR-Pfeile frei bleibt. [onClose] schließt das Sheet, sobald
+ * eine Suche ausgelöst wurde.
+ */
+@Composable
+private fun RoutePlanningSheetContent(viewModel: MapViewModel, onClose: () -> Unit) {
+    val startAddr by viewModel.startAddress.collectAsState()
+    val endAddr by viewModel.endAddress.collectAsState()
+    val history by viewModel.routeHistory.collectAsState()
+    val isRouting by viewModel.isRouting.collectAsState()
+    val currentProfile by viewModel.routingProfile.collectAsState()
+    var historyExpanded by remember { mutableStateOf(false) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .navigationBarsPadding()
+            .padding(horizontal = 20.dp)
+            .padding(bottom = 16.dp)
+    ) {
+        Text(
+            text = "Route planen",
+            style = MaterialTheme.typography.titleLarge,
+            modifier = Modifier.padding(bottom = 12.dp)
+        )
+
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+            OutlinedTextField(
+                value = startAddr,
+                onValueChange = { viewModel.startAddress.value = it },
+                label = { Text("Startadresse") },
+                modifier = Modifier.weight(1f),
+                singleLine = true
+            )
+            IconButton(onClick = { historyExpanded = !historyExpanded }) {
+                Icon(Icons.Default.Menu, contentDescription = "Historie")
+            }
+            DropdownMenu(
+                expanded = historyExpanded,
+                onDismissRequest = { historyExpanded = false }
+            ) {
+                if (history.isEmpty()) {
+                    DropdownMenuItem(text = { Text("Keine Historie") }, onClick = { historyExpanded = false })
+                } else {
+                    history.forEach { item ->
+                        DropdownMenuItem(
+                            text = { Text("${item.startAddress} -> ${item.endAddress}", maxLines = 1) },
+                            onClick = {
+                                viewModel.startAddress.value = item.startAddress
+                                viewModel.endAddress.value = item.endAddress
+                                historyExpanded = false
+                                viewModel.calculateGeocodedRoute()
+                                onClose()
+                            }
+                        )
                     }
-                    drawPath(path, Color.Red.copy(alpha = 0.4f)) // Transparency so Map Tooltips stay readable!
-                    
-                    // Note: Drawing text needs to be unrotated or rotated carefully to be readable.
-                    // For simplicity, we draw it right next to the arrow.
-                    val distStr = "${distance.toInt()}m"
-                    drawText(
-                        textMeasurer = textMeasurer,
-                        text = distStr,
-                        topLeft = Offset(arrowTop.x - 30f, arrowTop.y + 50f)
+                    HorizontalDivider()
+                    DropdownMenuItem(
+                        text = { Text("Historie leeren", color = Color.Red) },
+                        leadingIcon = { Icon(Icons.Default.Delete, tint = Color.Red, contentDescription = null) },
+                        onClick = {
+                            viewModel.clearHistory()
+                            historyExpanded = false
+                        }
                     )
                 }
             }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            OutlinedTextField(
+                value = endAddr,
+                onValueChange = { viewModel.endAddress.value = it },
+                label = { Text("Zieladresse") },
+                modifier = Modifier.weight(1f),
+                singleLine = true
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Button(
+                onClick = {
+                    viewModel.calculateGeocodedRoute()
+                    onClose()
+                },
+                modifier = Modifier.height(56.dp)
+            ) {
+                Icon(Icons.Default.Search, contentDescription = "Suchen")
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceEvenly
+        ) {
+            val profiles = listOf("foot" to "Zu Fuß", "bike" to "Fahrrad", "driving" to "Mobil")
+            profiles.forEach { (key, label) ->
+                if (currentProfile == key) {
+                    Button(
+                        onClick = { },
+                        modifier = Modifier.weight(1f).padding(horizontal = 4.dp),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)
+                    ) {
+                        Text(label, maxLines = 1, style = MaterialTheme.typography.labelMedium)
+                    }
+                } else {
+                    OutlinedButton(
+                        onClick = {
+                            viewModel.routingProfile.value = key
+                            val start = viewModel.routeStart.value
+                            val end = viewModel.routeEnd.value
+                            if (start != null && end != null) {
+                                viewModel.calculateRoute(start, end)
+                            }
+                        },
+                        modifier = Modifier.weight(1f).padding(horizontal = 4.dp),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)
+                    ) {
+                        Text(label, maxLines = 1, style = MaterialTheme.typography.labelMedium)
+                    }
+                }
+            }
+        }
+
+        if (isRouting) {
+            Spacer(modifier = Modifier.height(12.dp))
+            LinearProgressIndicator(modifier = Modifier.fillMaxWidth().height(2.dp))
         }
     }
 }
