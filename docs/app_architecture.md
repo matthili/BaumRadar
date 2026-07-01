@@ -27,10 +27,10 @@ at.mafue.baumradar.app
 │   ├── NominatimGeocoder.kt     # Adressauflösung via OpenStreetMap Nominatim
 │   └── GpxGenerator.kt         # GPX-Export & Share-Intent
 ├── ui/
-│   ├── MapArScreen.kt           # Karten-Composable (OSMDroid), AR-Pfeile, Routing-UI, Long-Press-Dialog
+│   ├── MapArScreen.kt           # Karten-Composable (OSMDroid), AR-Pfeile, Routing-Bottom-Sheet, Long-Press-Dialog
 │   ├── MapViewModel.kt          # Zustand: Location, Trees, Routes, Geofences, Erkundungsmodus
 │   ├── ArNavigationManager.kt   # GPS-Tracking, Kompass (Magnetometer), Haversine, Bearing
-│   ├── ProfileScreen.kt         # Allergie-Profil UI (durchsuchbare Baumliste mit Tri-State)
+│   ├── ProfileScreen.kt         # Allergie-Profil UI (nach Gattung gruppiert, gattungsweite Warnung/Umfahren-Auswahl)
 │   ├── ProfileViewModel.kt     # Daten-Sanitization, Gattungs-Gruppierung, Geofence-Updates
 │   ├── CitySelectionScreen.kt  # Stadt-Wizard und Stadt-Verwaltung
 │   ├── CitySelectionViewModel.kt # Katalog-Laden, Download-Steuerung
@@ -77,6 +77,7 @@ Die Karte basiert auf **OSMDroid** (OpenStreetMap), eingebettet in Compose via `
   - Im **Erkundungsmodus**: Zeigt *alle* Bäume im Umkreis von 100 m, unabhängig vom Allergie-Profil.
 - **`effectiveLocation`**: Kombiniert den echten GPS-Standort mit einem optionalen `virtualLocation` (für Tests per Long-Press).
 - **Bounding-Box-Query**: Die Room-Datenbank wird via `getTreesInBoundingBox()` effizient abgefragt – danach erfolgt ein Haversine-Feinfilter in Kotlin.
+- **Marker-Clustering (Karte)**: Dicht beieinanderliegende Bäume werden zoom-abhängig zu grünen Zähl-Bubbles gebündelt (`addTreeMarkers`); ein Tap zoomt hinein und löst das Cluster auf. Erst bei höherem Zoom erscheinen die einzelnen gelben Pins.
 
 ---
 
@@ -84,7 +85,7 @@ Die Karte basiert auf **OSMDroid** (OpenStreetMap), eingebettet in Compose via `
 
 Die Klasse `ArNavigationManager` nutzt den Android `SensorManager` (Magnetometer + Accelerometer) für die Kompassrichtung. `ArOverlay` (ein `Canvas`-Composable) zeichnet:
 
-- **Rotierte Dreiecks-Pfeile** für jede der 15 nächsten Bäume, die sich außerhalb des aktuellen Field-of-View (60° gesamt) befinden.
+- **Rotierte Dreiecks-Pfeile** für jede der 15 nächsten Bäume – auch für (nahezu) geradeaus liegende (12-Uhr-Position). Jeder Pfeil zeigt in Richtung seines Baumes, sodass die Richtung auch beim direkten Zugehen sichtbar bleibt.
 - Jeder Pfeil zeigt die Entfernung in Metern an.
 - Die Berechnung nutzt `calculateBearing()` (Bearing zwischen zwei Geopunkten) und `calculateDistance()` (Haversine-Formel).
 
@@ -93,6 +94,8 @@ Die Klasse `ArNavigationManager` nutzt den Android `SensorManager` (Magnetometer
 ## 4. Routing & Kollisionserkennung
 
 ![Routing & Kollision Sequenz](architecture/04_routing_collision.png)
+
+Die Eingabe (Start-/Zieladresse, Fortbewegungsart) erfolgt über ein **`ModalBottomSheet`**, das über den „Route planen"-FAB (Wegbeschreibungs-Symbol, rechts unten) geöffnet wird – so bleibt der obere Kartenbereich für die AR-Pfeile frei.
 
 Der Routing-Ablauf in `MapViewModel.calculateGeocodedRoute()`:
 

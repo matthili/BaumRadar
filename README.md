@@ -68,14 +68,14 @@
 
 ### 🌿 Allergie-Profil & Warn-Zonen
 Im persönlichen Allergie-Profil lassen sich gezielt die Baumgattungen auswählen, die allergische Reaktionen auslösen (z. B. Birke, Hasel, Esche). Die App unterscheidet dabei zwischen zwei Stufen:
-- **„Umfahren 🚫"**: Diese Bäume werden beim Routing berücksichtigt – die App berechnet Routen, die diese Baumgattungen möglichst meiden.
-- **„Warnung ⚠️"**: Für diese Bäume registriert Baumradar im Hintergrund Geofence-Zonen bei Android. Eine **Push-Benachrichtigung direkt auf den Sperrbildschirm** erscheint, sobald sich der Standort einem solchen Baum nähert – auch bei geschlossener App. Dafür ist keine permanent laufende Hintergrund-App nötig, Android überwacht die Zonen energieeffizient über die Play Services.
+- **„Umfahren ✕"**: Diese Bäume werden beim Routing berücksichtigt – die App berechnet Routen, die diese Baumgattungen möglichst meiden.
+- **„Warnung 🔔"**: Für diese Bäume registriert Baumradar im Hintergrund Geofence-Zonen bei Android. Eine **Push-Benachrichtigung direkt auf den Sperrbildschirm** erscheint, sobald sich der Standort einem solchen Baum nähert – auch bei geschlossener App. Dafür ist keine permanent laufende Hintergrund-App nötig, Android überwacht die Zonen energieeffizient über die Play Services.
 
 ### 🔍 Erkundungsmodus
 *„Was ist das da für ein Baum?"* – Der Erkundungsmodus (Lupen-Icon unten rechts) zeigt **alle Bäume im Umkreis von 100 Metern** an, unabhängig vom Allergie-Profil. Jeder Marker auf der Karte zeigt den deutschen Gattungsnamen und, falls bekannt, die spezifische Art.
 
 ### 🧭 AR-Richtungsanzeige (Kompass-Pfeile)
-Auf dem Karten-Bildschirm blendet Baumradar transparente Pfeile und Entfernungsangaben ein. Diese zeigen in Echtzeit die Richtung und Distanz zu den nächstgelegenen markierten Bäumen (die nächsten 15). Die Pfeile reagieren auf den Kompass (Gyroskop) und drehen sich mit, sodass die Himmelsrichtung eines Baumes immer sichtbar ist – auch außerhalb des Kartenausschnitts.
+Auf dem Karten-Bildschirm blendet Baumradar transparente Pfeile und Entfernungsangaben ein. Diese zeigen in Echtzeit die Richtung und Distanz zu den nächstgelegenen markierten Bäumen (die nächsten 15). Die Pfeile reagieren auf den Kompass (Gyroskop) und drehen sich mit – für jeden nahen Baum, egal ob er seitlich, hinter dir oder direkt vor dir liegt. So bleibt die Richtung auch dann sichtbar, wenn du gerade auf einen markierten Baum zugehst.
 
 ### 🗺️ Allergiefreies Routing
 Baumradar berechnet Routen, die Allergen-Hotspots aktiv umfahren:
@@ -137,8 +137,8 @@ Die App hat am unteren Rand eine Tab-Leiste mit drei Bereichen:
 
 | Tab | Funktion |
 |-----|----------|
-| **🗺️ Karte** | OpenStreetMap-Karte mit Standort, Allergie-Bäumen (gelbe Pins), Geofence-Zonen (rote Kreise), berechneten Routen. Buttons: 📍 Zentrieren, ⚠️ Hotspots einblenden, 🔍 Erkundungsmodus |
-| **👤 Allergie-Profil** | Durchsuchbare, nach Gattung gruppierte Liste aller Baumarten. Für jede Art: „Warnung ⚠️" (Hintergrund-Benachrichtigung) und/oder „Umfahren 🚫" (Routing). Tri-State-Checkbox am Gruppen-Header für Massenauswahl. |
+| **🗺️ Karte** | OpenStreetMap-Karte mit Standort, Allergie-Bäumen (gelbe Pins, bei kleinem Zoom zu grünen Zähl-Bubbles gebündelt), Geofence-Zonen (rote Kreise), berechneten Routen. Buttons unten rechts: 🧭 Route planen (öffnet ein Eingabe-Sheet), 📍 Zentrieren, ⚠️ Hotspots einblenden, 🔍 Erkundungsmodus |
+| **👤 Allergie-Profil** | Durchsuchbare, nach Gattung gruppierte Baumliste. Pro **Gattung** zwei Schalter: „Warnung 🔔" (Hintergrund-Benachrichtigung) und/oder „Umfahren ✕" (Routing). Aufklappen zeigt die Arten mit botanischem Namen; die Auswahl gilt gattungsweit. |
 | **🏙️ Städte** | Heruntergeladene Städte verwalten: weitere laden, bestehende löschen, zur Kartenposition springen. |
 
 ### Langes Drücken auf die Karte

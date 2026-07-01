@@ -29,15 +29,14 @@ import java.util.Locale
 /**
  * Allergieprofil-Bildschirm mit erweiterbarer Baumgattungs-Liste.
  *
- * Zeigt alle verfügbaren Baumgattungen gruppiert an. Jede Gattung kann aufgeklappt
- * werden, um einzelne Arten auszuwählen. Pro Art gibt es zwei Optionen:
- * - **Warnung** (⚠️): Aktiviert Geofence-Benachrichtigungen bei Annäherung
- * - **Umfahren** (🚫): Gattung wird beim Routing gemieden
+ * Zeigt alle verfügbaren Baumgattungen gruppiert an. Die Auswahl erfolgt
+ * **gattungsweit** (passend zu den nach Gattung geclusterten Geofences); pro
+ * Gattung gibt es zwei Schalter:
+ * - **Warnung** (Glocken-Icon): Aktiviert Geofence-Benachrichtigungen bei Annäherung
+ * - **Umfahren** (X-Icon): Gattung wird beim Routing gemieden
  *
- * Die Gattungs-Überschrift nutzt einen [TriStateCheckbox]:
- * - Alle Arten ausgewählt → On
- * - Einige Arten ausgewählt → Indeterminate
- * - Keine Art ausgewählt → Off
+ * Jede Gattung lässt sich aufklappen, um ihre Arten mit botanischem Namen
+ * anzuzeigen (rein informativ – die Warnung/Umfahren-Auswahl bleibt gattungsweit).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

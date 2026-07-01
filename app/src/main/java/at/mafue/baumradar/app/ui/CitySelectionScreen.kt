@@ -76,8 +76,13 @@ fun CitySelectionScreen(
                         )
                     }
 
-                    // Katalog nach Ländern gruppieren für die Anzeige in aufklappbaren Sektionen
+                    // Katalog nach Ländern gruppieren. Die Länder-Reihenfolge folgt bewusst dem
+                    // ersten Auftreten in catalog.json (Aufnahme-Historie) – groupBy behält die
+                    // Schlüssel-Reihenfolge. Die Städte je Land werden alphabetisch aufsteigend
+                    // sortiert (deutsche Collation, damit Umlaute korrekt einsortiert werden).
+                    val cityCollator = remember { java.text.Collator.getInstance(java.util.Locale.GERMAN) }
                     val groupedCatalog = catalog.groupBy { it.country }
+                        .mapValues { (_, cities) -> cities.sortedWith(compareBy(cityCollator) { it.name }) }
                     val expandedCountries = remember { mutableStateListOf<String>() }
 
                     // Beim ersten Laden alle Länder-Sektionen aufklappen

@@ -27,10 +27,10 @@ at.mafue.baumradar.app
 │   ├── NominatimGeocoder.kt     # Address resolution via OpenStreetMap Nominatim
 │   └── GpxGenerator.kt         # GPX export & Share intent
 ├── ui/
-│   ├── MapArScreen.kt           # Map Composable (OSMDroid), AR arrows, Routing UI, Long-Press dialog
+│   ├── MapArScreen.kt           # Map Composable (OSMDroid), AR arrows, Routing bottom sheet, Long-Press dialog
 │   ├── MapViewModel.kt          # State: Location, Trees, Routes, Geofences, Exploration mode
 │   ├── ArNavigationManager.kt   # GPS tracking, Compass (Magnetometer), Haversine, Bearing
-│   ├── ProfileScreen.kt         # Allergy profile UI (searchable tree list with tri-state)
+│   ├── ProfileScreen.kt         # Allergy profile UI (grouped by genus, genus-wide Warning/Avoid selection)
 │   ├── ProfileViewModel.kt     # Data sanitization, genus grouping, geofence updates
 │   ├── CitySelectionScreen.kt  # City wizard and city management
 │   ├── CitySelectionViewModel.kt # Catalog loading, download control
@@ -77,6 +77,7 @@ The map is based on **OSMDroid** (OpenStreetMap), embedded in Compose via `Andro
   - In **Exploration mode**: Shows *all* trees within a 100 m radius, regardless of allergy profile.
 - **`effectiveLocation`**: Combines the real GPS location with an optional `virtualLocation` (for testing via long-press).
 - **Bounding-box query**: The Room database is efficiently queried via `getTreesInBoundingBox()` – followed by a Haversine fine-filter in Kotlin.
+- **Marker clustering (map)**: Trees close together are bundled into green count bubbles depending on zoom level (`addTreeMarkers`); tapping one zooms in and dissolves the cluster. Individual yellow pins only appear at higher zoom.
 
 ---
 
@@ -84,7 +85,7 @@ The map is based on **OSMDroid** (OpenStreetMap), embedded in Compose via `Andro
 
 The class `ArNavigationManager` uses the Android `SensorManager` (Magnetometer + Accelerometer) for compass direction. `ArOverlay` (a `Canvas` Composable) draws:
 
-- **Rotated triangle arrows** for each of the 15 closest trees that are outside the current field-of-view (60° total).
+- **Rotated triangle arrows** for each of the 15 closest trees – including those (almost) straight ahead (12 o'clock). Each arrow points toward its tree, so the direction stays visible even while walking directly toward it.
 - Each arrow displays the distance in meters.
 - Calculations use `calculateBearing()` (bearing between two geopoints) and `calculateDistance()` (Haversine formula).
 
@@ -93,6 +94,8 @@ The class `ArNavigationManager` uses the Android `SensorManager` (Magnetometer +
 ## 4. Routing & Collision Detection
 
 ![Routing & Collision Sequence](architecture/04_routing_collision.png)
+
+Input (start/destination address, travel mode) is entered via a **`ModalBottomSheet`** opened from the "Route planning" FAB (directions icon, bottom right) – this keeps the upper map area clear for the AR arrows.
 
 The routing workflow in `MapViewModel.calculateGeocodedRoute()`:
 

@@ -66,14 +66,14 @@
 
 ### 🌿 Allergy Profile & Warning Zones
 In your personal allergy profile, you select the tree genera you are allergic to (e.g., Birch, Hazel, Ash). The app distinguishes between two levels:
-- **"Avoid 🚫"**: These trees are considered during routing – the app tries to calculate routes that avoid these tree genera as much as possible.
-- **"Warning ⚠️"**: For these trees, Baumradar registers background geofence zones with Android. You receive a **push notification directly on your lock screen** when you approach such a tree – even when the app is closed. No permanently running background app is required; Android monitors the zones energy-efficiently via Play Services.
+- **"Avoid ✕"**: These trees are considered during routing – the app tries to calculate routes that avoid these tree genera as much as possible.
+- **"Warning 🔔"**: For these trees, Baumradar registers background geofence zones with Android. You receive a **push notification directly on your lock screen** when you approach such a tree – even when the app is closed. No permanently running background app is required; Android monitors the zones energy-efficiently via Play Services.
 
 ### 🔍 Exploration Mode
 Standing in front of a tree and wondering: *"What kind of tree is that?"* Activate the exploration mode (the magnifying glass icon at the bottom right of the map) and Baumradar shows you **all trees within a 100-meter radius** – regardless of your allergy profile. Each marker on the map displays the common name and, if known, the specific species.
 
 ### 🧭 AR Directional Display (Compass Arrows)
-On the map screen, Baumradar displays transparent arrows and distance indicators. These show you the real-time direction and distance to the closest marked trees (up to the nearest 15). The arrows respond to your compass (gyroscope) and rotate with you, so you always know which direction a tree is in – even if it's outside the visible map area.
+On the map screen, Baumradar displays transparent arrows and distance indicators. These show you the real-time direction and distance to the closest marked trees (up to the nearest 15). The arrows respond to your compass (gyroscope) and rotate with you – one for every nearby tree, whether it's to your side, behind you, or directly ahead. That way the direction stays visible even while you're walking straight toward a marked tree.
 
 ### 🗺️ Allergy-Free Routing
 Open the "Plan Route" card at the top of the screen. Enter a start and destination address and choose your mode of transport (Walking, Cycling, Driving). Baumradar:
@@ -127,16 +127,17 @@ On the very first launch, a **City Wizard** appears. Here you toggle the cities 
 ### Main Screen (Tabs)
 The app has a tab bar at the bottom with three sections:
 
-1. **Map (🗺️):** The main area. Here you see the OpenStreetMap map with your location (blue dot), marked allergy trees (yellow pins), geofence zones (red circles), and any calculated routes (blue polyline). At the bottom right there are three buttons:
+1. **Map (🗺️):** The main area. Here you see the OpenStreetMap map with your location (blue dot), marked allergy trees (yellow pins, bundled into green count bubbles at low zoom), geofence zones (red circles), and any calculated routes (blue polyline). At the bottom right there are four buttons:
+   - 🧭 **Route planning**: Opens a bottom sheet to enter start/destination and travel mode.
    - 📍 **Center**: Jumps back to your current location.
    - ⚠️ **Hotspots**: Shows all geofence zones for your selected allergens within a 2 km radius.
    - 🔍 **Exploration Mode**: Shows all trees (of any species) within 100 m.
 
-2. **Allergy Profile (👤):** Here you manage your allergies. You see a searchable list grouped by genus of all tree species in the database. For each species there are two checkboxes:
-   - **"Warning ⚠️"**: Activates background geofence notifications for this species.
-   - **"Avoid 🚫"**: Considers this species during allergy-free routing.
+2. **Allergy Profile (👤):** Here you manage your allergies. You see a searchable list grouped by genus. Each **genus** has two toggles:
+   - **"Warning 🔔"**: Activates background geofence notifications for the genus.
+   - **"Avoid ✕"**: Considers the genus during allergy-free routing.
    
-   The tri-state checkbox on the group header (e.g., "Ahorn / Maple") lets you select or deselect an entire genus with one click.
+   Selection is genus-wide (matching the genus-clustered geofences). Expanding a genus reveals its species with botanical names – for reference only.
 
 3. **Cities (🏙️):** Here you manage downloaded cities. You can download additional cities, delete existing ones, or tap the location icon to jump directly to a city's map position.
 

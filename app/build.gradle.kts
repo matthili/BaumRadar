@@ -14,9 +14,9 @@ android {
         targetSdk = 34
         // versionCode muss bei jedem Release monoton steigen, sonst lehnt der
         // Android-Paketinstaller das Sideload-Upgrade ab.
-        // Schema: major*10000 + minor*100 + patch  →  1.5.0 = 10500
-        versionCode = 10500
-        versionName = "1.5"
+        // Schema: major*10000 + minor*100 + patch  →  1.6.0 = 10600
+        versionCode = 10600
+        versionName = "1.6"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

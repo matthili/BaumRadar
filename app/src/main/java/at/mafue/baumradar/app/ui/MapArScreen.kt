@@ -21,6 +21,11 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Place
@@ -53,7 +58,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import org.osmdroid.config.Configuration
 import org.osmdroid.events.MapEventsReceiver
 import org.osmdroid.util.GeoPoint
@@ -170,8 +174,17 @@ fun MapArScreen() {
 
     val isMapLoading by viewModel.isMapLoading.collectAsState()
     val isExplorationMode by viewModel.isExplorationMode.collectAsState()
-    val snackbarHostState = remember { SnackbarHostState() }
-    val coroutineScope = rememberCoroutineScope()
+    // Kurzer Bestätigungs-Hinweis links neben dem Allergiezonen-Button (statt breiter Snackbar,
+    // die den Button verdeckte). Erscheint ~2,5 s und braucht nur die Breite des Textes.
+    var geofenceHintText by remember { mutableStateOf("") }
+    var geofenceHintVisible by remember { mutableStateOf(false) }
+    var geofenceHintToken by remember { mutableStateOf(0) }
+    LaunchedEffect(geofenceHintToken) {
+        if (geofenceHintToken > 0) {
+            delay(2500)
+            geofenceHintVisible = false
+        }
+    }
     var showRouteSheet by remember { mutableStateOf(false) }
 
     if (permissionGranted) {
@@ -228,17 +241,36 @@ fun MapArScreen() {
                         viewModel.triggerRecenter()
                     }
 
-                    // Allergiezonen ein-/ausblenden (grün = aktiv)
+                    // Allergiezonen ein-/ausblenden (grün = aktiv). Die Bestätigung erscheint als
+                    // kompakter Hinweis links neben dem Button und verdeckt ihn nicht.
                     val showAllGeofences by viewModel.showAllGeofences.collectAsState()
-                    MapToolFab(Icons.Default.Warning, "Allergiezonen anzeigen", active = showAllGeofences) {
-                        val newState = !showAllGeofences
-                        viewModel.showAllGeofences.value = newState
-                        coroutineScope.launch {
-                            snackbarHostState.currentSnackbarData?.dismiss()
-                            snackbarHostState.showSnackbar(
-                                message = if (newState) "Allergiezonen eingeblendet" else "Allergiezonen ausgeblendet",
-                                duration = SnackbarDuration.Short
-                            )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        AnimatedVisibility(
+                            visible = geofenceHintVisible,
+                            enter = fadeIn() + expandHorizontally(expandFrom = Alignment.End),
+                            exit = fadeOut() + shrinkHorizontally(shrinkTowards = Alignment.End)
+                        ) {
+                            Surface(
+                                shape = RoundedCornerShape(50),
+                                color = MaterialTheme.colorScheme.inverseSurface,
+                                contentColor = MaterialTheme.colorScheme.inverseOnSurface,
+                                shadowElevation = 4.dp,
+                                modifier = Modifier.padding(end = 12.dp)
+                            ) {
+                                Text(
+                                    text = geofenceHintText,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    maxLines = 1,
+                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
+                                )
+                            }
+                        }
+                        MapToolFab(Icons.Default.Warning, "Allergiezonen anzeigen", active = showAllGeofences) {
+                            val newState = !showAllGeofences
+                            viewModel.showAllGeofences.value = newState
+                            geofenceHintText = if (newState) "Allergiezonen eingeblendet" else "Allergiezonen ausgeblendet"
+                            geofenceHintVisible = true
+                            geofenceHintToken++
                         }
                     }
 
@@ -498,14 +530,6 @@ fun MapArScreen() {
                     RoutePlanningSheetContent(viewModel) { showRouteSheet = false }
                 }
             }
-
-            // Snackbar für Feedback-Meldungen (z.B. Geofence-Toggle)
-            SnackbarHost(
-                hostState = snackbarHostState,
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 100.dp)
-            )
         }
     } else {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
