@@ -85,7 +85,7 @@ http://localhost:8081/geoserver/baumradar/wfs?service=WFS&version=2.0.0&request=
 | `PG_PORT` | `5433` | Host-Port für PostGIS (Container: 5432) |
 | `GEOSERVER_PORT` | `8081` | Host-Port für GeoServer |
 | `GEOSERVER_USER` / `GEOSERVER_PASSWORD` | `admin` / `geoserver` | GeoServer-Admin |
-| `GEOSERVER_VERSION` | `2.26.2` | Image-Tag des GeoServer-Containers |
+| `GEOSERVER_VERSION` | `2.28.0` | Image-Tag; mindestens 2.27 (OGC API Features ist erst ab dort stabile Extension) |
 | `CITY_FILTER` | *(leer = alle)* | Kommagetrennte Stadt-IDs, z. B. `wien,linz` |
 | `CATALOG_URL` | GitHub Pages | Quelle des Stadtkatalogs |
 
@@ -109,7 +109,7 @@ mvn test -Pit
 
 - [x] Phase 0 – Gerüst (compose, README)
 - [x] Phase 1 – Loader (Download → Verify → PostGIS → GeoServer-Provisionierung)
-- [ ] Phase 2 – GeoServer-Dienste end-to-end verifiziert
+- [x] Phase 2 – GeoServer-Dienste end-to-end verifiziert (WMS-GetMap, WFS-GetFeature+CQL, OGC API Features)
 - [ ] Phase 3 – Angular-Client (OpenLayers, Signals, `runOutsideAngular`)
 - [ ] Phase 4 – GraphHopper-Routing (Insel-Graph, Zonen-Vermeidung)
 - [ ] Phase 5 – Doku (EN), Architektur-Diagramm, Verlinkung im Haupt-README
