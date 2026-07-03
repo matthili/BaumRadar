@@ -1,0 +1,81 @@
+name: baumradar-webgis
+
+services:
+  # Räumliche Datenbank: Bäume (Punkte) + Allergiezonen (gebufferte Polygone)
+  postgis:
+    image: postgis/postgis:17-3.5
+    container_name: baumradar-postgis
+    environment:
+      POSTGRES_DB: ${PG_DB:-baumradar}
+      POSTGRES_USER: ${PG_USER:-baumradar}
+      POSTGRES_PASSWORD: ${PG_PASSWORD:-baumradar}
+    ports:
+      - "${PG_PORT:-5433}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PG_USER:-baumradar} -d ${PG_DB:-baumradar}"]
+      interval: 5s
+      timeout: 3s
+      retries: 24
+
+  # OGC-Dienste: WMS 1.3.0, WFS 2.0, OGC API Features (Community-Extension)
+  geoserver:
+    image: docker.osgeo.org/geoserver:${GEOSERVER_VERSION:-2.26.2}
+    container_name: baumradar-geoserver
+    depends_on:
+      postgis:
+        condition: service_healthy
+    environment:
+      GEOSERVER_ADMIN_USER: ${GEOSERVER_USER:-admin}
+      GEOSERVER_ADMIN_PASSWORD: ${GEOSERVER_PASSWORD:-geoserver}
+      INSTALL_EXTENSIONS: "true"
+      COMMUNITY_EXTENSIONS: "ogcapi-features"
+      SKIP_DEMO_DATA: "true"
+    ports:
+      - "${GEOSERVER_PORT:-8081}:8080"
+    volumes:
+      - gsdata:/opt/geoserver_data
+
+  # Einmaliger Import: Katalog -> Signaturprüfung -> PostGIS -> GeoServer-Provisionierung.
+  # Idempotent über dataVersion; erneutes `up` überspringt unveränderte Städte.
+  loader:
+    build: ./loader
+    container_name: baumradar-loader
+    depends_on:
+      postgis:
+        condition: service_healthy
+      geoserver:
+        condition: service_started
+    environment:
+      CATALOG_URL: ${CATALOG_URL:-https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/catalog.json}
+      CITY_FILTER: ${CITY_FILTER:-}
+      PG_URL: jdbc:postgresql://postgis:5432/${PG_DB:-baumradar}
+      PG_DB: ${PG_DB:-baumradar}
+      PG_USER: ${PG_USER:-baumradar}
+      PG_PASSWORD: ${PG_PASSWORD:-baumradar}
+      GEOSERVER_URL: http://geoserver:8080/geoserver
+      GEOSERVER_USER: ${GEOSERVER_USER:-admin}
+      GEOSERVER_PASSWORD: ${GEOSERVER_PASSWORD:-geoserver}
+      GEOSERVER_PG_HOST: postgis
+      GEOSERVER_PG_PORT: "5432"
+      SKIP_GEOSERVER: ${SKIP_GEOSERVER:-false}
+      MAX_PARALLEL_IMPORTS: ${MAX_PARALLEL_IMPORTS:-4}
+    restart: "no"
+
+  # ---------------------------------------------------------------------------
+  # Phase 3 (Angular-Client) — folgt:
+  #  web:
+  #    build: ./client
+  #    ports: ["${WEB_PORT:-4200}:80"]
+  #
+  # Phase 4 (Routing) — folgt:
+  #  graph-builder:  osmium: 19 Stadt-BBoxen (aus PostGIS) aus Länder-PBFs
+  #                  extrahieren und zu einem Insel-Graph-PBF mergen
+  #  graphhopper:    ein Dienst, LM/flexibler Modus, Custom-Model-Zonenvermeidung
+  #    profiles: ["routing"]
+  # ---------------------------------------------------------------------------
+
+volumes:
+  pgdata:
+  gsdata:

@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "cities": [
+    {
+      "id": "wien",
+      "name": "Wien",
+      "country": "Österreich",
+      "boundingBox": [48.11, 16.16, 48.33, 16.58],
+      "dbUrl": "https://example.test/data/wien.db.gz",
+      "sigUrl": "https://example.test/data/wien.db.gz.sig",
+      "dataVersion": "b251aa80a5bfa32b"
+    },
+    {
+      "id": "grossstadt",
+      "name": "Großstadt",
+      "country": "Deutschland",
+      "boundingBox": [52.34, 13.08, 52.68, 13.76],
+      "dbUrl": "https://example.test/data/grossstadt.db.gz",
+      "dbUrlChunks": [
+        "https://example.test/data/grossstadt.db.gz.part0",
+        "https://example.test/data/grossstadt.db.gz.part1"
+      ],
+      "sigUrl": "https://example.test/data/grossstadt.db.gz.sig",
+      "dataVersion": "1234567890abcdef"
+    }
+  ]
+}
