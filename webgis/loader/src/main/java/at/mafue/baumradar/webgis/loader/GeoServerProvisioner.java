@@ -59,6 +59,9 @@ final class GeoServerProvisioner {
 
         ensureFeatureType("trees", "BaumRadar Bäume");
         ensureFeatureType("allergy_zones", "BaumRadar Allergiezonen");
+        // Geometrielose Tabellen — nur via WFS sinnvoll (Filter/Suche des Web-Clients).
+        ensureFeatureType("genus_stats", "BaumRadar Gattungs-Statistik");
+        ensureFeatureType("species_stats", "BaumRadar Art-Statistik");
 
         setDefaultStyle("trees", "baumradar_trees");
         setDefaultStyle("allergy_zones", "baumradar_zones");

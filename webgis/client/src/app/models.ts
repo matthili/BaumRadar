@@ -1,0 +1,55 @@
+/** Gemeinsame Datentypen des BaumRadar-WebGIS-Clients. */
+
+/** Stadteintrag aus docs/data/catalog.json (GitHub Pages — dieselbe Quelle wie die Android-App). */
+export interface City {
+  id: string;
+  name: string;
+  country: string;
+  /** [minLat, minLon, maxLat, maxLon] — Reihenfolge wie im Katalog. */
+  boundingBox: [number, number, number, number];
+  dataVersion: string;
+}
+
+export interface Catalog {
+  version: number;
+  cities: City[];
+}
+
+/** Zeile aus baumradar:genus_stats (vom Loader befüllt, via WFS gelesen). */
+export interface GenusStat {
+  genusDe: string;
+  genusEn: string | null;
+  treeCount: number;
+}
+
+/**
+ * Art-Tupel aus baumradar:species_stats (DISTINCT Gattung + beide Artnamen,
+ * analog zur Profil-Liste der App). `speciesEn` trägt den botanischen Namen.
+ */
+export interface SpeciesStat {
+  genusDe: string;
+  speciesDe: string;
+  speciesEn: string;
+  treeCount: number;
+}
+
+/** Baum-Treffer aus WMS GetFeatureInfo. */
+export interface TreeHit {
+  genusDe: string;
+  genusEn: string | null;
+  speciesDe: string | null;
+  speciesEn: string | null;
+}
+
+/** Allergiezonen-Treffer aus WMS GetFeatureInfo. */
+export interface ZoneHit {
+  genusDe: string;
+  treeCount: number;
+  radiusM: number;
+}
+
+/** Inhalt der Karten-Sprechblase nach einem Klick. */
+export interface PopupData {
+  trees: TreeHit[];
+  zones: ZoneHit[];
+}

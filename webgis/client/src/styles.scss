@@ -1,0 +1,169 @@
+/* ============================================================
+   BaumRadar WebGIS — globales Design-System
+   Farbwelt der Android-App (M3-Grün-Palette aus Color.kt),
+   übersetzt in "Glas über heller Karte" wie die Karten-FABs.
+   ============================================================ */
+
+:root {
+  /* Marken-Grün (identisch zur App) */
+  --br-primary: #2e6b2e;
+  --br-primary-bright: #4caf50;
+  --br-primary-container: #b0f1a7;
+  --br-background: #f7fbf0;
+
+  /* Dunkles Glas (Panels über der Karte) */
+  --br-glass-bg: rgba(22, 28, 20, 0.82);
+  --br-glass-border: rgba(255, 255, 255, 0.09);
+  --br-on-glass: #eef3ea;
+  --br-on-glass-muted: rgba(238, 243, 234, 0.62);
+
+  /* Akzente */
+  --br-zone-red: #d32f2f;
+  --br-tree-yellow: #ffc107;
+
+  --br-radius: 20px;
+  --br-radius-small: 12px;
+  --br-shadow: 0 6px 24px rgba(0, 0, 0, 0.28);
+
+  font-family: system-ui, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--br-background);
+}
+
+/* --- Glas-Panel-Grundrezept -------------------------------------------- */
+.glass {
+  background: var(--br-glass-bg);
+  color: var(--br-on-glass);
+  border: 1px solid var(--br-glass-border);
+  border-radius: var(--br-radius);
+  box-shadow: var(--br-shadow);
+  backdrop-filter: blur(12px) saturate(1.1);
+  -webkit-backdrop-filter: blur(12px) saturate(1.1);
+}
+
+/* --- Formularelemente auf Glas ------------------------------------------ */
+.glass select,
+.glass input[type="search"] {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: var(--br-radius-small);
+  border: 1px solid var(--br-glass-border);
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--br-on-glass);
+  font: inherit;
+  outline: none;
+
+  &:focus-visible {
+    border-color: var(--br-primary-bright);
+  }
+}
+
+.glass select option {
+  background: #1c231a;
+  color: var(--br-on-glass);
+}
+
+/* Schalter im Stil der App (grüne M3-Switches) */
+.switch-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 2px;
+  cursor: pointer;
+
+  input[type="checkbox"] {
+    display: none;
+  }
+
+  .switch {
+    flex: none;
+    width: 44px;
+    height: 24px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.18);
+    position: relative;
+    transition: background 0.2s ease;
+
+    &::after {
+      content: "";
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #cfd6cb;
+      transition: transform 0.2s ease, background 0.2s ease;
+    }
+  }
+
+  input:checked + .switch {
+    background: var(--br-primary-bright);
+
+    &::after {
+      transform: translateX(20px);
+      background: #ffffff;
+    }
+  }
+}
+
+/* Dezente Scrollbalken in Listen */
+.genus-list {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.25) transparent;
+}
+
+/* --- OpenLayers-Controls in den Glas-Look überführen -------------------- */
+.ol-zoom {
+  top: auto;
+  left: auto;
+  /* Links neben dem 300px-Steuer-Panel, nicht darunter. */
+  right: 336px;
+  bottom: 28px;
+  background: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ol-zoom button {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  border: 1px solid var(--br-glass-border);
+  background: var(--br-glass-bg);
+  color: var(--br-on-glass);
+  font-size: 20px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: var(--br-shadow);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+
+  &:hover,
+  &:focus {
+    background: rgba(46, 107, 46, 0.85);
+    outline: none;
+  }
+}
+
+.ol-attribution {
+  background: rgba(247, 251, 240, 0.8);
+  border-radius: 10px 0 0 0;
+  font-size: 11px;
+}
+
+.ol-attribution button {
+  display: none;
+}

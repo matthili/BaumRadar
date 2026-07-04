@@ -1,0 +1,138 @@
+<!-- Vollflächige Karte; alles andere schwebt als Glas-Panel darüber (App-Look). -->
+<div class="map-host" #mapHost></div>
+
+<header class="brand glass">
+  <span class="leaf-dot" aria-hidden="true"></span>
+  <div>
+    <h1>BaumRadar <span class="thin">WebGIS</span></h1>
+    <p>OGC-Tech-Demo &middot; WMS 1.3.0 &middot; WFS 2.0 &middot; OGC API Features</p>
+  </div>
+</header>
+
+<aside class="panel glass">
+  <section>
+    <label class="sec" for="city-select">Stadt</label>
+    <select id="city-select" (change)="jumpToCity($any($event.target).value)">
+      <option value="" disabled selected>Zur Stadt springen &hellip;</option>
+      @for (c of cities(); track c.id) {
+        <option [value]="c.id">{{ c.name }} ({{ c.country }})</option>
+      }
+    </select>
+  </section>
+
+  <section>
+    <label class="sec">Ebenen</label>
+    <label class="switch-row">
+      <span class="dot trees" aria-hidden="true"></span>
+      <span class="grow">Bäume</span>
+      <input type="checkbox" [checked]="showTrees()"
+             (change)="showTrees.set($any($event.target).checked)">
+      <span class="switch" aria-hidden="true"></span>
+    </label>
+    <label class="switch-row">
+      <span class="dot zones" aria-hidden="true"></span>
+      <span class="grow">Allergiezonen</span>
+      <input type="checkbox" [checked]="showZones()"
+             (change)="showZones.set($any($event.target).checked)">
+      <span class="switch" aria-hidden="true"></span>
+    </label>
+  </section>
+
+  <section class="genera">
+    <div class="sec-row">
+      <label class="sec" for="genus-search">Gattungsfilter</label>
+      @if (selectedGenera().size > 0) {
+        <button class="chip" type="button" (click)="clearGenera()">
+          {{ selectedGenera().size }} aktiv &middot; zur&uuml;cksetzen
+        </button>
+      }
+    </div>
+    <input id="genus-search" type="search" placeholder="Gattung oder Art suchen &hellip;"
+           autocomplete="off" [value]="genusQuery()"
+           (input)="genusQuery.set($any($event.target).value)">
+    <div class="genus-list">
+      @for (g of filteredGenera(); track g.genusDe) {
+        <label class="genus-row" [class.active]="selectedGenera().has(g.genusDe)">
+          <input type="checkbox" [checked]="selectedGenera().has(g.genusDe)"
+                 (change)="toggleGenus(g.genusDe)">
+          <span class="labels">
+            <span class="line">
+              <span class="name">{{ g.genusDe }}</span>
+              <span class="count">{{ fmt(g.treeCount) }}</span>
+            </span>
+            @if (g.matchedVia) {
+              <span class="via">gefunden &uuml;ber {{ g.matchedVia }}</span>
+            }
+          </span>
+          @if (speciesFor(g.genusDe).length > 0) {
+            <button class="chev" type="button"
+                    [class.open]="expandedGenera().has(g.genusDe)"
+                    (click)="$event.preventDefault(); $event.stopPropagation(); toggleExpand(g.genusDe)"
+                    [attr.aria-label]="expandedGenera().has(g.genusDe) ? 'Arten einklappen' : 'Arten anzeigen'">
+              &#9656;
+            </button>
+          }
+        </label>
+        @if (expandedGenera().has(g.genusDe)) {
+          <div class="species-block">
+            <p class="species-summary">
+              {{ speciesFor(g.genusDe).length }} Arten &amp; Sorten
+            </p>
+            @for (s of speciesFor(g.genusDe); track $index) {
+              <div class="species-row">
+                <span class="species-names">
+                  <span>{{ s.speciesDe || s.speciesEn }}</span>
+                  @if (s.speciesDe && s.speciesEn) {
+                    <em>{{ s.speciesEn }}</em>
+                  }
+                </span>
+                <span class="count">{{ fmt(s.treeCount) }}</span>
+              </div>
+            }
+          </div>
+        }
+      } @empty {
+        <p class="muted">
+          @if (generaLoading()) { Lade Gattungen &hellip; } @else { Keine Treffer }
+        </p>
+      }
+    </div>
+  </section>
+</aside>
+
+@if (routeName(); as rn) {
+  <div class="route-chip glass">
+    <span class="route-line" aria-hidden="true"></span>
+    <span class="grow">Route: {{ rn }}</span>
+    <button type="button" (click)="clearRoute()" aria-label="Route entfernen">&#10005;</button>
+  </div>
+} @else {
+  <div class="hint glass">GPX-Route (App-Export) einfach auf die Karte ziehen</div>
+}
+
+<!-- Das Element geh&ouml;rt dem OL-Overlay und muss dauerhaft existieren;
+     nur sein Inhalt ist Angular-gesteuert. -->
+<div class="popup glass" #popupHost>
+  @if (popup(); as p) {
+    <button class="close" type="button" (click)="closePopup()" aria-label="Schlie&szlig;en">&#10005;</button>
+    @for (t of p.trees; track $index) {
+      <div class="tree-hit">
+        <strong>{{ t.genusDe }}</strong>
+        @if (t.genusEn) { <span class="en">&middot; {{ t.genusEn }}</span> }
+        @if (t.speciesDe || t.speciesEn) {
+          <div class="species">
+            {{ t.speciesDe ?? '' }}
+            @if (t.speciesEn) { <em>({{ t.speciesEn }})</em> }
+          </div>
+        }
+      </div>
+    }
+    @if (p.zones.length > 0) {
+      <div class="zone-hit" [class.solo]="p.trees.length === 0">
+        <strong>Allergiezone</strong> {{ p.zones[0].genusDe }}
+        &middot; {{ fmt(p.zones[0].treeCount) }} B&auml;ume
+        &middot; Radius {{ p.zones[0].radiusM }} m
+      </div>
+    }
+  }
+</div>

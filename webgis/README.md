@@ -40,6 +40,7 @@ $env:CITY_FILTER = "wien,graz"; docker compose up
 
 | Dienst | URL | Zugang |
 |---|---|---|
+| **Web-Client** (Angular + OpenLayers) | http://localhost:8082 | — |
 | GeoServer Web-UI | http://localhost:8081/geoserver | admin / geoserver (via `.env`) |
 | WMS 1.3.0 | http://localhost:8081/geoserver/baumradar/wms | — |
 | WFS 2.0 | http://localhost:8081/geoserver/baumradar/wfs | — |
@@ -89,13 +90,27 @@ http://localhost:8081/geoserver/baumradar/wfs?service=WFS&version=2.0.0&request=
 | `CITY_FILTER` | *(leer = alle)* | Kommagetrennte Stadt-IDs, z. B. `wien,linz` |
 | `CATALOG_URL` | GitHub Pages | Quelle des Stadtkatalogs |
 
-## Entwicklung (Loader)
+## Entwicklung
 
-Maven muss nicht lokal installiert sein — Tests laufen im Container:
+**Loader** — Maven muss nicht lokal installiert sein, Tests laufen im Container:
 
 ```powershell
 docker run --rm -v "${PWD}\loader:/src" -w /src -v baumradar-m2:/root/.m2 `
   maven:3.9-eclipse-temurin-25 mvn test
+```
+
+**Web-Client** — Angular 22 (Standalone + Signals, zoneless), OpenLayers direkt ohne
+Wrapper-Bibliothek; die Karte entsteht in `runOutsideAngular` (unter zoneless ohnehin
+entschärft, als Muster dokumentiert). Für lokales `npm start` braucht die Angular-CLI
+**Node ≥ 24.15** — alternativ laufen Build und Tests im Container:
+
+```powershell
+# Dev-Server lokal (Node >= 24.15): proxied /geoserver -> localhost:8081
+cd client; npm install; npm start
+
+# Unit-Tests (vitest) im Container:
+docker run --rm -v "${PWD}\client:/src:ro" node:24-alpine `
+  sh -c "cp -r /src /app && cd /app && npm install --silent && npx ng test --watch=false"
 ```
 
 Integrationstest gegen echtes PostGIS (Testcontainers, braucht lokalen Docker-Socket,
@@ -110,6 +125,6 @@ mvn test -Pit
 - [x] Phase 0 – Gerüst (compose, README)
 - [x] Phase 1 – Loader (Download → Verify → PostGIS → GeoServer-Provisionierung)
 - [x] Phase 2 – GeoServer-Dienste end-to-end verifiziert (WMS-GetMap, WFS-GetFeature+CQL, OGC API Features)
-- [ ] Phase 3 – Angular-Client (OpenLayers, Signals, `runOutsideAngular`)
+- [x] Phase 3 – Angular-Client (OpenLayers, Signals, GetFeatureInfo-Popup, GPX-Drop; Filter-Suche über Gattungs- **und** Artnamen, deutsch wie botanisch — Auswahl bleibt gattungsweit, passend zu den genus-geclusterten Zonen)
 - [ ] Phase 4 – GraphHopper-Routing (Insel-Graph, Zonen-Vermeidung)
 - [ ] Phase 5 – Doku (EN), Architektur-Diagramm, Verlinkung im Haupt-README

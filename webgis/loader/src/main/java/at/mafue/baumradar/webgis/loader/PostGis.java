@@ -50,6 +50,45 @@ final class PostGis {
         }
     }
 
+    /**
+     * Befüllt die Gattungs-Statistik neu (Quelle des Filter-UI im Web-Client).
+     * Ein einzelner GROUP-BY-Scan über alle Bäume — bewusst als Tabelle statt
+     * View, damit WFS-Zugriffe nicht jedes Mal 2,6 Mio Zeilen aggregieren.
+     *
+     * @return Anzahl der Gattungen
+     */
+    int refreshGenusStats() throws SQLException {
+        try (Connection c = connect(); Statement st = c.createStatement()) {
+            st.execute("TRUNCATE genus_stats");
+            return st.executeUpdate("""
+                    INSERT INTO genus_stats (genus_de, genus_en, tree_count)
+                    SELECT genus_de, min(genus_en), count(*)::int
+                    FROM trees
+                    WHERE genus_de IS NOT NULL AND genus_de <> ''
+                    GROUP BY genus_de""");
+        }
+    }
+
+    /**
+     * Befüllt die Art-Tupel-Statistik neu (DISTINCT über Gattung + beide Artnamen,
+     * analog zur Profil-Liste der App). Quelle der namens-übergreifenden Suche
+     * im Web-Client; Zeilen ganz ohne Artangabe tragen zur Suche nichts bei.
+     *
+     * @return Anzahl der Art-Tupel
+     */
+    int refreshSpeciesStats() throws SQLException {
+        try (Connection c = connect(); Statement st = c.createStatement()) {
+            st.execute("TRUNCATE species_stats");
+            return st.executeUpdate("""
+                    INSERT INTO species_stats (genus_de, species_de, species_en, tree_count)
+                    SELECT genus_de, coalesce(species_de, ''), coalesce(species_en, ''), count(*)::int
+                    FROM trees
+                    WHERE genus_de IS NOT NULL AND genus_de <> ''
+                      AND (coalesce(species_de, '') <> '' OR coalesce(species_en, '') <> '')
+                    GROUP BY 1, 2, 3""");
+        }
+    }
+
     /** Bereits importierte dataVersion je Stadt (für den Idempotenz-Vergleich). */
     Map<String, String> fetchImportState() throws SQLException {
         Map<String, String> state = new HashMap<>();

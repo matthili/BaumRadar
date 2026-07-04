@@ -1,0 +1,382 @@
+/* Layout der Karten-Shell: Karte füllt alles, Panels schweben darüber. */
+
+:host {
+  display: block;
+  width: 100vw;
+  height: 100vh;
+}
+
+.map-host {
+  position: absolute;
+  inset: 0;
+}
+
+/* --- Marken-Kopf oben links --------------------------------------------- */
+.brand {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 18px 10px 14px;
+  z-index: 5;
+
+  h1 {
+    margin: 0;
+    font-size: 18px;
+    letter-spacing: 0.2px;
+
+    .thin {
+      font-weight: 300;
+      color: var(--br-primary-container);
+    }
+  }
+
+  p {
+    margin: 2px 0 0;
+    font-size: 11px;
+    color: var(--br-on-glass-muted);
+  }
+}
+
+.leaf-dot {
+  width: 30px;
+  height: 30px;
+  border-radius: 50% 50% 50% 6px; /* Blattform */
+  background: linear-gradient(135deg, var(--br-primary-bright), var(--br-primary));
+  border: 2px solid var(--br-primary-container);
+  flex: none;
+}
+
+/* --- Steuer-Panel rechts -------------------------------------------------- */
+.panel {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 300px;
+  max-height: calc(100vh - 32px);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+  z-index: 5;
+  overflow: hidden;
+
+  section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    /* Nicht schrumpfen lassen — sonst überlappen die Sektionen optisch. */
+    flex: 0 0 auto;
+  }
+
+  /* Nur die Gattungsliste nimmt den Restplatz und scrollt intern. */
+  section.genera {
+    flex: 1 1 auto;
+    min-height: 120px;
+  }
+}
+
+.sec {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--br-primary-container);
+}
+
+.sec-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.chip {
+  border: none;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 11px;
+  background: var(--br-primary-container);
+  color: #12250f;
+  cursor: pointer;
+
+  &:hover {
+    background: #c4f7bc;
+  }
+}
+
+.grow {
+  flex: 1;
+}
+
+.dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex: none;
+
+  &.trees {
+    background: var(--br-tree-yellow);
+    border: 2px solid var(--br-primary);
+  }
+
+  &.zones {
+    background: rgba(211, 47, 47, 0.45);
+    border: 2px solid var(--br-zone-red);
+  }
+}
+
+.genus-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--br-radius-small);
+}
+
+.genus-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 13.5px;
+
+  input {
+    accent-color: var(--br-primary-bright);
+  }
+
+  .labels {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+
+  .line {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .count {
+    color: var(--br-on-glass-muted);
+    font-size: 11.5px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Erklärt Treffer über einen Artnamen ("Acer", "spitz" -> Ahorn). */
+  .via {
+    font-size: 11px;
+    color: var(--br-primary-container);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Aufklapp-Chevron: klappt die Arten-Liste auf, ohne die Checkbox zu toggeln. */
+  .chev {
+    flex: none;
+    border: none;
+    background: none;
+    color: var(--br-on-glass-muted);
+    font-size: 13px;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 8px;
+    transition: transform 0.18s ease;
+
+    &:hover {
+      color: var(--br-on-glass);
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    &.open {
+      transform: rotate(90deg);
+    }
+  }
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  &.active {
+    background: rgba(76, 175, 80, 0.18);
+  }
+}
+
+.muted {
+  color: var(--br-on-glass-muted);
+  font-size: 13px;
+  padding: 8px 10px;
+}
+
+/* Aufgeklappte Arten-Liste einer Gattung (Anzeige, nicht wählbar —
+   die Auswahl bleibt gattungsweit wie im App-Profil). */
+.species-block {
+  margin: 0 4px 6px 30px;
+  padding: 6px 10px;
+  border-left: 2px solid rgba(176, 241, 167, 0.35);
+
+  .species-summary {
+    margin: 0 0 4px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--br-primary-container);
+  }
+
+  .species-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 3px 0;
+    font-size: 12px;
+
+    .species-names {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+
+      em {
+        color: var(--br-on-glass-muted);
+        font-size: 11px;
+      }
+    }
+
+    .count {
+      color: var(--br-on-glass-muted);
+      font-size: 11px;
+      font-variant-numeric: tabular-nums;
+    }
+  }
+}
+
+/* --- GPX-Hinweis / Routen-Chip unten links ------------------------------- */
+.hint,
+.route-chip {
+  position: absolute;
+  left: 16px;
+  bottom: 28px;
+  padding: 10px 16px;
+  font-size: 12.5px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hint {
+  color: var(--br-on-glass-muted);
+}
+
+.route-chip {
+  button {
+    border: none;
+    background: none;
+    color: var(--br-on-glass);
+    font-size: 14px;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 8px;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.12);
+    }
+  }
+}
+
+.route-line {
+  width: 22px;
+  height: 0;
+  border-top: 4px solid var(--br-primary-bright);
+  border-radius: 2px;
+  flex: none;
+}
+
+/* --- Klick-Popup ----------------------------------------------------------- */
+.popup {
+  min-width: 220px;
+  max-width: 300px;
+  padding: 12px 14px;
+  font-size: 13px;
+  position: relative;
+
+  .close {
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    border: none;
+    background: none;
+    color: var(--br-on-glass-muted);
+    cursor: pointer;
+    font-size: 13px;
+
+    &:hover {
+      color: var(--br-on-glass);
+    }
+  }
+
+  .tree-hit {
+    padding: 5px 0;
+
+    + .tree-hit {
+      border-top: 1px solid var(--br-glass-border);
+    }
+
+    .en {
+      color: var(--br-on-glass-muted);
+      font-size: 12px;
+    }
+
+    .species {
+      color: var(--br-on-glass-muted);
+      font-size: 12px;
+      margin-top: 2px;
+
+      em {
+        font-style: italic;
+      }
+    }
+  }
+
+  .zone-hit {
+    margin-top: 8px;
+    padding: 7px 9px;
+    border-radius: 10px;
+    background: rgba(211, 47, 47, 0.22);
+    border: 1px solid rgba(211, 47, 47, 0.45);
+    font-size: 12px;
+
+    &.solo {
+      margin-top: 12px;
+    }
+  }
+}
+
+/* --- Schmale Screens ------------------------------------------------------- */
+@media (max-width: 760px) {
+  .panel {
+    top: auto;
+    bottom: 16px;
+    right: 12px;
+    left: 12px;
+    width: auto;
+    max-height: 45vh;
+  }
+
+  .brand p {
+    display: none;
+  }
+
+  .hint,
+  .route-chip {
+    display: none;
+  }
+}

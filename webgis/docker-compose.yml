@@ -66,12 +66,18 @@ services:
       MAX_PARALLEL_IMPORTS: ${MAX_PARALLEL_IMPORTS:-4}
     restart: "no"
 
+  # Angular-Client (OpenLayers) — nginx liefert die App aus und proxied
+  # /geoserver same-origin an den GeoServer-Service (kein CORS nötig).
+  web:
+    build: ./client
+    container_name: baumradar-web
+    depends_on:
+      geoserver:
+        condition: service_started
+    ports:
+      - "${WEB_PORT:-8082}:80"
+
   # ---------------------------------------------------------------------------
-  # Phase 3 (Angular-Client) — folgt:
-  #  web:
-  #    build: ./client
-  #    ports: ["${WEB_PORT:-4200}:80"]
-  #
   # Phase 4 (Routing) — folgt:
   #  graph-builder:  osmium: 19 Stadt-BBoxen (aus PostGIS) aus Länder-PBFs
   #                  extrahieren und zu einem Insel-Graph-PBF mergen

@@ -78,6 +78,10 @@ public final class Main {
             System.out.printf("  FEHLER [%s]: %s%n", r.cityId(), r.error());
         }
 
+        int genera = pg.refreshGenusStats();
+        int species = pg.refreshSpeciesStats();
+        System.out.printf("  Statistik: %d Gattungen, %d Art-Tupel%n", genera, species);
+
         if (cfg.skipGeoserver()) {
             System.out.println("  GeoServer-Provisionierung übersprungen (SKIP_GEOSERVER=true)");
         } else {

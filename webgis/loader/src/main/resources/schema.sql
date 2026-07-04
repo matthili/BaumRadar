@@ -32,6 +32,26 @@ CREATE TABLE IF NOT EXISTS allergy_zones (
 CREATE INDEX IF NOT EXISTS zones_geom_gix  ON allergy_zones USING GIST (geom);
 CREATE INDEX IF NOT EXISTS zones_genus_idx ON allergy_zones (genus_de);
 
+-- Gattungs-Statistik für den Web-Client (Filter-UI): klein, geometrielos,
+-- wird vom Loader nach jedem Import-Lauf neu befüllt und via WFS publiziert.
+CREATE TABLE IF NOT EXISTS genus_stats (
+    genus_de   TEXT PRIMARY KEY,
+    tree_count INTEGER NOT NULL
+);
+-- Nachrüstung für Bestände aus früheren Loader-Versionen (idempotent).
+ALTER TABLE genus_stats ADD COLUMN IF NOT EXISTS genus_en TEXT;
+
+-- Art-Tupel je Gattung (DISTINCT wie im Allergie-Profil der App): Grundlage der
+-- Client-Suche über deutsche UND botanische Namen ("Acer", "irgendwas mit spitz").
+-- Die Auswahl im Client bleibt gattungsweit — passend zu den genus-geclusterten Zonen.
+CREATE TABLE IF NOT EXISTS species_stats (
+    genus_de   TEXT NOT NULL,
+    species_de TEXT NOT NULL DEFAULT '',
+    species_en TEXT NOT NULL DEFAULT '',
+    tree_count INTEGER NOT NULL,
+    PRIMARY KEY (genus_de, species_de, species_en)
+);
+
 -- Idempotenz-Buchführung: welche dataVersion je Stadt bereits importiert ist.
 CREATE TABLE IF NOT EXISTS import_state (
     city_id      TEXT PRIMARY KEY,
