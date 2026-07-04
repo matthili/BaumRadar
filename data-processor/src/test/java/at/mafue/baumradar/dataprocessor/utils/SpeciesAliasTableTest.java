@@ -17,7 +17,7 @@ public class SpeciesAliasTableTest {
     private static String germanFor(SpeciesAliasTable t, String rawEn, String rawDe) {
         String canonEn = CultivarNormalizer.canonicalScientific(rawEn, rawDe);
         String key = CultivarNormalizer.identityKey("egal", rawEn, rawDe);
-        return t.canonicalGerman(key, canonEn);
+        return t.canonicalGerman(key, canonEn, CultivarNormalizer.cleanGerman(rawDe));
     }
 
     @Test
@@ -43,6 +43,21 @@ public class SpeciesAliasTableTest {
         // Cross-Field: Sorte steckt im deutschen Feld, Latein ist nackt.
         assertEquals("Spitz-Ahorn 'Columnare'",
                 germanFor(t, "Acer platanoides", "Säulenförmiger Spitz-Ahorn 'Columnare'"));
+    }
+
+    @Test
+    public void preservesStandaloneGermanFormButUnifiesVariantsAndMergedNames() {
+        SpeciesAliasTable t = new SpeciesAliasTable(Map.of(
+                "acer|platanoides", "Spitz-Ahorn", "quercus|robur", "Stiel-Eiche"));
+        // Reine Schreibvarianten des Basisnamens → vereinheitlicht:
+        assertEquals("Spitz-Ahorn", germanFor(t, "Acer platanoides", "Spitzahorn"));
+        assertEquals("Spitz-Ahorn", germanFor(t, "Acer platanoides", "Spitz-ahorn"));
+        // Zusammengemischte Doppelnamen → auf den Basisnamen gezogen:
+        assertEquals("Stiel-Eiche", germanFor(t, "Quercus robur", "Sommer-Eiche, Stiel-Eiche"));
+        assertEquals("Stiel-Eiche", germanFor(t, "Quercus robur", "Sommer-Eiche - Stiel-Eiche"));
+        // Eigenständige Form ohne Latein-Sorte → BLEIBT erhalten (nicht plattgemacht):
+        assertEquals("Kugel-Ahorn", germanFor(t, "Acer platanoides", "Kugel-Ahorn"));
+        assertEquals("Blut-Ahorn", germanFor(t, "Acer platanoides", "Blut-Ahorn"));
     }
 
     @Test

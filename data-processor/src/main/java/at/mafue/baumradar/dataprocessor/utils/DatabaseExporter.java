@@ -182,11 +182,11 @@ public class DatabaseExporter {
                 String key = CultivarNormalizer.identityKey(record.genusDe, rawEn, rawDe);
                 // Schicht 2: kanonischer deutscher Artname aus der Alias-Tabelle
                 // (Sorte wird angehängt); ohne Treffer der mojibake-bereinigte Original-Name.
-                String aliasDe = SpeciesAliasTable.get().canonicalGerman(key, canonEn);
+                String cleaned = CultivarNormalizer.cleanGerman(rawDe);
+                String aliasDe = SpeciesAliasTable.get().canonicalGerman(key, canonEn, cleaned);
                 if (aliasDe != null) {
                     record.speciesDe = aliasDe;
                 } else {
-                    String cleaned = CultivarNormalizer.cleanGerman(rawDe);
                     // Keinen deutschen Namen in der Quelle → Gattungsname (+ Sorte), damit
                     // die Anzeige nie leer ist, statt eines leeren deutschen Feldes.
                     record.speciesDe = (cleaned != null && !cleaned.isBlank())
@@ -243,6 +243,11 @@ public class DatabaseExporter {
         String hex = mixed.toString(16);
         while (hex.length() < 16) hex = "0" + hex;
         return hex.substring(hex.length() - 16);
+    }
+
+    /** Number of tree rows folded into the fingerprint so far (i.e. inserted). */
+    public long getInsertedCount() {
+        return fpCount;
     }
 
     /** Closes the underlying JDBC connection if it is still open. */

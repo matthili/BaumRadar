@@ -14,10 +14,16 @@ import java.util.UUID;
  * City provider for <strong>Basel, Switzerland</strong>.
  *
  * <p>Downloads the tree cadastre from the Canton of Basel-Stadt’s
- * Opendatasoft-based open-data portal as paginated GeoJSON.  The genus
+ * Opendatasoft-based open-data portal as a single GeoJSON export.  The genus
  * is extracted from the first word of the Latin botanical species name
  * ({@code baumart_lateinisch}), similar to the approach used by
  * {@link at.mafue.baumradar.dataprocessor.providers.germany.FreiburgProvider}.
+ *
+ * <p>The export is fetched in one request (pagination disabled): Opendatasoft's
+ * {@code /exports/geojson} endpoint rejects {@code offset + limit > 10000}, so the
+ * previous paginated fetch silently capped Basel at 9997 of its ~32&nbsp;400 trees —
+ * the same trap that hit
+ * {@link at.mafue.baumradar.dataprocessor.providers.germany.DortmundProvider}.
  */
 public class BaselProvider extends AbstractGeoJsonProvider {
 
@@ -41,9 +47,18 @@ public class BaselProvider extends AbstractGeoJsonProvider {
         return new double[]{47.53, 7.57, 47.60, 7.68};
     }
 
+    /** The Opendatasoft export returns the whole dataset in one response;
+     *  limit/offset paging is capped at 10000 and must not be used. */
+    @Override
+    protected boolean supportsPagination() {
+        return false;
+    }
+
     @Override
     protected String getGeoJsonUrl(int offset) {
-        return "https://data.bs.ch/api/v2/catalog/datasets/100052/exports/geojson?limit=" + BATCH_SIZE + "&offset=" + offset;
+        // Single-shot: offset wird ignoriert (siehe supportsPagination). Exakt der Link,
+        // der im Browser den kompletten Datensatz (32.406 Bäume) auf einmal liefert.
+        return "https://data.bs.ch/api/explore/v2.1/catalog/datasets/100052/exports/geojson/?lang=de&timezone=Europe%2FVienna";
     }
 
     @Override

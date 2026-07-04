@@ -67,6 +67,7 @@ robinia|pseudoacacia	Robinie
 # --- Hasel / Zürgelbaum / Amberbaum ---
 corylus|colurna	Baum-Hasel
 celtis|australis	Südlicher Zürgelbaum
+celtis|occidentalis	Westlicher Zürgelbaum
 liquidambar|styraciflua	Amberbaum
 
 # --- Kirsche / Pflaume (Prunus) ---
@@ -111,3 +112,78 @@ crataegus|monogyna	Eingriffliger Weißdorn
 crataegus|laevigata	Zweigriffliger Weißdorn
 ulmus	Ulme
 ulmus|glabra	Berg-Ulme
+ulmus|laevis	Flatter-Ulme
+ulmus|minor	Feld-Ulme
+
+# ============================================================
+# --- Zweite Ebene: seltenere Arten aus dem Report (2026-07-04) ---
+#     Long-Tail; vereinheitlicht Bindestrich-/Schreibvarianten (z. B.
+#     "Rotahorn"/"Rot-Ahorn"). Nur gesicherte deutsche Standardnamen.
+# ============================================================
+
+# --- Ahorn (Acer), weitere Arten ---
+acer|rubrum	Rot-Ahorn
+acer|saccharum	Zucker-Ahorn
+acer|monspessulanum	Französischer Ahorn
+acer|cappadocicum	Kolchischer Ahorn
+acer|palmatum	Fächer-Ahorn
+acer|ginnala	Feuer-Ahorn
+acer|tataricum	Tataren-Ahorn
+
+# --- Eiche / Kastanie ---
+quercus|cerris	Zerr-Eiche
+castanea	Ess-Kastanie
+castanea|sativa	Ess-Kastanie
+
+# --- Pappel (Populus), weitere Arten ---
+populus|tremula	Zitter-Pappel
+populus|alba	Silber-Pappel
+populus|canescens	Grau-Pappel
+populus|balsamifera	Balsam-Pappel
+
+# --- Erle (Alnus) / Weide ---
+alnus	Erle
+alnus|incana	Grau-Erle
+alnus|cordata	Italienische Erle
+salix|caprea	Sal-Weide
+
+# --- Esche (Fraxinus), weitere Arten ---
+fraxinus|angustifolia	Schmalblättrige Esche
+fraxinus|pennsylvanica	Rot-Esche
+
+# --- Nadelbäume ---
+pinus	Kiefer
+larix	Lärche
+larix|decidua	Europäische Lärche
+picea	Fichte
+picea|omorika	Serbische Fichte
+tsuga|canadensis	Kanadische Hemlocktanne
+chamaecyparis|lawsoniana	Lawsons Scheinzypresse
+
+# --- Rosskastanie / Buche (Gattungsebene) ---
+aesculus	Rosskastanie
+fagus	Buche
+
+# --- Weitere Gattungen und Arten ---
+platanus	Platane
+crataegus	Weißdorn
+catalpa	Trompetenbaum
+catalpa|bignonioides	Trompetenbaum
+liriodendron	Tulpenbaum
+liriodendron|tulipifera	Tulpenbaum
+ostrya|carpinifolia	Hopfenbuche
+cornus	Hartriegel
+cornus|mas	Kornelkirsche
+paulownia	Blauglockenbaum
+paulownia|tomentosa	Blauglockenbaum
+parrotia|persica	Eisenholzbaum
+sambucus|nigra	Schwarzer Holunder
+pterocarya|fraxinifolia	Kaukasische Flügelnuss
+morus	Maulbeere
+morus|alba	Weiße Maulbeere
+amelanchier	Felsenbirne
+amelanchier|lamarckii	Kupfer-Felsenbirne
+koelreuteria|paniculata	Blasenbaum
+magnolia	Magnolie
+magnolia|kobus	Kobushi-Magnolie
+styphnolobium|japonicum	Japanischer Schnurbaum

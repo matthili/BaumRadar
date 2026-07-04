@@ -45,9 +45,45 @@ public final class SpeciesAliasTable {
      * den bereinigten Original-Namen zurück). Das Kultivar wird aus dem kanonischen
      * Latein-Namen übernommen.
      */
-    public String canonicalGerman(String identityKey, String canonicalScientificEn) {
+    /**
+     * Kanonischer deutscher Name für einen {@link CultivarNormalizer#identityKey}, oder
+     * {@code null}, wenn die Art nicht in der Tabelle steht.
+     *
+     * <p><b>Konservativ beim deutschen Namen:</b> überschrieben wird nur, wenn
+     * <ol>
+     *   <li>das Latein eine Sorte trägt (dann kanonischer Artname + Sorte), oder</li>
+     *   <li>der deutsche Rohname ein zusammengemischter Doppelname ist
+     *       ({@code "Sommer-Eiche, Stiel-Eiche"}), oder</li>
+     *   <li>er nur eine Schreibvariante des Basisnamens ist ({@code "Spitzahorn"}).</li>
+     * </ol>
+     * Ein eigenständiger Trivialname, der eine Form meint, deren Sorte NICHT im
+     * Latein-Feld steht ({@code "Kugel-Ahorn"} = 'Globosum', {@code "Blut-Ahorn"}),
+     * bleibt <b>erhalten</b> — er trägt Information, die sonst verloren ginge.
+     *
+     * @param cleanedGermanRaw der bereits mojibake-bereinigte deutsche Rohname
+     */
+    public String canonicalGerman(String identityKey, String canonicalScientificEn, String cleanedGermanRaw) {
         String base = german.get(CultivarNormalizer.speciesKeyOf(identityKey));
-        return base == null ? null : CultivarNormalizer.appendCultivar(base, canonicalScientificEn);
+        if (base == null) return null;
+        String withCultivar = CultivarNormalizer.appendCultivar(base, canonicalScientificEn);
+        if (!withCultivar.equals(base)) return withCultivar; // Latein-Sorte belegt → kanonisch
+        if (cleanedGermanRaw == null || cleanedGermanRaw.isBlank()) return base;
+        if (looksMerged(cleanedGermanRaw) || sameName(cleanedGermanRaw, base)) return base;
+        return cleanedGermanRaw; // eigenständiger Trivialname → erhalten
+    }
+
+    /** Zusammengemischter Doppelname: Komma/Semikolon/Slash oder „ - " (mit Leerzeichen). */
+    private static boolean looksMerged(String s) {
+        return s.matches(".*[,;/].*") || s.matches(".*\\s[-–]\\s.*");
+    }
+
+    private static boolean sameName(String a, String b) {
+        return normName(a).equals(normName(b));
+    }
+
+    /** Nur Buchstaben/Ziffern, kleingeschrieben — Bindestriche/Leerzeichen egal. */
+    private static String normName(String s) {
+        return s.toLowerCase(Locale.ROOT).replaceAll("[^a-zäöüß0-9]", "");
     }
 
     public boolean covers(String identityKey) {
