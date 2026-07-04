@@ -46,5 +46,16 @@ public interface CityProvider {
      * @throws Exception if downloading or parsing fails
      */
     void processData(DatabaseExporter exporter) throws Exception;
+
+    /**
+     * Optionally overrides the source URL for this city — for when a portal moves
+     * but keeps the same data <em>format</em>. A {@code {offset}} placeholder, if
+     * present, is substituted with the pagination offset. Default: no-op; providers
+     * that support overriding (e.g. {@link AbstractGeoJsonProvider}) honour it. A
+     * URL to a differently-shaped portal still needs a code change.
+     *
+     * @param url the replacement URL (may contain {@code {offset}}), or {@code null}/blank to clear
+     */
+    default void setSourceUrlOverride(String url) {}
 }
 

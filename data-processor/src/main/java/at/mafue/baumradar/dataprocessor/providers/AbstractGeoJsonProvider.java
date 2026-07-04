@@ -51,11 +51,30 @@ public abstract class AbstractGeoJsonProvider implements CityProvider {
     /** Attempts per page before giving up (absorbs transient/flaky failures). */
     protected static final int MAX_PAGE_ATTEMPTS = 6;
 
+    /** Optional runtime URL override (e.g. from the Web-UI); {@code {offset}} is substituted per page. */
+    private String sourceUrlOverride;
+
+    @Override
+    public void setSourceUrlOverride(String url) {
+        this.sourceUrlOverride = url;
+    }
+
     /**
      * Get the URL for the GeoJSON endpoint.
      * @param offset for pagination loops (ArcGIS limits etc.)
      */
     protected abstract String getGeoJsonUrl(int offset);
+
+    /**
+     * The effective URL for a page: a {@link #setSourceUrlOverride override} wins over
+     * {@link #getGeoJsonUrl}, with any {@code {offset}} placeholder substituted.
+     */
+    protected String resolveUrl(int offset) {
+        if (sourceUrlOverride != null && !sourceUrlOverride.isBlank()) {
+            return sourceUrlOverride.replace("{offset}", String.valueOf(offset));
+        }
+        return getGeoJsonUrl(offset);
+    }
 
     /**
      * Map a single GeoJSON Feature node to a TreeRecord.
@@ -108,7 +127,7 @@ public abstract class AbstractGeoJsonProvider implements CityProvider {
 
             for (int attempt = 1; attempt <= MAX_PAGE_ATTEMPTS && page == null; attempt++) {
                 try {
-                    page = fetchPage(client, factory, mapper, getGeoJsonUrl(offset));
+                    page = fetchPage(client, factory, mapper, resolveUrl(offset));
                 } catch (HttpStatusException he) {
                     lastError = he;
                     if (attempt < MAX_PAGE_ATTEMPTS) {

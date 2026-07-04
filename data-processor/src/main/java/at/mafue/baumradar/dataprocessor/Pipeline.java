@@ -45,10 +45,12 @@ public class Pipeline {
      * @param allProviders the full provider list — metadata source for the catalog
      * @param outDir       the {@code docs/data} output directory
      * @param baseUrl      base URL prefix for catalog file references
+     * @param urlOverrides optional {@code cityId → source URL} overrides (may be {@code null})
      * @param listener     progress callbacks (may be {@code null} → {@link PipelineListener#NOOP})
      */
     public static void run(List<CityProvider> toProcess, List<CityProvider> allProviders,
-                           File outDir, String baseUrl, PipelineListener listener) throws Exception {
+                           File outDir, String baseUrl, Map<String, String> urlOverrides,
+                           PipelineListener listener) throws Exception {
         final PipelineListener l = listener == null ? PipelineListener.NOOP : listener;
         if (!outDir.exists()) outDir.mkdirs();
 
@@ -72,6 +74,13 @@ public class Pipeline {
         AtomicInteger failed = new AtomicInteger();
 
         for (CityProvider provider : toProcess) {
+            if (urlOverrides != null) {
+                String ov = urlOverrides.get(provider.getCityId());
+                if (ov != null && !ov.isBlank()) {
+                    provider.setSourceUrlOverride(ov);
+                    logger.info("[{}] Using source URL override.", provider.getName());
+                }
+            }
             executor.submit(() -> {
                 try {
                     l.onCityStart(provider.getCityId(), provider.getName());

@@ -40,6 +40,9 @@ public class Main {
     private static final String BASE_URL =
             "https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/";
 
+    /** Port for the local Web-UI ({@code --ui}). */
+    private static final int UI_PORT = 8420;
+
     /** The full set of city providers. Order is irrelevant; the catalog lists every one with data. */
     static List<CityProvider> allProviders() {
         return Arrays.asList(
@@ -71,6 +74,20 @@ public class Main {
         File outDir = resolveOutputDir();
         List<CityProvider> all = allProviders();
 
+        // --ui: launch the local Web-UI instead of running immediately. The server
+        // keeps the JVM alive and exits it itself once a run has completed.
+        if (Arrays.stream(args).anyMatch(a -> a != null
+                && (a.equalsIgnoreCase("--ui") || a.equalsIgnoreCase("ui")))) {
+            try {
+                new WebServer(all, outDir, BASE_URL, UI_PORT).start();
+                new java.util.concurrent.CountDownLatch(1).await(); // block; WebServer exits the JVM when done
+            } catch (Exception e) {
+                logger.error("Web-UI failed: {}", e.getMessage(), e);
+                System.exit(1);
+            }
+            return;
+        }
+
         List<CityProvider> toProcess = selectProviders(all, args);
         if (toProcess == null) {
             System.exit(2); // unknown city id(s) — message already logged
@@ -79,7 +96,7 @@ public class Main {
 
         try {
             // The CLI relies on the pipeline's own SLF4J logging for progress.
-            Pipeline.run(toProcess, all, outDir, BASE_URL, PipelineListener.NOOP);
+            Pipeline.run(toProcess, all, outDir, BASE_URL, null, PipelineListener.NOOP);
         } catch (Exception e) {
             logger.error("Fatal error in pipeline: {}", e.getMessage(), e);
             System.exit(1);

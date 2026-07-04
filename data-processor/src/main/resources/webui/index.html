@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BaumRadar Runner</title>
+<link rel="icon" type="image/png" href="{{FAVICON}}">
+<style>
+  :root {
+    --green: #2e7d32; --green-d: #1b5e20; --green-l: #e8f5e9;
+    --ink: #1b2a1e; --muted: #5b6b5e; --line: #d8e3d9; --bg: #f4f7f4;
+    --amber: #b26a00; --red: #b3261e; --card: #ffffff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--ink); line-height: 1.5;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 24px 20px 64px; }
+  header { display: flex; align-items: center; gap: 14px; margin: 12px 0 6px; }
+  header img { width: 48px; height: 48px; border-radius: 10px; }
+  header h1 { font-size: 1.4rem; margin: 0; letter-spacing: -0.01em; }
+  header .sub { color: var(--muted); font-size: .9rem; }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 18px; margin-top: 18px; box-shadow: 0 1px 2px rgba(0,0,0,.04);
+  }
+  .toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+  .toolbar .spacer { flex: 1; }
+  button {
+    font: inherit; border: 1px solid var(--line); background: #fff; color: var(--ink);
+    padding: 8px 14px; border-radius: 9px; cursor: pointer; transition: background .12s, border-color .12s;
+  }
+  button:hover { background: #f0f4f0; }
+  button.primary { background: var(--green); border-color: var(--green); color: #fff; font-weight: 600; }
+  button.primary:hover { background: var(--green-d); }
+  button:disabled { opacity: .5; cursor: default; }
+  .count { color: var(--muted); font-size: .88rem; }
+  ul.cities { list-style: none; margin: 0; padding: 0; }
+  ul.cities li {
+    display: flex; align-items: center; gap: 10px; padding: 9px 6px;
+    border-top: 1px solid var(--line);
+  }
+  ul.cities li:first-child { border-top: none; }
+  ul.cities .name { font-weight: 550; }
+  ul.cities .country { color: var(--muted); font-size: .85rem; }
+  ul.cities .grow { flex: 1; }
+  .status { font-size: .82rem; padding: 2px 9px; border-radius: 999px; white-space: nowrap; }
+  .status.idle { display: none; }
+  .status.running { background: var(--green-l); color: var(--green-d); }
+  .status.done { background: #e7f3e8; color: var(--green-d); }
+  .status.error { background: #fde8e6; color: var(--red); }
+  .urltoggle { background: none; border: none; color: var(--muted); font-size: .8rem; padding: 2px 6px; text-decoration: underline; }
+  .urlbox { display: none; width: 100%; padding: 6px 0 2px 30px; }
+  .urlbox input { width: 100%; font: inherit; font-size: .85rem; padding: 6px 8px; border: 1px solid var(--line); border-radius: 7px; }
+  li.open .urlbox { display: block; }
+  .banner { border-radius: 12px; padding: 14px 16px; margin-top: 18px; font-weight: 500; display: none; }
+  .banner.ok { background: var(--green-l); border: 1px solid #b6ddb9; color: var(--green-d); display: block; }
+  .banner.warn { background: #fff4e2; border: 1px solid #f0d9ab; color: var(--amber); display: block; }
+  .checkbox { width: 18px; height: 18px; accent-color: var(--green); }
+  footer { color: var(--muted); font-size: .8rem; text-align: center; margin-top: 26px; }
+  .quit { background: none; border: 1px solid var(--line); color: var(--muted); padding: 6px 14px; border-radius: 9px; font-size: .82rem; cursor: pointer; }
+  .quit:hover:not(:disabled) { background: #fdecea; border-color: #f0c5c0; color: var(--red); }
+  .quit:disabled { opacity: .5; cursor: default; }
+  code { background: #eef3ee; padding: 1px 5px; border-radius: 5px; font-size: .85em; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <img src="{{LOGO}}" alt="BaumRadar">
+    <div>
+      <h1>BaumRadar&nbsp;Runner</h1>
+      <div class="sub">Daten-Pipeline — Städte auswählen und veröffentlichen</div>
+    </div>
+  </header>
+
+  <div class="banner" id="banner"></div>
+
+  <div class="card">
+    <div class="toolbar">
+      <button id="all">Alle</button>
+      <button id="none">Keine</button>
+      <span class="count" id="count"></span>
+      <span class="spacer"></span>
+      <button class="primary" id="start">Start</button>
+    </div>
+    <ul class="cities" id="list"><li><span class="country">Lade Städte…</span></li></ul>
+  </div>
+
+  <footer>
+    Läuft lokal · schließt sich nach getaner Arbeit selbst
+    <div style="margin-top:10px"><button id="quit" class="quit">Runner beenden</button></div>
+  </footer>
+</div>
+
+<script>
+const list = document.getElementById('list');
+const banner = document.getElementById('banner');
+const startBtn = document.getElementById('start');
+const countEl = document.getElementById('count');
+let cities = [];
+let finished = false;
+let running = false;
+
+function refreshCount() {
+  const n = list.querySelectorAll('input.checkbox:checked').length;
+  countEl.textContent = n + ' von ' + cities.length + ' ausgewählt';
+}
+
+function row(c) {
+  const li = document.createElement('li');
+  li.dataset.id = c.id;
+  li.innerHTML =
+    '<input type="checkbox" class="checkbox" checked>' +
+    '<span class="name"></span> <span class="country"></span>' +
+    '<span class="grow"></span>' +
+    '<button class="urltoggle" title="Quell-URL überschreiben">URL</button>' +
+    '<span class="status idle" data-status>—</span>' +
+    '<div class="urlbox"><input type="url" placeholder="Quelle überschreiben (gleiches Format, {offset} für Seiten)"></div>';
+  li.querySelector('.name').textContent = c.name;
+  li.querySelector('.country').textContent = c.country;
+  li.querySelector('.checkbox').addEventListener('change', refreshCount);
+  li.querySelector('.urltoggle').addEventListener('click', () => li.classList.toggle('open'));
+  return li;
+}
+
+fetch('/api/cities').then(r => r.json()).then(data => {
+  cities = data;
+  list.innerHTML = '';
+  data.forEach(c => list.appendChild(row(c)));
+  refreshCount();
+}).catch(() => { list.innerHTML = '<li><span class="country">Konnte Städte nicht laden.</span></li>'; });
+
+document.getElementById('all').onclick = () => {
+  if (running) return;
+  list.querySelectorAll('input.checkbox').forEach(cb => cb.checked = true); refreshCount();
+};
+document.getElementById('none').onclick = () => {
+  if (running) return;
+  list.querySelectorAll('input.checkbox').forEach(cb => cb.checked = false); refreshCount();
+};
+
+function setStatus(id, cls, text) {
+  const li = list.querySelector('li[data-id="' + id + '"]');
+  if (!li) return;
+  const s = li.querySelector('[data-status]');
+  s.className = 'status ' + cls;
+  s.textContent = text;
+}
+
+const es = new EventSource('/api/progress');
+es.addEventListener('city', e => {
+  const d = JSON.parse(e.data);
+  if (d.status === 'running') setStatus(d.id, 'running', 'läuft…');
+  else if (d.status === 'done') setStatus(d.id, 'done', '✓ ' + Number(d.trees).toLocaleString('de-DE') + ' Bäume');
+  else if (d.status === 'error') setStatus(d.id, 'error', '✗ Fehler');
+});
+es.addEventListener('done', e => {
+  const d = JSON.parse(e.data);
+  finished = true;
+  es.close();
+  banner.className = 'banner ok';
+  banner.innerHTML = '✓ Alles erledigt — ' + d.processed + ' Stadt/Städte verarbeitet' +
+    (d.failed ? (', <b>' + d.failed + ' fehlgeschlagen</b>') : '') +
+    '. Die Anwendung hat sich beendet; dieses Fenster bleibt als Übersicht.';
+});
+es.onerror = () => {
+  if (finished) return; // planmäßiges Ende — kein Fehler
+};
+
+startBtn.onclick = () => {
+  if (running) return;
+  const chosen = [...list.querySelectorAll('li')].filter(li => li.querySelector('input.checkbox').checked);
+  if (!chosen.length) { alert('Bitte mindestens eine Stadt auswählen.'); return; }
+  const ids = chosen.map(li => li.dataset.id);
+  const overrides = {};
+  chosen.forEach(li => {
+    const u = li.querySelector('.urlbox input').value.trim();
+    if (u) overrides[li.dataset.id] = u;
+  });
+  running = true;
+  startBtn.disabled = true; startBtn.textContent = 'Läuft…';
+  document.getElementById('all').disabled = true;
+  document.getElementById('none').disabled = true;
+  document.getElementById('quit').disabled = true;
+  list.querySelectorAll('input.checkbox, .urltoggle, .urlbox input').forEach(el => el.disabled = true);
+  chosen.forEach(li => setStatus(li.dataset.id, 'running', 'wartet…'));
+  banner.className = 'banner warn';
+  banner.textContent = 'Verarbeite ' + ids.length + ' Stadt/Städte… du kannst dies offen lassen.';
+  fetch('/api/run', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ cities: ids, overrides })
+  }).catch(() => {});
+};
+
+document.getElementById('quit').onclick = () => {
+  if (running) return; // während eines Laufs gesperrt — der beendet sich selbst
+  finished = true;
+  es.close();
+  fetch('/api/shutdown', { method: 'POST' }).catch(() => {});
+  banner.className = 'banner ok';
+  banner.innerHTML = '✓ Runner beendet. Du kannst dieses Fenster jetzt schließen.';
+  ['quit', 'start', 'all', 'none'].forEach(id => document.getElementById(id).disabled = true);
+};
+</script>
+</body>
+</html>
