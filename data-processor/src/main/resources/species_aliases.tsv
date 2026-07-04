@@ -1,0 +1,113 @@
+# BaumRadar — Schicht-2 Alias-Tabelle (kuratiert)
+# ------------------------------------------------------------------
+# Zweck: EIN kanonischer deutscher Artname je Art. Sorten (Kultivare) werden
+#        mechanisch angehängt:  <deutscher Artname> '<Kultivar>'.
+#        Beispiel:  acer|platanoides + Kultivar "Columnare"  ->  "Spitz-Ahorn 'Columnare'"
+#
+# Format:  <identityKey-Präfix><TAB><deutscher Artname>
+#   - "gattung|art"  gilt für alle Sorten dieser Art
+#   - nur "gattung"  gilt für zur-Gattung-bestimmte Bäume (ohne Art)
+#
+# Diese Datei wächst aus harmonization_report.txt. Latein bleibt unverändert
+# (das erledigt Schicht 1); hier geht es nur um den deutschen Anzeigenamen.
+# Kommentarzeilen beginnen mit #, leere Zeilen werden ignoriert.
+
+# --- Ahorn (Acer) ---
+acer	Ahorn
+acer|platanoides	Spitz-Ahorn
+acer|pseudoplatanus	Berg-Ahorn
+acer|campestre	Feld-Ahorn
+acer|negundo	Eschen-Ahorn
+acer|saccharinum	Silber-Ahorn
+
+# --- Linde (Tilia) ---
+tilia	Linde
+tilia|cordata	Winter-Linde
+tilia|platyphyllos	Sommer-Linde
+tilia|europaea	Holländische Linde
+tilia|intermedia	Holländische Linde
+tilia|vulgaris	Holländische Linde
+tilia|tomentosa	Silber-Linde
+tilia|euchlora	Krim-Linde
+tilia|americana	Amerikanische Linde
+
+# --- Eiche (Quercus) ---
+quercus	Eiche
+quercus|robur	Stiel-Eiche
+quercus|rubra	Rot-Eiche
+quercus|petraea	Trauben-Eiche
+quercus|palustris	Sumpf-Eiche
+
+# --- Hainbuche / Buche ---
+carpinus	Hainbuche
+carpinus|betulus	Hainbuche
+fagus|sylvatica	Rot-Buche
+
+# --- Platane (Platanus) — acerifolia/hispanica/hybrida sind Synonyme ---
+platanus|acerifolia	Ahornblättrige Platane
+platanus|hispanica	Ahornblättrige Platane
+platanus|hybrida	Ahornblättrige Platane
+
+# --- Esche (Fraxinus) ---
+fraxinus	Esche
+fraxinus|excelsior	Gemeine Esche
+fraxinus|ornus	Blumen-Esche
+
+# --- Rosskastanie (Aesculus) ---
+aesculus|hippocastanum	Gemeine Rosskastanie
+aesculus|carnea	Rotblühende Rosskastanie
+
+# --- Birke (Betula) ---
+betula	Birke
+betula|pendula	Hänge-Birke
+
+# --- Robinie ---
+robinia|pseudoacacia	Robinie
+
+# --- Hasel / Zürgelbaum / Amberbaum ---
+corylus|colurna	Baum-Hasel
+celtis|australis	Südlicher Zürgelbaum
+liquidambar|styraciflua	Amberbaum
+
+# --- Kirsche / Pflaume (Prunus) ---
+prunus	Kirsche
+prunus|avium	Vogel-Kirsche
+prunus|serrulata	Japanische Zierkirsche
+prunus|cerasifera	Kirschpflaume
+prunus|padus	Trauben-Kirsche
+prunus|domestica	Pflaume
+
+# --- Kiefer / Fichte / Douglasie / Eibe (Nadelbäume) ---
+pinus|sylvestris	Wald-Kiefer
+pinus|nigra	Schwarz-Kiefer
+picea|abies	Gemeine Fichte
+pseudotsuga|menziesii	Douglasie
+taxus|baccata	Gemeine Eibe
+
+# --- Pappel / Weide / Erle ---
+populus	Pappel
+populus|nigra	Schwarz-Pappel
+populus|canadensis	Kanadische Pappel
+salix	Weide
+salix|alba	Silber-Weide
+alnus|glutinosa	Schwarz-Erle
+
+# --- Obst / Zierbäume ---
+malus	Apfel
+malus|domestica	Kultur-Apfel
+pyrus|calleryana	Zierbirne
+pyrus|communis	Kultur-Birne
+sorbus|intermedia	Schwedische Mehlbeere
+sorbus|aria	Echte Mehlbeere
+sorbus|aucuparia	Eberesche
+
+# --- Weitere häufige Straßenbäume ---
+gleditsia|triacanthos	Amerikanische Gleditschie
+sophora|japonica	Japanischer Schnurbaum
+juglans|regia	Walnuss
+ginkgo|biloba	Ginkgo
+ailanthus|altissima	Götterbaum
+crataegus|monogyna	Eingriffliger Weißdorn
+crataegus|laevigata	Zweigriffliger Weißdorn
+ulmus	Ulme
+ulmus|glabra	Berg-Ulme

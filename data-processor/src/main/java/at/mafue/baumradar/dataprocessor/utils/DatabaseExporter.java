@@ -174,6 +174,27 @@ public class DatabaseExporter {
         connection.setAutoCommit(false);
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
             for (TreeRecord record : records) {
+                // Schicht 1: Artnamen deterministisch harmonisieren (Chokepoint für alle
+                // Städte), Schicht 3: Roh→kanonisch für den Import-Report erfassen.
+                String rawDe = record.speciesDe;
+                String rawEn = record.speciesEn;
+                String canonEn = CultivarNormalizer.canonicalScientific(rawEn, rawDe);
+                String key = CultivarNormalizer.identityKey(record.genusDe, rawEn, rawDe);
+                // Schicht 2: kanonischer deutscher Artname aus der Alias-Tabelle
+                // (Sorte wird angehängt); ohne Treffer der mojibake-bereinigte Original-Name.
+                String aliasDe = SpeciesAliasTable.get().canonicalGerman(key, canonEn);
+                if (aliasDe != null) {
+                    record.speciesDe = aliasDe;
+                } else {
+                    String cleaned = CultivarNormalizer.cleanGerman(rawDe);
+                    // Keinen deutschen Namen in der Quelle → Gattungsname (+ Sorte), damit
+                    // die Anzeige nie leer ist, statt eines leeren deutschen Feldes.
+                    record.speciesDe = (cleaned != null && !cleaned.isBlank())
+                            ? cleaned : CultivarNormalizer.appendCultivar(record.genusDe, canonEn);
+                }
+                record.speciesEn = canonEn;
+                HarmonizationReport.shared().record(rawDe, rawEn, canonEn, key);
+
                 pstmt.setString(1, record.id);
                 pstmt.setString(2, record.cityId);
                 pstmt.setDouble(3, record.latitude);

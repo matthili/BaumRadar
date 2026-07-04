@@ -94,6 +94,11 @@ logs/
 *.log
 
 # ============================================================
+# Harmonisierungs-Report (Schicht 3 – lokale Arbeitsliste, nicht versionieren)
+# ============================================================
+harmonization_report.txt
+
+# ============================================================
 # Temporäre Rohdaten im Root-Verzeichnis
 # ============================================================
 /*.json

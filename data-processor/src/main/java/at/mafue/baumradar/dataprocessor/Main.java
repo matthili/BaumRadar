@@ -208,6 +208,17 @@ public class Main {
             executor.shutdown();
             executor.awaitTermination(2, TimeUnit.HOURS); // Wait for all threads to finish
 
+            // Harmonisierungs-Report (Schicht 3): Arbeitsliste für spätere Alias-Pflege.
+            // Landet im Repo-Root (git-ignoriert), nicht in docs/ (das ist GitHub Pages).
+            try {
+                File reportFile = new File(outDir.getAbsoluteFile().getParentFile().getParentFile(),
+                        "harmonization_report.txt");
+                HarmonizationReport.shared().writeTo(reportFile);
+                logger.info("   Harmonization report written to {}", reportFile.getAbsolutePath());
+            } catch (Exception e) {
+                logger.warn("   Could not write harmonization report: {}", e.getMessage());
+            }
+
             logger.info("3. Generating Catalog...");
             File catalogFile = new File(outDir, "catalog.json");
             CatalogBuilder.build(catalogFile, providers, BASE_URL, dataVersions);
