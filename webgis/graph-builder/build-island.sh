@@ -50,11 +50,24 @@ for COUNTRY in Deutschland Österreich Schweiz; do
     echo "$COUNTRY: nutze gecachtes ${PBF[$COUNTRY]}"
   fi
 
-  CFG="$(mktemp)"
-  jq -n --argjson ex "$EX" '{directory:"/osm", extracts:$ex}' > "$CFG"
-  echo "$COUNTRY: extrahiere $N Stadt-BBox(en)…"
-  osmium extract -c "$CFG" --overwrite "${PBF[$COUNTRY]}"
-  rm -f "$CFG"
+  # RAM-schonend in Batches extrahieren: osmium hält pro Extrakt eine Bitmap über
+  # den GLOBALEN Node-ID-Raum (~1,5 GB — unabhängig von der Stadtgröße!). 12 Städte
+  # in einem Lauf ≈ 18 GB → OOM-Kill (exit 137) auf normalen Docker-VMs. Default 1
+  # (gemessen: läuft ab ~3 GB VM-RAM); auf großen Maschinen per EXTRACT_BATCH erhöhen
+  # (~1,5 GB je Stadt im Batch). Die Randeffekte der "simple"-Strategie fängt der
+  # ohnehin vorhandene BBox-Rand (BBOX_MARGIN_DEG) ab.
+  BATCH="${EXTRACT_BATCH:-1}"
+  i=0
+  while [ "$i" -lt "$N" ]; do
+    CFG="$(mktemp)"
+    jq -n --argjson ex "$EX" --argjson i "$i" --argjson n "$BATCH" \
+       '{directory:"/osm", extracts: $ex[$i:$i+$n]}' > "$CFG"
+    upper=$(( i + BATCH > N ? N : i + BATCH ))
+    echo "$COUNTRY: extrahiere Stadt-BBox $((i+1))–$upper von $N …"
+    osmium extract -s simple -c "$CFG" --overwrite "${PBF[$COUNTRY]}"
+    rm -f "$CFG"
+    i=$(( i + BATCH ))
+  done
   while IFS= read -r o; do ALL+=("/osm/$o"); done < <(jq -r '.[].output' <<<"$EX")
 done
 

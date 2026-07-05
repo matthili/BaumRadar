@@ -90,6 +90,9 @@ services:
       CATALOG_URL: ${CATALOG_URL:-https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/catalog.json}
       CITY_FILTER: ${CITY_FILTER:-}
       BBOX_MARGIN_DEG: ${BBOX_MARGIN_DEG:-0.03}
+      # Städte je osmium-Lauf: osmium braucht ~1,5 GB RAM je Stadt im Batch
+      # (globale ID-Bitmap). 1 = läuft ab ~3 GB Docker-VM; größer = schneller.
+      EXTRACT_BATCH: ${EXTRACT_BATCH:-1}
     volumes:
       - osmcache:/osm
       - routingdata:/data
