@@ -10,12 +10,14 @@ import VectorSource from 'ol/source/Vector';
 import GPX from 'ol/format/GPX';
 import type FeatureFormat from 'ol/format/Feature';
 import Feature from 'ol/Feature';
+import type { FeatureLike } from 'ol/Feature';
+import { LineString, Point } from 'ol/geom';
 import DragAndDrop, { DragAndDropEvent } from 'ol/interaction/DragAndDrop';
-import { fromLonLat, transformExtent } from 'ol/proj';
+import { fromLonLat, toLonLat, transformExtent } from 'ol/proj';
 import { Style, Stroke, Circle as CircleStyle, Fill } from 'ol/style';
 import type { Coordinate } from 'ol/coordinate';
 import { GeoServerService } from './geoserver.service';
-import { PopupData, TreeHit, ZoneHit } from './models';
+import { LonLat, PopupData, TreeHit, ZoneHit } from './models';
 
 /**
  * Kapselt die komplette OpenLayers-Karte — bewusst ohne Wrapper-Bibliothek.
@@ -38,6 +40,9 @@ export class MapService {
   private treesLayer?: TileLayer<TileWMS>;
   private zonesLayer?: TileLayer<TileWMS>;
   private routeSource?: VectorSource;
+  private routingSource?: VectorSource;
+  private routingMode = false;
+  private onRoutingPoint?: (p: LonLat) => void;
 
   /**
    * @param onFeatureInfo Klick-Resultate (GetFeatureInfo); `null` = Klick ins Leere
@@ -69,6 +74,14 @@ export class MapService {
         }),
       });
 
+      // Eigene Ebene für die berechnete Route + Start/Ziel-Marker (getrennt von der
+      // GPX-Ebene). Style je nach Feature-Art ('start' | 'end' | 'route').
+      this.routingSource = new VectorSource();
+      const routingLayer = new VectorLayer({
+        source: this.routingSource,
+        style: (feature) => this.routingStyle(feature),
+      });
+
       const dragAndDrop = new DragAndDrop({
         // Bekannte OL-Typing-Lücke: GPX ist zur Laufzeit ein gültiger
         // FeatureFormat-Konstruktor, die Generics passen nur nominell nicht.
@@ -97,7 +110,7 @@ export class MapService {
 
       this.map = new Map({
         target,
-        layers: [new TileLayer({ source: new OSM() }), this.zonesLayer, this.treesLayer, routeLayer],
+        layers: [new TileLayer({ source: new OSM() }), this.zonesLayer, this.treesLayer, routeLayer, routingLayer],
         overlays: [this.popupOverlay],
         view: new View({
           center: fromLonLat([12.5, 49.4]), // DACH-Überblick; Städte-Auswahl zoomt hinein
@@ -107,18 +120,24 @@ export class MapService {
       this.map.addInteraction(dragAndDrop);
 
       this.map.on('singleclick', (event) => {
+        // Im Routing-Modus setzen Klicks Start/Ziel statt eine Sprechblase zu öffnen.
+        if (this.routingMode && this.onRoutingPoint) {
+          const [lon, lat] = toLonLat(event.coordinate);
+          this.onRoutingPoint({ lon, lat });
+          return;
+        }
         void this.queryFeatureInfo(event.coordinate, onFeatureInfo);
       });
     });
   }
 
-  /** Gattungsfilter (CQL) auf beide WMS-Layer anwenden; `null` = alles zeigen. */
-  setGenusFilter(cql: string | null): void {
-    // 'INCLUDE' ist das CQL-Neutralelement — deterministischer, als den
-    // Parameter wieder aus den Source-Params entfernen zu wollen.
-    const filter = cql ?? 'INCLUDE';
-    this.treesSource?.updateParams({ CQL_FILTER: filter });
-    this.zonesSource?.updateParams({ CQL_FILTER: filter });
+  /**
+   * Kombinierten CQL-Filter (Gattung + Stadt) auf beide WMS-Layer anwenden.
+   * Der Aufrufer liefert stets einen gültigen Ausdruck ({@code INCLUDE} = alles).
+   */
+  setLayerFilter(cql: string): void {
+    this.treesSource?.updateParams({ CQL_FILTER: cql });
+    this.zonesSource?.updateParams({ CQL_FILTER: cql });
   }
 
   setTreesVisible(visible: boolean): void {
@@ -138,6 +157,70 @@ export class MapService {
 
   clearRoute(): void {
     this.routeSource?.clear();
+  }
+
+  /** Routing-Modus schalten: Klicks melden Start/Ziel (lon/lat) statt GetFeatureInfo. */
+  enableRouting(on: boolean, onPoint: (p: LonLat) => void): void {
+    this.routingMode = on;
+    this.onRoutingPoint = on ? onPoint : undefined;
+  }
+
+  /** Start-/Ziel-Marker setzen; die berechnete Routenlinie bleibt erhalten. */
+  setRouteMarkers(start: LonLat | null, end: LonLat | null): void {
+    this.zone.runOutsideAngular(() => {
+      const src = this.routingSource;
+      if (!src) return;
+      src.getFeatures()
+        .filter((f) => f.get('kind') !== 'route')
+        .forEach((f) => src.removeFeature(f));
+      if (start) src.addFeature(this.markerFeature(start, 'start'));
+      if (end) src.addFeature(this.markerFeature(end, 'end'));
+    });
+  }
+
+  /** Berechnete Route (Stützpunkte [lon, lat]) zeichnen und in den Blick rücken. */
+  drawRoute(coords: [number, number][]): void {
+    this.zone.runOutsideAngular(() => {
+      const src = this.routingSource;
+      if (!src || coords.length === 0) return;
+      src.getFeatures()
+        .filter((f) => f.get('kind') === 'route')
+        .forEach((f) => src.removeFeature(f));
+      const geom = new LineString(coords.map((c) => fromLonLat(c)));
+      const line = new Feature({ geometry: geom });
+      line.set('kind', 'route');
+      src.addFeature(line);
+      this.map?.getView().fit(geom.getExtent(), {
+        padding: [90, 90, 90, 90],
+        duration: 500,
+        maxZoom: 17,
+      });
+    });
+  }
+
+  /** Start, Ziel und Routenlinie entfernen. */
+  clearRouting(): void {
+    this.routingSource?.clear();
+  }
+
+  private markerFeature(p: LonLat, kind: 'start' | 'end'): Feature {
+    const f = new Feature({ geometry: new Point(fromLonLat([p.lon, p.lat])) });
+    f.set('kind', kind);
+    return f;
+  }
+
+  private routingStyle(feature: FeatureLike): Style {
+    if (feature.get('kind') === 'route') {
+      return new Style({ stroke: new Stroke({ color: '#2E6B2E', width: 6 }) });
+    }
+    const isStart = feature.get('kind') === 'start';
+    return new Style({
+      image: new CircleStyle({
+        radius: 8,
+        fill: new Fill({ color: isStart ? '#2E6B2E' : '#FFFFFF' }),
+        stroke: new Stroke({ color: '#2E6B2E', width: 3 }),
+      }),
+    });
   }
 
   hidePopup(): void {

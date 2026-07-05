@@ -78,6 +78,35 @@ export class GeoServerService {
     }));
   }
 
+  /** Gattungs-Statistik JE STADT (baumradar:genus_stats_city) → {@code cityId → GenusStat[]}. */
+  async fetchGeneraByCity(): Promise<Map<string, GenusStat[]>> {
+    const params = new HttpParams({
+      fromObject: {
+        service: 'WFS',
+        version: '2.0.0',
+        request: 'GetFeature',
+        typeNames: 'baumradar:genus_stats_city',
+        outputFormat: 'application/json',
+        count: '10000',
+      },
+    });
+    interface Fc {
+      features: {
+        properties: { city_id: string; genus_de: string; genus_en: string | null; tree_count: number };
+      }[];
+    }
+    const fc = await firstValueFrom(this.http.get<Fc>(GeoServerService.WFS_URL, { params }));
+    const map = new Map<string, GenusStat[]>();
+    for (const f of fc.features) {
+      const p = f.properties;
+      const list = map.get(p.city_id) ?? [];
+      list.push({ genusDe: p.genus_de, genusEn: p.genus_en ?? null, treeCount: p.tree_count });
+      map.set(p.city_id, list);
+    }
+    for (const list of map.values()) list.sort((a, b) => b.treeCount - a.treeCount);
+    return map;
+  }
+
   /**
    * CQL-Filter für eine Gattungs-Auswahl; `null` = keine Einschränkung.
    * Einfache Anführungszeichen werden CQL-konform verdoppelt.
@@ -88,5 +117,16 @@ export class GeoServerService {
       .map((g) => `'${g.replaceAll("'", "''")}'`)
       .join(',');
     return `genus_de IN (${quoted})`;
+  }
+
+  /** CQL-Filter für eine einzelne Stadt; `null` = keine Einschränkung. */
+  static cityCql(cityId: string | null): string | null {
+    return cityId ? `city_id = '${cityId.replaceAll("'", "''")}'` : null;
+  }
+
+  /** Verknüpft CQL-Teilfilter mit AND; `INCLUDE` (Neutralelement), wenn keiner aktiv ist. */
+  static combineCql(...parts: (string | null)[]): string {
+    const active = parts.filter((p): p is string => !!p);
+    return active.length ? active.join(' AND ') : 'INCLUDE';
   }
 }

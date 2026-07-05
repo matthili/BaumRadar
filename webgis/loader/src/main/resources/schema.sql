@@ -41,6 +41,17 @@ CREATE TABLE IF NOT EXISTS genus_stats (
 -- Nachrüstung für Bestände aus früheren Loader-Versionen (idempotent).
 ALTER TABLE genus_stats ADD COLUMN IF NOT EXISTS genus_en TEXT;
 
+-- Dieselbe Gattungs-Statistik, aber je Stadt aufgeschlüsselt: Grundlage dafür, dass
+-- die Auswahl einer Stadt im Client die angezeigten Baumzahlen auf DIESE Stadt scopt
+-- (statt der globalen Summe über alle Städte). Geometrielos, via WFS gelesen.
+CREATE TABLE IF NOT EXISTS genus_stats_city (
+    city_id    TEXT NOT NULL,
+    genus_de   TEXT NOT NULL,
+    genus_en   TEXT,
+    tree_count INTEGER NOT NULL,
+    PRIMARY KEY (city_id, genus_de)
+);
+
 -- Art-Tupel je Gattung (DISTINCT wie im Allergie-Profil der App): Grundlage der
 -- Client-Suche über deutsche UND botanische Namen ("Acer", "irgendwas mit spitz").
 -- Die Auswahl im Client bleibt gattungsweit — passend zu den genus-geclusterten Zonen.

@@ -12,12 +12,15 @@
 <aside class="panel glass">
   <section>
     <label class="sec" for="city-select">Stadt</label>
-    <select id="city-select" (change)="jumpToCity($any($event.target).value)">
-      <option value="" disabled selected>Zur Stadt springen &hellip;</option>
+    <select id="city-select" (change)="selectCity($any($event.target).value)">
+      <option value="" [selected]="!selectedCity()">Alle St&auml;dte</option>
       @for (c of cities(); track c.id) {
-        <option [value]="c.id">{{ c.name }} ({{ c.country }})</option>
+        <option [value]="c.id" [selected]="selectedCity() === c.id">{{ c.name }} ({{ c.country }})</option>
       }
     </select>
+    @if (selectedCityName(); as cn) {
+      <p class="city-hint">Zahlen &amp; Karte auf <strong>{{ cn }}</strong> gefiltert</p>
+    }
   </section>
 
   <section>
@@ -36,6 +39,43 @@
              (change)="showZones.set($any($event.target).checked)">
       <span class="switch" aria-hidden="true"></span>
     </label>
+  </section>
+
+  <section class="routing">
+    <label class="sec">Route <span class="thin">&middot; lokal</span></label>
+    <div class="seg" role="group" aria-label="Fortbewegung">
+      <button type="button" [class.active]="routeProfile() === 'foot'"
+              (click)="setProfile('foot')">zu Fu&szlig;</button>
+      <button type="button" [class.active]="routeProfile() === 'bike'"
+              (click)="setProfile('bike')">Rad</button>
+    </div>
+    <button type="button" class="route-btn" [class.on]="routingActive()"
+            (click)="toggleRouting()">
+      {{ routingActive() ? 'Routing beenden' : 'Route planen' }}
+    </button>
+    @if (routingActive()) {
+      <p class="route-hint">{{ routingHint() }}</p>
+      @if (selectedGenera().size > 0) {
+        <p class="route-avoid">meidet {{ selectedGenera().size }} Gattung(en) im Korridor</p>
+      } @else {
+        <p class="route-avoid muted">Gattungen im Filter w&auml;hlen, um Zonen zu meiden</p>
+      }
+      @if (routeError(); as e) {
+        <p class="route-err">{{ e }}</p>
+      }
+      @if (routeInfo(); as ri) {
+        <div class="route-info">
+          <span class="dist">{{ fmtDistance(ri.distanceM) }}</span>
+          <span>{{ fmtDuration(ri.timeMs) }}</span>
+          @if (ri.avoidedZones > 0) {
+            <span class="avoided">{{ ri.avoidedZones }} Zonen</span>
+          }
+        </div>
+      }
+      @if (routeStart()) {
+        <button type="button" class="route-clear" (click)="clearRoutingUi()">Route l&ouml;schen</button>
+      }
+    }
   </section>
 
   <section class="genera">

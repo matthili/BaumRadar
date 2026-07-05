@@ -53,3 +53,22 @@ export interface PopupData {
   trees: TreeHit[];
   zones: ZoneHit[];
 }
+
+/** Routing-Profil (GraphHopper). */
+export type RouteProfile = 'foot' | 'bike';
+
+/** Punkt in WGS84 als (lon, lat) — die Reihenfolge, die GraphHopper erwartet. */
+export interface LonLat {
+  lon: number;
+  lat: number;
+}
+
+/** Ergebnis einer Routenberechnung. */
+export interface RouteResult {
+  /** Stützpunkte der Route als [lon, lat]. */
+  coords: [number, number][];
+  distanceM: number;
+  timeMs: number;
+  /** Wie viele Allergiezonen als Block-Areas mitgegeben wurden (0 = keine Vermeidung). */
+  avoidedZones: number;
+}

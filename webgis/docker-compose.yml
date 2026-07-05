@@ -77,14 +77,45 @@ services:
     ports:
       - "${WEB_PORT:-8082}:80"
 
-  # ---------------------------------------------------------------------------
-  # Phase 4 (Routing) — folgt:
-  #  graph-builder:  osmium: 19 Stadt-BBoxen (aus PostGIS) aus Länder-PBFs
-  #                  extrahieren und zu einem Insel-Graph-PBF mergen
-  #  graphhopper:    ein Dienst, LM/flexibler Modus, Custom-Model-Zonenvermeidung
-  #    profiles: ["routing"]
-  # ---------------------------------------------------------------------------
+  # --- Phase 4: Routing (nur mit `--profile routing`) ------------------------
+  # Einmaliger Job: extrahiert die Stadt-BBoxen aus den DE/AT/CH-Geofabrik-PBFs
+  # zu einem kleinen Insel-PBF. Die Länder-PBFs bleiben im osmcache-Volume.
+  graph-builder:
+    build: ./graph-builder
+    container_name: baumradar-graph-builder
+    profiles: ["routing"]
+    environment:
+      CATALOG_URL: ${CATALOG_URL:-https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/catalog.json}
+      CITY_FILTER: ${CITY_FILTER:-}
+      BBOX_MARGIN_DEG: ${BBOX_MARGIN_DEG:-0.03}
+    volumes:
+      - osmcache:/osm
+      - routingdata:/data
+    restart: "no"
+
+  # Ein GraphHopper-Dienst (foot + bike), flexibler Modus: der Client schickt die
+  # Allergiezonen pro Anfrage als Custom-Model-Block-Areas mit. Baut den Graph beim
+  # ersten Start aus dem Insel-PBF (danach gecacht im routingdata-Volume).
+  graphhopper:
+    build:
+      context: ./graphhopper
+      args:
+        GH_VERSION: ${GH_VERSION:-10.0}
+    container_name: baumradar-graphhopper
+    profiles: ["routing"]
+    depends_on:
+      graph-builder:
+        condition: service_completed_successfully
+    environment:
+      JAVA_OPTS: ${GH_JAVA_OPTS:--Xmx2g -Xms1g}
+    ports:
+      - "${GRAPHHOPPER_PORT:-8989}:8989"
+    volumes:
+      - routingdata:/data
+    restart: unless-stopped
 
 volumes:
   pgdata:
   gsdata:
+  osmcache:
+  routingdata:

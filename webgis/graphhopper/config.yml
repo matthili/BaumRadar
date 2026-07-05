@@ -1,0 +1,49 @@
+# GraphHopper — foot + bike, flexibler Modus (kein CH), damit der Client pro
+# Anfrage ein Custom-Model mit den Allergiezonen als Block-Areas mitschicken kann.
+graphhopper:
+  datareader.file: /data/island.osm.pbf
+  graph.location: /data/graph-cache
+
+  # GraphHopper 10 verlangt diesen Parameter explizit. foot+bike brauchen keine
+  # Autobahnen — die überspringen wir beim Import (kleiner, schneller).
+  import.osm.ignored_highways: motorway
+
+  graph.encoded_values: foot_access, foot_average_speed, foot_priority, bike_access, bike_average_speed, bike_priority, road_class, road_environment, surface, max_speed
+
+  profiles:
+    - name: foot
+      custom_model:
+        priority:
+          - if: "!foot_access"
+            multiply_by: "0"
+          - if: "true"
+            multiply_by: "foot_priority"
+        speed:
+          - if: "true"
+            limit_to: "foot_average_speed"
+    - name: bike
+      custom_model:
+        priority:
+          - if: "!bike_access"
+            multiply_by: "0"
+          - if: "true"
+            multiply_by: "bike_priority"
+        speed:
+          - if: "true"
+            limit_to: "bike_average_speed"
+
+  # Landmark-Beschleunigung (schnell auf dem kleinen Insel-Graph); erlaubt
+  # weiterhin Custom-Models pro Anfrage — anders als CH.
+  profiles_lm:
+    - profile: foot
+    - profile: bike
+
+server:
+  application_connectors:
+    - type: http
+      port: 8989
+      bind_host: 0.0.0.0
+  admin_connectors:
+    - type: http
+      port: 8990
+      bind_host: 0.0.0.0

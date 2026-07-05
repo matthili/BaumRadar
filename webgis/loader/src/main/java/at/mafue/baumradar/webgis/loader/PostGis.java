@@ -70,6 +70,24 @@ final class PostGis {
     }
 
     /**
+     * Befüllt die Gattungs-Statistik <em>je Stadt</em> neu — Grundlage für das
+     * Stadt-Scoping im Client (Baumzahlen der gewählten Stadt statt globaler Summe).
+     *
+     * @return Anzahl der (Stadt, Gattung)-Paare
+     */
+    int refreshGenusStatsCity() throws SQLException {
+        try (Connection c = connect(); Statement st = c.createStatement()) {
+            st.execute("TRUNCATE genus_stats_city");
+            return st.executeUpdate("""
+                    INSERT INTO genus_stats_city (city_id, genus_de, genus_en, tree_count)
+                    SELECT city_id, genus_de, min(genus_en), count(*)::int
+                    FROM trees
+                    WHERE genus_de IS NOT NULL AND genus_de <> ''
+                    GROUP BY city_id, genus_de""");
+        }
+    }
+
+    /**
      * Befüllt die Art-Tupel-Statistik neu (DISTINCT über Gattung + beide Artnamen,
      * analog zur Profil-Liste der App). Quelle der namens-übergreifenden Suche
      * im Web-Client; Zeilen ganz ohne Artangabe tragen zur Suche nichts bei.
