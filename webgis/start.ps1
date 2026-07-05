@@ -1,13 +1,13 @@
-﻿# BaumRadar WebGIS - Ein-Befehl-Start.
-#   .\start.cmd                        Basis-Stack (Karte, alle 19 Städte)
-#   .\start.cmd -Cities zug,wien       nur bestimmte Städte (schneller Erststart)
-#   .\start.cmd -Routing -Geocoding    zusätzlich Routing und/oder Adresssuche
-#   .\start.cmd -Down                  alles stoppen
+﻿# BaumRadar WebGIS - Ein-Befehl-Start. Routing + Adresssuche sind STANDARD (lokal!).
+#   .\start.cmd                           Voll-Stack: Karte + Routing + Adresssuche, alle 19 Städte
+#   .\start.cmd -Cities zug,wien          nur bestimmte Städte (schneller Erststart, kleine Downloads)
+#   .\start.cmd -NoRouting -NoGeocoding   nur die Karte (kleinster Download)
+#   .\start.cmd -Down                     alles stoppen
 # Beim ersten Lauf wird .env aus .env.example erzeugt - mit ZUFÄLLIGEN Passwörtern.
 param(
     [string]$Cities = "",
-    [switch]$Routing,
-    [switch]$Geocoding,
+    [switch]$NoRouting,
+    [switch]$NoGeocoding,
     [switch]$Down
 )
 $ErrorActionPreference = "Stop"
@@ -19,9 +19,10 @@ try { docker compose version | Out-Null } catch {
     exit 1
 }
 
+# Lokal ist der Sinn der Sache: Routing + Adresssuche laufen standardmäßig mit.
 $profiles = @()
-if ($Routing)   { $profiles += @("--profile", "routing") }
-if ($Geocoding) { $profiles += @("--profile", "geocoding") }
+if (-not $NoRouting)   { $profiles += @("--profile", "routing") }
+if (-not $NoGeocoding) { $profiles += @("--profile", "geocoding") }
 
 if ($Down) {
     docker compose --profile routing --profile geocoding down
@@ -60,5 +61,6 @@ Write-Host "  Karte:              http://localhost:$webPort"
 Write-Host "  GeoServer-Admin:    http://localhost:$gsPort/geoserver  (Zugang: siehe .env; nur localhost)"
 Write-Host ""
 Write-Host "Der Datenimport läuft im Hintergrund - Fortschritt:  docker logs -f baumradar-loader"
-if ($Routing)   { Write-Host "Routing: erster Start lädt Länder-PBFs (mehrere GB) - docker logs -f baumradar-graph-builder" }
-if ($Geocoding) { Write-Host "Adresssuche: erster Start lädt Stadt-Häppchen + baut den Index - docker logs -f baumradar-photon" }
+Write-Host "ACHTUNG: Dieser Datenimport benötigt mehrere Minuten"
+if (-not $NoRouting)   { Write-Host "Routing: erster Start lädt Länder-PBFs (DE ~4 GB, AT/CH ~0,5 GB - nur benötigte Länder) und baut den Graph - docker logs -f baumradar-graphhopper" }
+if (-not $NoGeocoding) { Write-Host "Adresssuche: erster Start lädt Stadt-Häppchen + baut den Index (einige Minuten) - docker logs -f baumradar-photon" }

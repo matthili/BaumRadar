@@ -106,7 +106,7 @@ Alongside the app there is a **complete self-hostable web GIS** ([`webgis/`](web
 
 ```powershell
 cd webgis
-.\start.cmd -Cities zug -Routing -Geocoding
+.\start.cmd -Cities zug      # map + local routing + local address search for Zug
 ```
 
 → [Quick start & services](webgis/README.md) · [Architecture doc incl. lessons learned](docs/webgis_architecture_en.md)

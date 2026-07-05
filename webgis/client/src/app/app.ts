@@ -335,7 +335,15 @@ export class App implements AfterViewInit {
       this.routeInfo.set(result);
       this.mapService.drawRoute(result.coords);
     } catch (err) {
-      this.routeError.set('Route konnte nicht berechnet werden.');
+      // Unterscheiden: Dienst gar nicht erreichbar (Profil »routing« aus oder
+      // Graph baut noch) vs. GraphHopper hat geantwortet, findet aber keine Route.
+      const status = (err as { status?: number }).status;
+      const serviceDown = status === 0 || status === 404 || status === 502
+        || status === 503 || status === 504;
+      this.routeError.set(serviceDown
+        ? 'Routing-Dienst nicht erreichbar — er ist Standard beim Start-Skript '
+          + '(beim allerersten Start dauert der Graph-Aufbau einige Minuten).'
+        : 'Keine Route gefunden — liegen Start und Ziel im Gebiet derselben Stadt?');
       console.error('Routing fehlgeschlagen', err);
     } finally {
       this.routing.set(false);

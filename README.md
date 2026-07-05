@@ -114,7 +114,7 @@ Neben der App gibt es ein **komplettes Web-GIS zum Selbst-Hosten** ([`webgis/`](
 
 ```powershell
 cd webgis
-.\start.cmd -Cities zug -Routing -Geocoding
+.\start.cmd -Cities zug      # Karte + lokales Routing + lokale Adresssuche für Zug
 ```
 
 → [Schnellstart & Dienste](webgis/README.md) · [Architektur-Doku mit Lessons Learned](docs/webgis_architecture.md)

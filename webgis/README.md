@@ -23,15 +23,16 @@ kein Java, kein Node, kein Maven. Dann:
 
 ```powershell
 cd webgis
-.\start.cmd                              # Windows — Karte mit allen 19 Städten
+.\start.cmd                              # Windows — Voll-Stack: Karte + Routing + Adresssuche
 ./start.sh                               # Linux/macOS
 ```
 
+**Lokales Routing und lokale Adresssuche sind Standard** — dafür ist das Ganze ja da.
 Empfehlenswert zum ersten Ausprobieren (kleiner, schneller):
 
 ```powershell
-.\start.cmd -Cities zug,wien                       # nur bestimmte Städte
-.\start.cmd -Cities zug -Routing -Geocoding        # + Routenplanung + Adresssuche
+.\start.cmd -Cities zug,wien                       # nur bestimmte Städte (kleine Downloads)
+.\start.cmd -Cities zug -NoRouting -NoGeocoding    # nur die Karte (kleinster Download)
 .\start.cmd -Down                                  # alles stoppen
 ```
 
@@ -43,9 +44,12 @@ PostGIS und provisioniert GeoServer per REST — idempotent, unveränderte Städ
 (`dataVersion`) werden bei jedem weiteren Start übersprungen.
 
 **Erstlauf-Datenmengen** (einmalig, danach in Volumes gecacht): Baumdaten je nach
-`CITY_FILTER` (Zug ~2 MB … alle 19 ~600 MB) · `-Geocoding` lädt die Geocoder-Häppchen
-der gewählten Städte (15–176 MB je Stadt) · `-Routing` lädt die Länder-PBFs von
+`CITY_FILTER` (Zug ~2 MB … alle 19 ~600 MB) · die Adresssuche (Standard; abwählbar mit
+`-NoGeocoding`) lädt die Geocoder-Häppchen der gewählten Städte (15–176 MB je Stadt) ·
+das Routing (Standard; abwählbar mit `-NoRouting`) lädt die Länder-PBFs von
 Geofabrik (**DE ~4 GB**, AT/CH je ~0,5 GB — nur die Länder der gewählten Städte).
+Der erste Start baut danach Routing-Graph und Such-Index — **einige Minuten Geduld**;
+der Web-Client überbrückt die Adresssuche solange automatisch über photon.komoot.io.
 
 ## Sicherheit (auch für Heim-/Schulnetz)
 

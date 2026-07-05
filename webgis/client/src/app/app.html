@@ -75,8 +75,9 @@
         }
       </div>
       @if (geocoderOnline()) {
-        <p class="route-avoid muted">Adresssuche l&auml;uft online (photon.komoot.io) —
-          f&uuml;r lokale Suche das Profil &bdquo;geocoding&ldquo; starten</p>
+        <p class="route-avoid muted">Adresssuche vor&uuml;bergehend online (photon.komoot.io) —
+          der lokale Geocoder ist gerade nicht erreichbar (beim ersten Start importiert er
+          einige Minuten) und wird automatisch wieder &uuml;bernommen.</p>
       }
       <p class="route-hint">{{ routingHint() }}</p>
       @if (selectedGenera().size > 0) {

@@ -1,29 +1,34 @@
 #!/usr/bin/env bash
-# BaumRadar WebGIS — Ein-Befehl-Start (Linux/macOS).
-#   ./start.sh                          Basis-Stack (Karte, alle 19 Städte)
-#   ./start.sh --cities zug,wien        nur bestimmte Städte (schneller Erststart)
-#   ./start.sh --routing --geocoding    zusätzlich Routing und/oder Adresssuche
-#   ./start.sh --down                   alles stoppen
-# Beim ersten Lauf wird .env aus .env.example erzeugt — mit ZUFÄLLIGEN Passwörtern.
+# BaumRadar WebGIS - Ein-Befehl-Start (Linux/macOS). Routing + Adresssuche sind STANDARD.
+#   ./start.sh                               Voll-Stack: Karte + Routing + Adresssuche
+#   ./start.sh --cities zug,wien             nur bestimmte Städte (schneller Erststart)
+#   ./start.sh --no-routing --no-geocoding   nur die Karte (kleinster Download)
+#   ./start.sh --down                        alles stoppen
+# Beim ersten Lauf wird .env aus .env.example erzeugt - mit ZUFÄLLIGEN Passwörtern.
 set -euo pipefail
 cd "$(dirname "$0")"
 
 command -v docker >/dev/null || { echo "FEHLER: Docker ist nicht installiert."; exit 1; }
 docker compose version >/dev/null 2>&1 || { echo "FEHLER: Docker Compose v2 fehlt."; exit 1; }
 
-PROFILES=()
+# Lokal ist der Sinn der Sache: Routing + Adresssuche laufen standardmäßig mit.
+ROUTING=1
+GEOCODING=1
 CITIES=""
 DOWN=0
 while [ $# -gt 0 ]; do
   case "$1" in
-    --routing)   PROFILES+=(--profile routing) ;;
-    --geocoding) PROFILES+=(--profile geocoding) ;;
-    --cities)    CITIES="${2:-}"; shift ;;
-    --down)      DOWN=1 ;;
+    --no-routing)   ROUTING=0 ;;
+    --no-geocoding) GEOCODING=0 ;;
+    --cities)       CITIES="${2:-}"; shift ;;
+    --down)         DOWN=1 ;;
     *) echo "Unbekannte Option: $1"; exit 2 ;;
   esac
   shift
 done
+PROFILES=()
+[ "$ROUTING" = "1" ]   && PROFILES+=(--profile routing)
+[ "$GEOCODING" = "1" ] && PROFILES+=(--profile geocoding)
 
 if [ "$DOWN" = "1" ]; then
   docker compose --profile routing --profile geocoding down

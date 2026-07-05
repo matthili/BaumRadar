@@ -38,10 +38,10 @@ Der Start ist bewusst trivial gehalten (**nur Docker nötig** — kein Java, kei
 
 ```powershell
 cd webgis
-.\start.cmd -Cities zug -Routing -Geocoding     # Linux/macOS: ./start.sh --cities zug …
+.\start.cmd -Cities zug     # Linux/macOS: ./start.sh --cities zug
 ```
 
-Das Skript erzeugt beim ersten Lauf die `.env` **mit zufälligen Passwörtern**, baut die Images und startet den Stack. `CITY_FILTER` gilt einheitlich für Loader, Routing **und** Geocoder.
+Das Skript erzeugt beim ersten Lauf die `.env` **mit zufälligen Passwörtern**, baut die Images und startet den Stack — **Routing und Adresssuche laufen standardmäßig mit** (abwählbar per `-NoRouting`/`-NoGeocoding`). `CITY_FILTER` gilt einheitlich für Loader, Routing **und** Geocoder.
 
 ---
 

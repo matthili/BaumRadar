@@ -33,8 +33,15 @@ export class GeocoderService {
   private static readonly LOCAL_URL = '/photon/api';
   private static readonly ONLINE_URL = 'https://photon.komoot.io/api';
 
-  /** {@code true}, sobald auf die öffentliche Komoot-Instanz umgeschaltet wurde. */
+  /** {@code true}, solange die lokale Instanz nicht erreichbar ist (→ Komoot-Fallback). */
   readonly online = signal(false);
+
+  /** Zeitpunkt des letzten lokalen Fehlschlags — danach wird periodisch neu probiert. */
+  private lastLocalFailure = 0;
+
+  /** Nach dieser Zeit wird die lokale Instanz erneut versucht (sie könnte z. B.
+   *  gerade erst ihren Index importieren und kurz darauf verfügbar sein). */
+  private static readonly LOCAL_RETRY_MS = 30_000;
 
   /**
    * Suche mit Autocomplete-Charakteristik. {@code bbox} (optional, WGS84
@@ -51,15 +58,20 @@ export class GeocoderService {
       params = params.set('bbox', `${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]}`);
     }
 
-    if (!this.online()) {
+    // Lokal zuerst — und nach einem Fehlschlag nicht dauerhaft aufgeben: die lokale
+    // Instanz importiert beim allerersten Start minutenlang ihren Index und wird
+    // danach automatisch wieder übernommen (Banner verschwindet von selbst).
+    const retryLocal = !this.online()
+      || Date.now() - this.lastLocalFailure > GeocoderService.LOCAL_RETRY_MS;
+    if (retryLocal) {
       try {
         const fc = await firstValueFrom(
           this.http.get<PhotonFc>(GeocoderService.LOCAL_URL, { params }),
         );
+        this.online.set(false);
         return this.toHits(fc);
       } catch {
-        // Lokale Instanz nicht erreichbar (Profil "geocoding" nicht gestartet)
-        // → dauerhaft auf die öffentliche Instanz wechseln, UI zeigt es an.
+        this.lastLocalFailure = Date.now();
         this.online.set(true);
       }
     }
