@@ -135,4 +135,43 @@ public class CatalogBuilderTest {
         Map<String, String> read = CatalogBuilder.readDataVersions(new File("does-not-exist-catalog.json"));
         assertTrue(read.isEmpty());
     }
+
+    @Test
+    public void geocoderFieldsOnlyForCitiesWithPublishedGeocoderData() throws Exception {
+        File dir = tempDir();
+        publish(dir, "wien");
+        publish(dir, "graz");
+        File geo = new File(dir, "geocoder_graz.jsonl.gz");
+        Files.write(geo.toPath(), new byte[]{0});
+        geo.deleteOnExit();
+        File out = new File(dir, "catalog.json");
+
+        CatalogBuilder.build(out, Arrays.asList(fakeCity("wien", "Wien"), fakeCity("graz", "Graz")),
+                "https://example.com/", new HashMap<>(), Map.of("graz", "beef000000000001"));
+        String json = Files.readString(out.toPath());
+
+        assertTrue(json.contains("\"geocoderUrl\": \"https://example.com/geocoder_graz.jsonl.gz\""));
+        assertTrue(json.contains("\"geocoderSigUrl\": \"https://example.com/geocoder_graz.jsonl.gz.sig\""));
+        assertTrue(json.contains("\"geocoderVersion\": \"beef000000000001\""));
+        assertFalse("Stadt ohne Geocoder-Datei bekommt keine Geocoder-Felder",
+                json.contains("geocoder_wien"));
+    }
+
+    @Test
+    public void readVersionsDoesNotCrossPairOptionalFields() throws Exception {
+        File dir = tempDir();
+        publish(dir, "wien");   // wien OHNE Geocoder
+        publish(dir, "graz");   // graz MIT Geocoder
+        File geo = new File(dir, "geocoder_graz.jsonl.gz");
+        Files.write(geo.toPath(), new byte[]{0});
+        geo.deleteOnExit();
+        File out = new File(dir, "catalog.json");
+        CatalogBuilder.build(out, Arrays.asList(fakeCity("wien", "Wien"), fakeCity("graz", "Graz")),
+                "https://example.com/", new HashMap<>(), Map.of("graz", "beef000000000001"));
+
+        Map<String, String> read = CatalogBuilder.readVersions(out, "geocoderVersion");
+        assertEquals("nur graz hat eine geocoderVersion", 1, read.size());
+        assertEquals("beef000000000001", read.get("graz"));
+        assertFalse("wien darf grazs Version nicht erben", read.containsKey("wien"));
+    }
 }

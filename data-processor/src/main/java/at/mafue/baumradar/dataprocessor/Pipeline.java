@@ -2,8 +2,10 @@ package at.mafue.baumradar.dataprocessor;
 
 import at.mafue.baumradar.dataprocessor.providers.CityProvider;
 import at.mafue.baumradar.dataprocessor.utils.CatalogBuilder;
+import at.mafue.baumradar.dataprocessor.utils.Chunks;
 import at.mafue.baumradar.dataprocessor.utils.CryptoManager;
 import at.mafue.baumradar.dataprocessor.utils.DatabaseExporter;
+import at.mafue.baumradar.dataprocessor.utils.GeocoderCutter;
 import at.mafue.baumradar.dataprocessor.utils.HarmonizationReport;
 
 import java.io.File;
@@ -35,21 +37,22 @@ import org.slf4j.LoggerFactory;
 public class Pipeline {
     private static final Logger logger = LoggerFactory.getLogger(Pipeline.class);
 
-    /** Archives larger than this are split into numbered chunks for GitHub Pages / CDNs. */
-    private static final long MAX_SIZE = 50L * 1024 * 1024;
-
     /**
      * Runs the pipeline for {@code toProcess} and rebuilds the catalog over {@code allProviders}.
      *
-     * @param toProcess    the cities to (re)process this run (a subset of, or equal to, allProviders)
-     * @param allProviders the full provider list — metadata source for the catalog
-     * @param outDir       the {@code docs/data} output directory
-     * @param baseUrl      base URL prefix for catalog file references
-     * @param urlOverrides optional {@code cityId → source URL} overrides (may be {@code null})
-     * @param listener     progress callbacks (may be {@code null} → {@link PipelineListener#NOOP})
+     * @param toProcess       the cities to (re)process this run (a subset of, or equal to, allProviders;
+     *                        may be empty for a geocoder-only run)
+     * @param allProviders    the full provider list — metadata source for the catalog
+     * @param outDir          the {@code docs/data} output directory
+     * @param baseUrl         base URL prefix for catalog file references
+     * @param urlOverrides    optional {@code cityId → source URL} overrides (may be {@code null})
+     * @param geocoderCityIds cities whose geocoder data (Photon dump cut) should be refreshed
+     *                        (may be {@code null}/empty — the usual case)
+     * @param listener        progress callbacks (may be {@code null} → {@link PipelineListener#NOOP})
      */
     public static void run(List<CityProvider> toProcess, List<CityProvider> allProviders,
                            File outDir, String baseUrl, Map<String, String> urlOverrides,
+                           java.util.Set<String> geocoderCityIds,
                            PipelineListener listener) throws Exception {
         final PipelineListener l = listener == null ? PipelineListener.NOOP : listener;
         if (!outDir.exists()) outDir.mkdirs();
@@ -67,6 +70,9 @@ public class Pipeline {
         File catalogFile = new File(outDir, "catalog.json");
         Map<String, String> dataVersions = new ConcurrentHashMap<>();
         dataVersions.putAll(CatalogBuilder.readDataVersions(catalogFile));
+        // Geocoder-Versionen analog: nicht neu geschnittene Städte behalten ihren Stand.
+        Map<String, String> geocoderVersions = new ConcurrentHashMap<>();
+        geocoderVersions.putAll(CatalogBuilder.readVersions(catalogFile, "geocoderVersion"));
 
         l.onStart(toProcess.stream().map(CityProvider::getName).toList());
         logger.info("2. Processing {} of {} cities in parallel...", toProcess.size(), allProviders.size());
@@ -111,14 +117,69 @@ public class Pipeline {
             logger.warn("   Could not write harmonization report: {}", e.getMessage());
         }
 
+        // Geocoder-Daten (Photon-Dump-Schnitt) für die angeforderten Städte erneuern.
+        if (geocoderCityIds != null && !geocoderCityIds.isEmpty()) {
+            runGeocoderPhase(geocoderCityIds, allProviders, outDir, cryptoManager, geocoderVersions, l);
+        }
+
         logger.info("3. Generating Catalog...");
-        CatalogBuilder.build(catalogFile, allProviders, baseUrl, dataVersions);
+        CatalogBuilder.build(catalogFile, allProviders, baseUrl, dataVersions, geocoderVersions);
         logger.info("   Catalog created at {}", catalogFile.getAbsolutePath());
 
         int ok = toProcess.size() - failed.get();
         logger.info("Done! {} of {} selected cities processed ({} failed) in {}",
                 ok, toProcess.size(), failed.get(), outDir.getAbsolutePath());
         l.onFinished(ok, failed.get());
+    }
+
+    /**
+     * Geocoder-Phase: stellt den Planet-Dump sicher (Download mit Resume), schneidet
+     * die angeforderten Städte in einem Streaming-Durchlauf, signiert und chunkt die
+     * Ergebnisse und aktualisiert die {@code geocoderVersion}s für den Katalog.
+     * Fehler brechen den Lauf nicht ab — die Baumdaten sind bereits publiziert.
+     */
+    private static void runGeocoderPhase(java.util.Set<String> geocoderCityIds,
+                                         List<CityProvider> allProviders, File outDir,
+                                         CryptoManager cryptoManager,
+                                         Map<String, String> geocoderVersions,
+                                         PipelineListener l) {
+        List<CityProvider> geoProviders = allProviders.stream()
+                .filter(p -> geocoderCityIds.contains(p.getCityId()))
+                .toList();
+        java.util.function.Consumer<String> note = msg -> {
+            logger.info("[geocoder] {}", msg);
+            l.onNote(msg);
+        };
+        try {
+            File repoRoot = outDir.getAbsoluteFile().getParentFile().getParentFile();
+            File dump = new File(repoRoot, "geocoder/" + GeocoderCutter.DUMP_FILENAME);
+            GeocoderCutter.ensureDump(dump, note);
+
+            Map<String, GeocoderCutter.Result> results =
+                    GeocoderCutter.cut(dump, GeocoderCutter.boxesFor(geoProviders), outDir, note);
+
+            for (CityProvider p : geoProviders) {
+                GeocoderCutter.Result r = results.get(p.getCityId());
+                if (r == null) {
+                    l.onGeoCityError(p.getCityId(), p.getName(), "keine Orte im Stadtgebiet gefunden");
+                    continue;
+                }
+                long compressedBytes = r.file().length();
+                File sigFile = new File(outDir, r.file().getName() + ".sig");
+                cryptoManager.signFile(r.file(), sigFile);
+                int chunks = Chunks.splitIfNeeded(r.file());
+                if (chunks > 0) {
+                    logger.info("[geocoder] {} über 50MB — in {} Chunks geteilt.", r.file().getName(), chunks);
+                }
+                geocoderVersions.put(p.getCityId(), r.version());
+                l.onGeoCityDone(p.getCityId(), p.getName(), r.places(), compressedBytes);
+            }
+        } catch (Exception e) {
+            logger.error("[geocoder] Phase fehlgeschlagen: {}", e.getMessage(), e);
+            for (CityProvider p : geoProviders) {
+                l.onGeoCityError(p.getCityId(), p.getName(), String.valueOf(e.getMessage()));
+            }
+        }
     }
 
     /**
@@ -177,45 +238,11 @@ public class Pipeline {
         cryptoManager.signFile(gzFile, sigFile);
 
         // GitHub Pages and many CDNs limit individual file sizes. Archives exceeding
-        // 50 MB are split into numbered chunks (e.g. berlin.db.gz.001, .002, …).
-        if (gzFile.length() > MAX_SIZE) {
-            logger.info("[{}] GZ file exceeds 50MB ({} bytes). Splitting into chunks...",
-                    provider.getName(), gzFile.length());
-            int chunkIndex = 1;
-            try (FileInputStream fis = new FileInputStream(gzFile)) {
-                byte[] buffer = new byte[8192];
-                int len;
-                long currentChunkSize = 0;
-                FileOutputStream chunkFos = null;
-                while ((len = fis.read(buffer)) > 0) {
-                    if (chunkFos == null) {
-                        String chunkExt = String.format(".%03d", chunkIndex);
-                        File chunkFile = new File(outDir, gzFile.getName() + chunkExt);
-                        chunkFos = new FileOutputStream(chunkFile);
-                        currentChunkSize = 0;
-                    }
-                    chunkFos.write(buffer, 0, len);
-                    currentChunkSize += len;
-                    if (currentChunkSize >= MAX_SIZE) {
-                        chunkFos.close();
-                        chunkFos = null;
-                        chunkIndex++;
-                    }
-                }
-                if (chunkFos != null) {
-                    chunkFos.close();
-                }
-            }
-            // Delete the un-chunked file so we don't commit it!
-            gzFile.delete();
-        } else {
-            // If a city's data shrank below the chunk threshold between runs, stale chunk
-            // files from the previous build must be removed to avoid the app downloading
-            // outdated partial files.
-            for (int i = 1; i < 100; i++) {
-                File oldChunk = new File(outDir, String.format("%s.%03d", gzFile.getName(), i));
-                if (oldChunk.exists()) oldChunk.delete(); else break;
-            }
+        // 50 MB are split into numbered chunks (e.g. berlin.db.gz.001, .002, …);
+        // shrunken cities get their stale chunks cleaned up.
+        int chunks = Chunks.splitIfNeeded(gzFile);
+        if (chunks > 0) {
+            logger.info("[{}] GZ exceeded 50MB — split into {} chunks.", provider.getName(), chunks);
         }
 
         return treeCount;

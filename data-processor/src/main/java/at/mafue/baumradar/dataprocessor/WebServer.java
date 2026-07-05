@@ -128,12 +128,20 @@ public class WebServer {
         JsonNode body = mapper.readTree(ex.getRequestBody());
         List<String> ids = new ArrayList<>();
         body.path("cities").forEach(n -> ids.add(n.asText()));
+        java.util.Set<String> geoIds = new java.util.HashSet<>();
+        body.path("geocoderCities").forEach(n -> geoIds.add(n.asText()));
         Map<String, String> overrides = new HashMap<>();
         body.path("overrides").fields().forEachRemaining(e -> overrides.put(e.getKey(), e.getValue().asText()));
 
+        if (ids.isEmpty() && geoIds.isEmpty()) {
+            runStarted.set(false);
+            sendText(ex, 400, "application/json", "{\"error\":\"nothing selected\"}");
+            return;
+        }
+
         sendText(ex, 202, "application/json", "{\"started\":true}");
 
-        Thread t = new Thread(() -> runPipeline(ids, overrides), "pipeline");
+        Thread t = new Thread(() -> runPipeline(ids, geoIds, overrides), "pipeline");
         t.setDaemon(true);
         t.start();
     }
@@ -165,14 +173,14 @@ public class WebServer {
 
     // ---- Pipeline driver ----------------------------------------------------
 
-    private void runPipeline(List<String> ids, Map<String, String> overrides) {
+    private void runPipeline(List<String> ids, java.util.Set<String> geoIds, Map<String, String> overrides) {
         List<CityProvider> toProcess = new ArrayList<>();
         for (CityProvider p : allProviders) {
             if (ids.contains(p.getCityId())) toProcess.add(p);
         }
         WebListener listener = new WebListener();
         try {
-            Pipeline.run(toProcess, allProviders, outDir, baseUrl, overrides, listener);
+            Pipeline.run(toProcess, allProviders, outDir, baseUrl, overrides, geoIds, listener);
         } catch (Exception e) {
             logger.error("Pipeline failed: {}", e.getMessage(), e);
             sendSse("done", "{\"processed\":0,\"failed\":" + toProcess.size() + ",\"fatal\":true}");
@@ -184,6 +192,8 @@ public class WebServer {
     private class WebListener implements PipelineListener {
         /** cityId → [name, status, trees, error]. */
         private final Map<String, Object[]> results = new ConcurrentHashMap<>();
+        private volatile int geoDone = 0;
+        private volatile int geoFailed = 0;
 
         @Override public void onCityStart(String id, String name) {
             sendSse("city", cityJson(id, name, "running", 0, null));
@@ -196,13 +206,37 @@ public class WebServer {
             results.put(id, new Object[]{name, "error", 0L, error});
             sendSse("city", cityJson(id, name, "error", 0, error));
         }
+        @Override public void onNote(String message) {
+            ObjectNode o = mapper.createObjectNode();
+            o.put("msg", message);
+            sendSse("note", o.toString());
+        }
+        @Override public void onGeoCityDone(String id, String name, long places, long bytes) {
+            geoDone++;
+            results.put(id + "::geo", new Object[]{name + " (Geocoder)", "done", places, null});
+            ObjectNode o = mapper.createObjectNode();
+            o.put("id", id);
+            o.put("status", "done");
+            o.put("places", places);
+            o.put("mb", Math.round(bytes / 1024.0 / 1024.0 * 10) / 10.0);
+            sendSse("geo", o.toString());
+        }
+        @Override public void onGeoCityError(String id, String name, String error) {
+            geoFailed++;
+            results.put(id + "::geo", new Object[]{name + " (Geocoder)", "error", 0L, error});
+            ObjectNode o = mapper.createObjectNode();
+            o.put("id", id);
+            o.put("status", "error");
+            sendSse("geo", o.toString());
+        }
         @Override public void onFinished(int processed, int failed) {
             try {
                 writeStaticReport(results, processed, failed);
             } catch (Exception e) {
                 logger.warn("Could not write last_run.html: {}", e.getMessage());
             }
-            sendSse("done", "{\"processed\":" + processed + ",\"failed\":" + failed + "}");
+            sendSse("done", "{\"processed\":" + processed + ",\"failed\":" + failed
+                    + ",\"geoDone\":" + geoDone + ",\"geoFailed\":" + geoFailed + "}");
             scheduleShutdown(2500);
         }
     }
@@ -280,7 +314,7 @@ public class WebServer {
             + "<div class=done>✓ Abgeschlossen: " + processed + " Stadt/Städte verarbeitet"
             + (failed > 0 ? (", <b>" + failed + " fehlgeschlagen</b>") : "")
             + ". Der Runner hat sich danach selbst beendet.</div>"
-            + "<table><tr><th>Stadt</th><th>Status</th><th class=num>Bäume</th></tr>\n" + rows + "</table>"
+            + "<table><tr><th>Stadt</th><th>Status</th><th class=num>Datensätze</th></tr>\n" + rows + "</table>"
             + "</body></html>\n";
 
         try (FileWriter w = new FileWriter(report, StandardCharsets.UTF_8)) {

@@ -51,6 +51,12 @@
   .status.done { background: #e7f3e8; color: var(--green-d); }
   .status.error { background: #fde8e6; color: var(--red); }
   .urltoggle { background: none; border: none; color: var(--muted); font-size: .8rem; padding: 2px 6px; text-decoration: underline; }
+  label.geo {
+    display: flex; align-items: center; gap: 4px; font-size: .78rem; color: var(--muted);
+    cursor: pointer; white-space: nowrap;
+  }
+  label.geo input { width: 14px; height: 14px; accent-color: var(--amber); }
+  .status.geo-done { background: #fdf3e2; color: var(--amber); }
   .urlbox { display: none; width: 100%; padding: 6px 0 2px 30px; }
   .urlbox input { width: 100%; font: inherit; font-size: .85rem; padding: 6px 8px; border: 1px solid var(--line); border-radius: 7px; }
   li.open .urlbox { display: block; }
@@ -115,14 +121,33 @@ function row(c) {
     '<input type="checkbox" class="checkbox" checked>' +
     '<span class="name"></span> <span class="country"></span>' +
     '<span class="grow"></span>' +
+    '<label class="geo" title="Geocoder-Daten (Adress- & Ortssuche) mit aktualisieren">' +
+    '<input type="checkbox" class="geocb">Geo</label>' +
     '<button class="urltoggle" title="Quell-URL überschreiben">URL</button>' +
     '<span class="status idle" data-status>—</span>' +
+    '<span class="status idle" data-geostatus>—</span>' +
     '<div class="urlbox"><input type="url" placeholder="Quelle überschreiben (gleiches Format, {offset} für Seiten)"></div>';
   li.querySelector('.name').textContent = c.name;
   li.querySelector('.country').textContent = c.country;
   li.querySelector('.checkbox').addEventListener('change', refreshCount);
+  li.querySelector('.geocb').addEventListener('change', updateGeoInfo);
   li.querySelector('.urltoggle').addEventListener('click', () => li.classList.toggle('open'));
   return li;
+}
+
+/** Hinweis einblenden, sobald mindestens eine Geocoder-Checkbox aktiv ist. */
+function updateGeoInfo() {
+  if (running || finished) return;
+  const n = list.querySelectorAll('input.geocb:checked').length;
+  if (n > 0) {
+    banner.className = 'banner warn';
+    banner.textContent = 'Geocoder-Daten (Adress- & Ortssuche): verursacht einen größeren ' +
+      'Daten-Download (Planet-Dump ~26 GB beim ersten Mal) und ist in aller Regel nur ' +
+      'sinnvoll, wenn sich Straßen- oder Ortsnamen geändert haben.';
+  } else {
+    banner.className = 'banner';
+    banner.textContent = '';
+  }
 }
 
 fetch('/api/cities').then(r => r.json()).then(data => {
@@ -149,6 +174,14 @@ function setStatus(id, cls, text) {
   s.textContent = text;
 }
 
+function setGeoStatus(id, cls, text) {
+  const li = list.querySelector('li[data-id="' + id + '"]');
+  if (!li) return;
+  const s = li.querySelector('[data-geostatus]');
+  s.className = 'status ' + cls;
+  s.textContent = text;
+}
+
 const es = new EventSource('/api/progress');
 es.addEventListener('city', e => {
   const d = JSON.parse(e.data);
@@ -156,14 +189,29 @@ es.addEventListener('city', e => {
   else if (d.status === 'done') setStatus(d.id, 'done', '✓ ' + Number(d.trees).toLocaleString('de-DE') + ' Bäume');
   else if (d.status === 'error') setStatus(d.id, 'error', '✗ Fehler');
 });
+es.addEventListener('geo', e => {
+  const d = JSON.parse(e.data);
+  if (d.status === 'done') setGeoStatus(d.id, 'geo-done', 'Geo ✓ ' + d.mb.toLocaleString('de-DE') + ' MB');
+  else setGeoStatus(d.id, 'error', 'Geo ✗');
+});
+es.addEventListener('note', e => {
+  if (finished) return;
+  const d = JSON.parse(e.data);
+  banner.className = 'banner warn';
+  banner.textContent = d.msg;
+});
 es.addEventListener('done', e => {
   const d = JSON.parse(e.data);
   finished = true;
   es.close();
   banner.className = 'banner ok';
-  banner.innerHTML = '✓ Alles erledigt — ' + d.processed + ' Stadt/Städte verarbeitet' +
-    (d.failed ? (', <b>' + d.failed + ' fehlgeschlagen</b>') : '') +
-    '. Die Anwendung hat sich beendet; dieses Fenster bleibt als Übersicht.';
+  let text = '✓ Alles erledigt — ' + d.processed + ' Stadt/Städte verarbeitet' +
+    (d.failed ? (', <b>' + d.failed + ' fehlgeschlagen</b>') : '');
+  if (d.geoDone || d.geoFailed) {
+    text += ' · Geocoder: ' + (d.geoDone || 0) + ' erneuert' +
+      (d.geoFailed ? (', <b>' + d.geoFailed + ' fehlgeschlagen</b>') : '');
+  }
+  banner.innerHTML = text + '. Die Anwendung hat sich beendet; dieses Fenster bleibt als Übersicht.';
 });
 es.onerror = () => {
   if (finished) return; // planmäßiges Ende — kein Fehler
@@ -171,9 +219,15 @@ es.onerror = () => {
 
 startBtn.onclick = () => {
   if (running) return;
-  const chosen = [...list.querySelectorAll('li')].filter(li => li.querySelector('input.checkbox').checked);
-  if (!chosen.length) { alert('Bitte mindestens eine Stadt auswählen.'); return; }
+  const rows = [...list.querySelectorAll('li')];
+  const chosen = rows.filter(li => li.querySelector('input.checkbox').checked);
+  const geoChosen = rows.filter(li => li.querySelector('input.geocb').checked);
+  if (!chosen.length && !geoChosen.length) {
+    alert('Bitte mindestens eine Stadt (Baumdaten oder Geocoder) auswählen.');
+    return;
+  }
   const ids = chosen.map(li => li.dataset.id);
+  const geoIds = geoChosen.map(li => li.dataset.id);
   const overrides = {};
   chosen.forEach(li => {
     const u = li.querySelector('.urlbox input').value.trim();
@@ -184,13 +238,15 @@ startBtn.onclick = () => {
   document.getElementById('all').disabled = true;
   document.getElementById('none').disabled = true;
   document.getElementById('quit').disabled = true;
-  list.querySelectorAll('input.checkbox, .urltoggle, .urlbox input').forEach(el => el.disabled = true);
+  list.querySelectorAll('input.checkbox, input.geocb, .urltoggle, .urlbox input').forEach(el => el.disabled = true);
   chosen.forEach(li => setStatus(li.dataset.id, 'running', 'wartet…'));
+  geoChosen.forEach(li => setGeoStatus(li.dataset.id, 'running', 'Geo wartet…'));
   banner.className = 'banner warn';
-  banner.textContent = 'Verarbeite ' + ids.length + ' Stadt/Städte… du kannst dies offen lassen.';
+  banner.textContent = 'Verarbeite ' + (ids.length || 'keine') + ' Stadt/Städte' +
+    (geoIds.length ? (' + Geocoder für ' + geoIds.length) : '') + ' … du kannst dies offen lassen.';
   fetch('/api/run', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ cities: ids, overrides })
+    body: JSON.stringify({ cities: ids, geocoderCities: geoIds, overrides })
   }).catch(() => {});
 };
 

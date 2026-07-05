@@ -27,6 +27,10 @@ dependencies {
     implementation("com.fasterxml.jackson.core:jackson-databind:2.15.2")
     implementation("com.fasterxml.jackson.core:jackson-core:2.15.2")
 
+    // Zstandard-Dekompression für den Photon-Planet-Dump (Geocoder-Cutter).
+    // Das JDK kann kein zstd; zstd-jni bündelt die nativen Bibliotheken für alle OS.
+    implementation("com.github.luben:zstd-jni:1.5.6-6")
+
     // JUnit for Testing
     testImplementation("junit:junit:4.13.2")
 }

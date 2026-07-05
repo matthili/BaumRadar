@@ -29,6 +29,15 @@ public interface PipelineListener {
     /** Fired once after all cities and the catalog are done. */
     default void onFinished(int processed, int failed) {}
 
+    /** Free-form progress note (geocoder dump download, cut progress, …) for the UI banner. */
+    default void onNote(String message) {}
+
+    /** Fired when a city's geocoder cut finished; {@code bytes} is the compressed file size. */
+    default void onGeoCityDone(String cityId, String name, long places, long bytes) {}
+
+    /** Fired when a city's geocoder cut failed. */
+    default void onGeoCityError(String cityId, String name, String error) {}
+
     /** A listener that ignores every event. */
     PipelineListener NOOP = new PipelineListener() {};
 }

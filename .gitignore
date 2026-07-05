@@ -118,3 +118,6 @@ PROJECT_BRIEFING.md
 
 # Web-UI Abschlussbericht (lokal)
 last_run.html
+
+# Photon-Planet-Dump (Geocoder-Quelle, ~26 GB - niemals committen)
+geocoder/

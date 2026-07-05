@@ -88,15 +88,29 @@ public class Main {
             return;
         }
 
-        List<CityProvider> toProcess = selectProviders(all, args);
-        if (toProcess == null) {
+        // Flags von den Stadt-IDs trennen:
+        //   --geocoder       zusätzlich die Geocoder-Daten der gewählten Städte schneiden
+        //   --geocoder-only  NUR die Geocoder-Daten schneiden (keine Baum-Pipeline)
+        boolean geocoder = Arrays.stream(args).anyMatch(a -> "--geocoder".equalsIgnoreCase(a));
+        boolean geocoderOnly = Arrays.stream(args).anyMatch(a -> "--geocoder-only".equalsIgnoreCase(a));
+        String[] cityArgs = Arrays.stream(args)
+                .filter(a -> a != null && !a.startsWith("--"))
+                .toArray(String[]::new);
+
+        List<CityProvider> selected = selectProviders(all, cityArgs);
+        if (selected == null) {
             System.exit(2); // unknown city id(s) — message already logged
             return;
         }
 
+        List<CityProvider> toProcess = geocoderOnly ? List.of() : selected;
+        java.util.Set<String> geocoderIds = (geocoder || geocoderOnly)
+                ? selected.stream().map(CityProvider::getCityId).collect(Collectors.toSet())
+                : java.util.Set.of();
+
         try {
             // The CLI relies on the pipeline's own SLF4J logging for progress.
-            Pipeline.run(toProcess, all, outDir, BASE_URL, null, PipelineListener.NOOP);
+            Pipeline.run(toProcess, all, outDir, BASE_URL, null, geocoderIds, PipelineListener.NOOP);
         } catch (Exception e) {
             logger.error("Fatal error in pipeline: {}", e.getMessage(), e);
             System.exit(1);
