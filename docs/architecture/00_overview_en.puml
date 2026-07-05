@@ -30,6 +30,8 @@ skinparam rectangle {
   BorderColor<<github>> #7B1FA2
   BackgroundColor<<app>> #FFF3E0
   BorderColor<<app>> #F57C00
+  BackgroundColor<<web>> #FFFDE7
+  BorderColor<<web>> #F9A825
 }
 
 rectangle "🌐  Open Data Sources\n19 Cities · AT / DE / CH\nTree Cadastre Datasets" as Src <<source>>
@@ -40,10 +42,13 @@ rectangle "📦  GitHub Repository\nSigned SQLite Databases\n+ catalog.json" as 
 
 rectangle "📱  Android App (Kotlin / Compose)\n· Signature Verification\n· Offline-First (Room DB)\n· OSM Map + AR Compass Arrows\n· Allergy-Free Routing (OSRM)\n· Geofence Proximity Warnings" as App <<app>>
 
+rectangle "🖥️  WebGIS Tech Demo (Docker)\n· PostGIS + GeoServer (WMS/WFS/OGC API)\n· Angular/OpenLayers Map\n· Local Routing + Address Search" as Web <<web>>
+
 actor "User\n(Allergy Profile)" as User
 
 Src -down-> BE : ingest
 BE -down-> GH : publish
 GH -down-> App : download\n& verify
+GH -down-> Web : download\n& verify
 User -right-> App
 @enduml

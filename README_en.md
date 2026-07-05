@@ -5,11 +5,15 @@
 *(Für die deutsche Dokumentation, siehe [README.md](README.md))*
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Platform](https://img.shields.io/badge/Platform-Android-green.svg)](https://developer.android.com)
+[![Platform](https://img.shields.io/badge/Platform-Android_·_Web-green.svg)](#-webgis-tech-demo-docker)
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.2-blue.svg)](https://kotlinlang.org)
-[![Java](https://img.shields.io/badge/Java-21-red.svg)](https://openjdk.org)
+[![Java](https://img.shields.io/badge/Java-21_·_25-red.svg)](https://openjdk.org)
+[![Angular](https://img.shields.io/badge/Angular-22-dd0031.svg)](https://angular.dev)
+[![OGC](https://img.shields.io/badge/OGC-WMS_·_WFS_·_API_Features-1f6feb.svg)](docs/webgis_architecture_en.md)
+[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED.svg)](webgis/README.md)
 [![Tests](https://img.shields.io/badge/Tests-passing-brightgreen.svg)](#-technical-documentation)
 [![Open Data](https://img.shields.io/badge/Open_Data-19_Cities-orange.svg)](#-multi-city-support)
+[![Trees](https://img.shields.io/badge/Trees-~2.6_M-forestgreen.svg)](docs/data_structure_en.md)
 
 > **Baumradar is an Open-Data-based tool that allows you to explore trees in your vicinity and intentionally avoid them when navigating through the city – especially helpful if you suffer from tree pollen allergies (e.g., early bloomers).** Behind the scenes: an Open Data geodata pipeline that unifies tree cadastres from currently 19 cities, spatially clusters them, and distributes them with cryptographic signatures.
 
@@ -97,6 +101,16 @@ The data is processed by the backend and cryptographically signed using **Ed2551
 ### 🔄 Self-Update & Data Refresh
 On startup the app checks for updates: if a newer app version exists in the GitHub releases, it can download and install itself on request (explaining the required install permission and jumping straight to the relevant setting). It likewise detects updated or corrected **tree data** – each city carries a content-based data version, and already-downloaded cities are offered a refresh whenever their data changes.
 
+### 🖥️ WebGIS Tech Demo (Docker)
+Alongside the app there is a **complete self-hostable web GIS** ([`webgis/`](webgis/README.md)): PostGIS and GeoServer publish the same signed datasets as **OGC services** (WMS 1.3.0, WFS 2.0, OGC API Features), an Angular/OpenLayers client provides the map, genus filters and city scoping — plus **local routing** (GraphHopper island graph, allergy-zone avoidance via custom models) and **local address/POI search** (Photon). The special twist: routing OSM data and the geocoder index are also fed from **per-city, signed slices** — someone trying just Zug downloads 25 MB for the address search instead of the 11 GB of pre-built country indexes. One command is all it takes (only Docker required):
+
+```powershell
+cd webgis
+.\start.cmd -Cities zug -Routing -Geocoding
+```
+
+→ [Quick start & services](webgis/README.md) · [Architecture doc incl. lessons learned](docs/webgis_architecture_en.md)
+
 ---
 
 ## 🚀 Installation (Android App)
@@ -158,6 +172,7 @@ Baumradar consists of two main parts and an open data structure:
 | [**Android App Architecture**](docs/app_architecture_en.md) | Kotlin app, Jetpack Compose UI, Room databases, routing system, background geofences |
 | [**Backend / Data-Processor**](docs/backend_architecture_en.md) | Java backend: read Open Data, translate, cluster, split into chunks, sign |
 | [**Data Structure & Third-Party Usage**](docs/data_structure_en.md) | Use the open, verified tree data in your own apps (iOS, Web) – with code examples |
+| [**WebGIS Tech Demo**](docs/webgis_architecture_en.md) | Docker stack: PostGIS, GeoServer (OGC), Angular/OpenLayers, local routing + geocoding – incl. a pitfalls collection |
 
 ### Architecture Diagrams
 
@@ -173,6 +188,8 @@ Baumradar consists of two main parts and an open data structure:
 | [Backend Classes](docs/architecture/05_backend_classes.png) | UML class diagram of the Data-Processor |
 | [Collision Activity](docs/architecture/06_collision_activity.png) | Activity diagram of the collision detection |
 | [App Self-Update](docs/architecture/07_app_update_flow.png) | In-app update flow via GitHub Releases |
+| [WebGIS Architecture](docs/architecture/08_webgis_architecture.png) | Containers, data flows and Compose profiles of the web GIS |
+| [WebGIS: Search & Route](docs/architecture/09_webgis_route_geocoding.png) | Sequence: address search + routing with zone avoidance |
 
 </details>
 

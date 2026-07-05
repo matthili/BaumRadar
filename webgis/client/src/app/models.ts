@@ -63,6 +63,13 @@ export interface LonLat {
   lat: number;
 }
 
+/** Treffer der Adress-/Ortssuche (Photon), Koordinate in WGS84. */
+export interface GeocodeHit {
+  label: string;
+  lon: number;
+  lat: number;
+}
+
 /** Ergebnis einer Routenberechnung. */
 export interface RouteResult {
   /** Stützpunkte der Route als [lon, lat]. */

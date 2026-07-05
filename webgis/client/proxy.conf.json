@@ -3,5 +3,17 @@
     "target": "http://localhost:8081",
     "secure": false,
     "changeOrigin": true
+  },
+  "/graphhopper": {
+    "target": "http://localhost:8989",
+    "secure": false,
+    "changeOrigin": true,
+    "pathRewrite": { "^/graphhopper": "" }
+  },
+  "/photon": {
+    "target": "http://localhost:2322",
+    "secure": false,
+    "changeOrigin": true,
+    "pathRewrite": { "^/photon": "" }
   }
 }

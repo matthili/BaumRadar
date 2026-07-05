@@ -2,7 +2,7 @@
 <div class="map-host" #mapHost></div>
 
 <header class="brand glass">
-  <span class="leaf-dot" aria-hidden="true"></span>
+  <img class="brand-logo" src="logo_baumradar.png" alt="BaumRadar-Logo" width="38" height="38">
   <div>
     <h1>BaumRadar <span class="thin">WebGIS</span></h1>
     <p>OGC-Tech-Demo &middot; WMS 1.3.0 &middot; WFS 2.0 &middot; OGC API Features</p>
@@ -54,6 +54,30 @@
       {{ routingActive() ? 'Routing beenden' : 'Route planen' }}
     </button>
     @if (routingActive()) {
+      <div class="geosearch">
+        <input type="search" placeholder="Start: Adresse oder Ort &hellip;" autocomplete="off"
+               [value]="startQuery()" (input)="onStartQuery($any($event.target).value)">
+        @if (startHits().length > 0) {
+          <ul class="hits">
+            @for (h of startHits(); track $index) {
+              <li (click)="pickStart(h)">{{ h.label }}</li>
+            }
+          </ul>
+        }
+        <input type="search" placeholder="Ziel: Adresse oder Ort &hellip;" autocomplete="off"
+               [value]="endQuery()" (input)="onEndQuery($any($event.target).value)">
+        @if (endHits().length > 0) {
+          <ul class="hits">
+            @for (h of endHits(); track $index) {
+              <li (click)="pickEnd(h)">{{ h.label }}</li>
+            }
+          </ul>
+        }
+      </div>
+      @if (geocoderOnline()) {
+        <p class="route-avoid muted">Adresssuche l&auml;uft online (photon.komoot.io) —
+          f&uuml;r lokale Suche das Profil &bdquo;geocoding&ldquo; starten</p>
+      }
       <p class="route-hint">{{ routingHint() }}</p>
       @if (selectedGenera().size > 0) {
         <p class="route-avoid">meidet {{ selectedGenera().size }} Gattung(en) im Korridor</p>

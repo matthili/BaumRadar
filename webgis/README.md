@@ -18,34 +18,59 @@ auf dem eigenen Rechner.
 
 ## Schnellstart
 
+Voraussetzung ist einzig **Docker** (Desktop oder Engine, mit Compose v2) —
+kein Java, kein Node, kein Maven. Dann:
+
 ```powershell
 cd webgis
-copy .env.example .env      # Zugangsdaten anpassen (Demo-Defaults funktionieren)
-docker compose up
+.\start.cmd                              # Windows — Karte mit allen 19 Städten
+./start.sh                               # Linux/macOS
 ```
 
-Der `loader` lädt beim ersten Start alle Städte aus dem GitHub-Pages-Katalog,
-prüft die **Ed25519-Signaturen**, importiert nach PostGIS und provisioniert
-GeoServer (Workspace, Layer, Styles) per REST. Wiederholte Starts sind
-idempotent: pro Stadt wird die `dataVersion` verglichen, unveränderte Städte
-werden übersprungen.
-
-Nur bestimmte Städte laden (z. B. zum Ausprobieren):
+Empfehlenswert zum ersten Ausprobieren (kleiner, schneller):
 
 ```powershell
-$env:CITY_FILTER = "wien,graz"; docker compose up
+.\start.cmd -Cities zug,wien                       # nur bestimmte Städte
+.\start.cmd -Cities zug -Routing -Geocoding        # + Routenplanung + Adresssuche
+.\start.cmd -Down                                  # alles stoppen
 ```
+
+Das Skript legt beim ersten Lauf die `.env` an — **mit zufällig generierten
+Passwörtern** statt Demo-Zugangsdaten — baut die Container und startet den Stack.
+Danach: Karte auf http://localhost:8082. Der `loader` lädt die gewählten Städte
+aus dem GitHub-Pages-Katalog, prüft die **Ed25519-Signaturen**, importiert nach
+PostGIS und provisioniert GeoServer per REST — idempotent, unveränderte Städte
+(`dataVersion`) werden bei jedem weiteren Start übersprungen.
+
+**Erstlauf-Datenmengen** (einmalig, danach in Volumes gecacht): Baumdaten je nach
+`CITY_FILTER` (Zug ~2 MB … alle 19 ~600 MB) · `-Geocoding` lädt die Geocoder-Häppchen
+der gewählten Städte (15–176 MB je Stadt) · `-Routing` lädt die Länder-PBFs von
+Geofabrik (**DE ~4 GB**, AT/CH je ~0,5 GB — nur die Länder der gewählten Städte).
+
+## Sicherheit (auch für Heim-/Schulnetz)
+
+- **Zufällige Zugangsdaten:** `start.cmd`/`start.sh` ersetzt die Demo-Passwörter
+  beim Anlegen der `.env` durch Zufallswerte (einsehbar in `webgis/.env`, die Datei
+  ist git-ignoriert). Achtung: das PostGIS-Passwort wird beim ersten Initialisieren
+  des Datenbank-Volumes eingebrannt — späteres Ändern braucht `docker compose down -v`.
+- **Nur localhost:** GeoServer-Admin, PostGIS, GraphHopper und Photon sind
+  standardmäßig an `127.0.0.1` gebunden — im LAN nicht erreichbar. Nur der
+  Web-Client (Port 8082) ist im Netz sichtbar; er reicht ausschließlich lesende
+  Dienste same-origin durch (kein Admin-Zugang, kein WFS-T).
+  Bewusster LAN-Zugriff auf die internen Dienste: `BIND_HOST=0.0.0.0` in `.env`.
 
 ## Dienste
 
 | Dienst | URL | Zugang |
 |---|---|---|
-| **Web-Client** (Angular + OpenLayers) | http://localhost:8082 | — |
-| GeoServer Web-UI | http://localhost:8081/geoserver | admin / geoserver (via `.env`) |
+| **Web-Client** (Angular + OpenLayers) | http://localhost:8082 | — (einziger LAN-sichtbarer Port) |
+| GeoServer Web-UI | http://localhost:8081/geoserver | siehe `.env` (nur localhost) |
 | WMS 1.3.0 | http://localhost:8081/geoserver/baumradar/wms | — |
 | WFS 2.0 | http://localhost:8081/geoserver/baumradar/wfs | — |
 | OGC API Features | http://localhost:8081/geoserver/ogc/features/v1 | — |
-| PostGIS | localhost:5433 (Container-intern 5432) | via `.env` |
+| PostGIS | localhost:5433 (Container-intern 5432) | siehe `.env` (nur localhost) |
+| GraphHopper (Profil `routing`) | http://localhost:8989 | — (nur localhost; Client nutzt `/graphhopper/`) |
+| Photon-Geocoder (Profil `geocoding`) | http://localhost:2322 | — (nur localhost; Client nutzt `/photon/`) |
 
 Beispiel-Requests:
 
@@ -82,13 +107,18 @@ http://localhost:8081/geoserver/baumradar/wfs?service=WFS&version=2.0.0&request=
 
 | Variable | Default | Bedeutung |
 |---|---|---|
-| `PG_DB` / `PG_USER` / `PG_PASSWORD` | `baumradar` | PostGIS-Zugang |
+| `PG_DB` / `PG_USER` / `PG_PASSWORD` | `baumradar` (Skript: zufällig) | PostGIS-Zugang |
 | `PG_PORT` | `5433` | Host-Port für PostGIS (Container: 5432) |
 | `GEOSERVER_PORT` | `8081` | Host-Port für GeoServer |
-| `GEOSERVER_USER` / `GEOSERVER_PASSWORD` | `admin` / `geoserver` | GeoServer-Admin |
+| `GEOSERVER_USER` / `GEOSERVER_PASSWORD` | `admin` / Skript: zufällig | GeoServer-Admin |
 | `GEOSERVER_VERSION` | `2.28.0` | Image-Tag; mindestens 2.27 (OGC API Features ist erst ab dort stabile Extension) |
-| `CITY_FILTER` | *(leer = alle)* | Kommagetrennte Stadt-IDs, z. B. `wien,linz` |
+| `BIND_HOST` | `127.0.0.1` | Bind-Adresse der internen Dienste (`0.0.0.0` = LAN) |
+| `WEB_PORT` | `8082` | Host-Port des Web-Clients |
+| `CITY_FILTER` | *(leer = alle)* | Kommagetrennte Stadt-IDs, z. B. `wien,linz` — gilt für Loader, Routing **und** Geocoder |
 | `CATALOG_URL` | GitHub Pages | Quelle des Stadtkatalogs |
+| `GH_VERSION` / `GRAPHHOPPER_PORT` / `GH_JAVA_OPTS` | `10.0` / `8989` / `-Xmx2g` | GraphHopper (Profil `routing`) |
+| `BBOX_MARGIN_DEG` | `0.03` | Rand um Stadt-BBoxen beim Insel-Graph |
+| `PHOTON_VERSION` / `PHOTON_PORT` | `1.2.1` / `2322` | Photon-Geocoder (Profil `geocoding`) |
 
 ## Entwicklung
 
@@ -125,6 +155,10 @@ mvn test -Pit
 - [x] Phase 0 – Gerüst (compose, README)
 - [x] Phase 1 – Loader (Download → Verify → PostGIS → GeoServer-Provisionierung)
 - [x] Phase 2 – GeoServer-Dienste end-to-end verifiziert (WMS-GetMap, WFS-GetFeature+CQL, OGC API Features)
-- [x] Phase 3 – Angular-Client (OpenLayers, Signals, GetFeatureInfo-Popup, GPX-Drop; Filter-Suche über Gattungs- **und** Artnamen, deutsch wie botanisch — Auswahl bleibt gattungsweit, passend zu den genus-geclusterten Zonen)
-- [ ] Phase 4 – GraphHopper-Routing (Insel-Graph, Zonen-Vermeidung)
-- [ ] Phase 5 – Doku (EN), Architektur-Diagramm, Verlinkung im Haupt-README
+- [x] Phase 3 – Angular-Client (OpenLayers, Signals, GetFeatureInfo-Popup, GPX-Drop; Filter-Suche über Gattungs- **und** Artnamen, deutsch wie botanisch — Auswahl bleibt gattungsweit, passend zu den genus-geclusterten Zonen; Stadt-Auswahl scopt Zahlen + Karte)
+- [x] Phase 4 – GraphHopper-Routing (Insel-Graph, Korridor-Zonen-Vermeidung per Custom-Model, Start/Ziel per Klick **oder** Adresssuche)
+- [x] Geocoding – Photon aus den pro-Stadt-Häppchen des Katalogs (lokal, `CITY_FILTER`-bewusst; Fallback photon.komoot.io)
+- [x] Phase 5 – Doku: [Architektur (DE)](../docs/webgis_architecture.md) / [EN](../docs/webgis_architecture_en.md) inkl. Diagrammen + Lessons Learned, Verlinkung im Haupt-README
+
+Die ausführliche Architektur-Dokumentation (Datenweg, Routing, Geocoding, Stolpersteine):
+**[docs/webgis_architecture.md](../docs/webgis_architecture.md)** · [English version](../docs/webgis_architecture_en.md)

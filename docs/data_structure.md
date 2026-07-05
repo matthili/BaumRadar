@@ -52,6 +52,10 @@ Diese Datei hat folgende Struktur:
 - `sigUrl`: URL der Ed25519-Signatur.
 - `dataVersion`: Inhaltsbasierter Fingerprint der Baumdaten (16 Hex-Zeichen, ID-unabhängig). Ändert sich nur, wenn sich die Daten tatsächlich ändern. Die App merkt sich die Version beim Download und bietet ein Refresh an, sobald der Katalog eine neuere Version meldet.
 
+**Optionale Geocoder-Felder** (Adress- & POI-Suche, genutzt vom [WebGIS](webgis_architecture.md)):
+- `geocoderUrl` / `geocoderUrlChunks` / `geocoderSigUrl`: Pro Stadt ein aus dem offiziellen Photon-Planet-Dump geschnittener Ausschnitt (`geocoder_<stadt>.jsonl.gz`, gzip; Chunk- und Signatur-Mechanik identisch zu den Baumdaten). Jede Datei ist ein **eigenständig Photon-importierbarer Dump** (Kopf- + CountryInfo-Zeile enthalten) mit allen Adressen, Straßen und POIs der Stadt-BBox + 15 km Rand — je Stadt 15–176 MB statt gigabytegroßer Länder-Indizes.
+- `geocoderVersion`: Inhaltsbasierter Fingerprint des Geocoder-Ausschnitts (analog `dataVersion`). Städte ohne Geocoder-Daten haben diese Felder nicht.
+
 ---
 
 ## Schritt 2: Download & Entpacken

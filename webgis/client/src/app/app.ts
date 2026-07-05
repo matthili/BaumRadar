@@ -11,7 +11,8 @@ import {
 import { CatalogService } from './catalog.service';
 import { GeoServerService } from './geoserver.service';
 import { MapService } from './map.service';
-import { City, GenusStat, LonLat, PopupData, RouteProfile, RouteResult, SpeciesStat } from './models';
+import { GeocoderService } from './geocoder.service';
+import { City, GenusStat, GeocodeHit, LonLat, PopupData, RouteProfile, RouteResult, SpeciesStat } from './models';
 import { RoutingService } from './routing.service';
 import { matchGenera } from './search';
 
@@ -35,6 +36,7 @@ export class App implements AfterViewInit {
   private readonly geoserver = inject(GeoServerService);
   private readonly catalog = inject(CatalogService);
   private readonly routingService = inject(RoutingService);
+  private readonly geocoder = inject(GeocoderService);
 
   private readonly mapHost = viewChild.required<ElementRef<HTMLDivElement>>('mapHost');
   private readonly popupHost = viewChild.required<ElementRef<HTMLDivElement>>('popupHost');
@@ -60,6 +62,15 @@ export class App implements AfterViewInit {
   readonly routeInfo = signal<RouteResult | null>(null);
   readonly routing = signal(false);
   readonly routeError = signal<string | null>(null);
+
+  // Adress-/Ortssuche für Start & Ziel (Photon; lokal mit Online-Fallback).
+  readonly startQuery = signal('');
+  readonly endQuery = signal('');
+  readonly startHits = signal<GeocodeHit[]>([]);
+  readonly endHits = signal<GeocodeHit[]>([]);
+  readonly geocoderOnline = this.geocoder.online;
+  private startTimer?: ReturnType<typeof setTimeout>;
+  private endTimer?: ReturnType<typeof setTimeout>;
   /** Aufgeklappte Gattungen (zeigen ihre Arten-Liste wie im App-Profil). */
   readonly expandedGenera = signal<ReadonlySet<string>>(new Set<string>());
 
@@ -220,6 +231,65 @@ export class App implements AfterViewInit {
     }
   }
 
+  // --- Adress-/Ortssuche (Start & Ziel) ------------------------------------
+
+  onStartQuery(value: string): void {
+    this.startQuery.set(value);
+    clearTimeout(this.startTimer);
+    if (value.trim().length < 2) {
+      this.startHits.set([]);
+      return;
+    }
+    this.startTimer = setTimeout(() => void this.searchFor('start', value.trim()), 300);
+  }
+
+  onEndQuery(value: string): void {
+    this.endQuery.set(value);
+    clearTimeout(this.endTimer);
+    if (value.trim().length < 2) {
+      this.endHits.set([]);
+      return;
+    }
+    this.endTimer = setTimeout(() => void this.searchFor('end', value.trim()), 300);
+  }
+
+  pickStart(hit: GeocodeHit): void {
+    this.startQuery.set(hit.label);
+    this.startHits.set([]);
+    this.routeStart.set({ lon: hit.lon, lat: hit.lat });
+    this.afterPointChosen();
+  }
+
+  pickEnd(hit: GeocodeHit): void {
+    this.endQuery.set(hit.label);
+    this.endHits.set([]);
+    this.routeEnd.set({ lon: hit.lon, lat: hit.lat });
+    this.afterPointChosen();
+  }
+
+  /** Marker aktualisieren und rechnen, sobald Start und Ziel beisammen sind. */
+  private afterPointChosen(): void {
+    this.routeInfo.set(null);
+    this.routeError.set(null);
+    this.mapService.setRouteMarkers(this.routeStart(), this.routeEnd());
+    if (this.routeStart() && this.routeEnd()) {
+      void this.computeRoute();
+    }
+  }
+
+  private async searchFor(field: 'start' | 'end', query: string): Promise<void> {
+    try {
+      const cityId = this.selectedCity();
+      const bbox = cityId
+        ? (this.cities().find((c) => c.id === cityId)?.boundingBox ?? null)
+        : null;
+      const hits = await this.geocoder.search(query, bbox);
+      (field === 'start' ? this.startHits : this.endHits).set(hits);
+    } catch {
+      (field === 'start' ? this.startHits : this.endHits).set([]);
+    }
+  }
+
   setProfile(p: RouteProfile): void {
     if (p === this.routeProfile()) return;
     this.routeProfile.set(p);
@@ -277,6 +347,10 @@ export class App implements AfterViewInit {
     this.routeEnd.set(null);
     this.routeInfo.set(null);
     this.routeError.set(null);
+    this.startQuery.set('');
+    this.endQuery.set('');
+    this.startHits.set([]);
+    this.endHits.set([]);
   }
 
   fmtDistance(m: number): string {

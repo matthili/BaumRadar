@@ -10,7 +10,9 @@ services:
       POSTGRES_USER: ${PG_USER:-baumradar}
       POSTGRES_PASSWORD: ${PG_PASSWORD:-baumradar}
     ports:
-      - "${PG_PORT:-5433}:5432"
+      # Nur lokal gebunden (Härtung): Admin-/DB-Ports gehören nicht ins LAN.
+      # Für bewussten LAN-Zugriff BIND_HOST=0.0.0.0 in .env setzen.
+      - "${BIND_HOST:-127.0.0.1}:${PG_PORT:-5433}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -36,7 +38,7 @@ services:
       STABLE_EXTENSIONS: "ogcapi-features"
       SKIP_DEMO_DATA: "true"
     ports:
-      - "${GEOSERVER_PORT:-8081}:8080"
+      - "${BIND_HOST:-127.0.0.1}:${GEOSERVER_PORT:-8081}:8080"
     volumes:
       - gsdata:/opt/geoserver_data
 
@@ -109,9 +111,29 @@ services:
     environment:
       JAVA_OPTS: ${GH_JAVA_OPTS:--Xmx2g -Xms1g}
     ports:
-      - "${GRAPHHOPPER_PORT:-8989}:8989"
+      - "${BIND_HOST:-127.0.0.1}:${GRAPHHOPPER_PORT:-8989}:8989"
     volumes:
       - routingdata:/data
+    restart: unless-stopped
+
+  # --- Geocoder: Adress- & Ortssuche (nur mit `--profile geocoding`) ----------
+  # Photon-Instanz, die beim ersten Start die pro-Stadt-Geocoder-Häppchen aus dem
+  # BaumRadar-Katalog importiert (CITY_FILTER wie beim Loader; je Stadt MB statt
+  # 11-GB-Länder-Dumps). Danach läuft die Suche komplett lokal auf :2322.
+  photon:
+    build:
+      context: ./photon
+      args:
+        PHOTON_VERSION: ${PHOTON_VERSION:-1.2.1}
+    container_name: baumradar-photon
+    profiles: ["geocoding"]
+    environment:
+      CATALOG_URL: ${CATALOG_URL:-https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/catalog.json}
+      CITY_FILTER: ${CITY_FILTER:-}
+    ports:
+      - "${BIND_HOST:-127.0.0.1}:${PHOTON_PORT:-2322}:2322"
+    volumes:
+      - photondata:/photon
     restart: unless-stopped
 
 volumes:
@@ -119,3 +141,4 @@ volumes:
   gsdata:
   osmcache:
   routingdata:
+  photondata:
