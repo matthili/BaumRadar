@@ -140,6 +140,7 @@ Things only real operation revealed — documented because they teach something:
 | **nginx + optional upstreams** | nginx refuses to start when `graphhopper`/`photon` (profile off) don't exist | `resolver 127.0.0.11` + upstream in a **variable** → DNS resolves per request, nginx always starts |
 | **Opendatasoft export limit** | a city yields exactly 9,997/10,000 trees | `/exports/geojson` caps at `offset+limit>10000` → single-shot without paging (hit Dortmund *and* Basel) |
 | **`jq`: context in function arguments** | `Cannot index array with string "id"` | in `$ids \| index(.id)`, `.id` is evaluated against `$ids` — **bind the id first**: `.id as $cid` |
+| **PowerShell 5.1 reads BOM-less UTF-8 as ANSI** | `start.cmd` fails on a fresh machine with garbled parse errors (`lÃ¤uft`, "missing parenthesis") | `start.cmd` invokes *Windows PowerShell 5.1*, which reads BOM-less `.ps1` files in the ANSI codepage. An em dash (UTF-8 `E2 80 94`) contains byte `0x94` = the cp1252 **curly quote** — which terminates strings early. Fix: save the `.ps1` **with a UTF-8 BOM** and avoid typographic characters in scripts. (Sneaky: under pwsh 7 the file works even without a BOM — you must test the `start.cmd` path.) |
 
 ---
 
