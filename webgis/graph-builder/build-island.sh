@@ -42,7 +42,10 @@ for COUNTRY in Deutschland Österreich Schweiz; do
 
   if [ ! -f "${PBF[$COUNTRY]}" ]; then
     echo "$COUNTRY-PBF laden (groß, wird danach gecacht)…"
-    curl -fSL "${URL[$COUNTRY]}" -o "${PBF[$COUNTRY]}"
+    # Abbruchsicher: erst als .part laden (mit Resume, falls ein Vorlauf abbrach),
+    # dann atomar umbenennen — der finale Name existiert nur vollständig.
+    curl -fSL -C - "${URL[$COUNTRY]}" -o "${PBF[$COUNTRY]}.part"
+    mv "${PBF[$COUNTRY]}.part" "${PBF[$COUNTRY]}"
   else
     echo "$COUNTRY: nutze gecachtes ${PBF[$COUNTRY]}"
   fi

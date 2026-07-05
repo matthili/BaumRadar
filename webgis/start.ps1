@@ -46,7 +46,13 @@ if ($Cities) { $env:CITY_FILTER = $Cities }
 
 Write-Host "Baue und starte Container (erster Lauf lädt Basis-Images und Stadtdaten) ..." -ForegroundColor Cyan
 docker compose @profiles up -d --build
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+if ($LASTEXITCODE -ne 0) {
+    Write-Host ""
+    Write-Host "Docker hat das Warten abgebrochen (z. B. '500 Internal Server Error' von Docker Desktop)." -ForegroundColor Yellow
+    Write-Host "Die bereits gestarteten Container laufen im Hintergrund weiter - einfach .\start.cmd" -ForegroundColor Yellow
+    Write-Host "erneut ausfuehren: der Start ist idempotent und setzt fort, wo er aufgehoert hat." -ForegroundColor Yellow
+    exit $LASTEXITCODE
+}
 
 $envMap = @{}
 Get-Content ".env" | Where-Object { $_ -match "^\s*([^#=]+)=(.*)$" } | ForEach-Object {
