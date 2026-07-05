@@ -14,7 +14,9 @@ RUN apt-get update \
 
 COPY config.yml /gh/config.yml
 COPY entrypoint.sh /gh/entrypoint.sh
-RUN chmod +x /gh/entrypoint.sh
+# CRLF-Schutz: Windows-Checkouts (core.autocrlf) brechen den Shebang (exit 127).
+RUN sed -i 's/\r$//' /gh/entrypoint.sh \
+ && chmod +x /gh/entrypoint.sh
 
 EXPOSE 8989
 ENTRYPOINT ["/gh/entrypoint.sh"]

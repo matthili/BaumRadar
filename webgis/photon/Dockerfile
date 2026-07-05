@@ -14,7 +14,9 @@ RUN apt-get update \
       -o photon.jar
 
 COPY entrypoint.sh /photon-app/entrypoint.sh
-RUN chmod +x /photon-app/entrypoint.sh
+# CRLF-Schutz: Windows-Checkouts (core.autocrlf) brechen den Shebang (exit 127).
+RUN sed -i 's/\r$//' /photon-app/entrypoint.sh \
+ && chmod +x /photon-app/entrypoint.sh
 
 EXPOSE 2322
 ENTRYPOINT ["/photon-app/entrypoint.sh"]

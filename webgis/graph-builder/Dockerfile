@@ -8,6 +8,9 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/*
 
 COPY build-island.sh /usr/local/bin/build-island.sh
-RUN chmod +x /usr/local/bin/build-island.sh
+# CRLF-Schutz: Windows-Checkouts (core.autocrlf) machen aus "bash" -> "bash\r"
+# und der Container stirbt mit exit 127 — deshalb Zeilenenden hier normalisieren.
+RUN sed -i 's/\r$//' /usr/local/bin/build-island.sh \
+ && chmod +x /usr/local/bin/build-island.sh
 
 ENTRYPOINT ["/usr/local/bin/build-island.sh"]

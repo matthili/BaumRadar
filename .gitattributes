@@ -1,0 +1,10 @@
+# Zeilenenden festnageln — unabhängig von core.autocrlf des jeweiligen Rechners.
+#
+# Shell-Skripte laufen in Linux-Containern: CRLF macht aus dem Shebang
+# "#!/usr/bin/env bash\r" -> Kernel findet "bash\r" nicht -> exit 127.
+*.sh       text eol=lf
+Dockerfile text eol=lf
+
+# Windows-Skripte dürfen/sollen CRLF behalten.
+*.cmd      text eol=crlf
+*.ps1      text eol=crlf

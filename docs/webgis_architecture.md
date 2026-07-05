@@ -141,6 +141,7 @@ Dinge, die erst der echte Betrieb gezeigt hat — dokumentiert, weil man an ihne
 | **Opendatasoft-Exportlimit** | Stadt liefert exakt 9.997/10.000 Bäume | `/exports/geojson` kappt bei `offset+limit>10000` → Single-Shot ohne Paging (traf Dortmund *und* Basel) |
 | **`jq`: Kontext in Funktionsargumenten** | `Cannot index array with string "id"` | In `$ids \| index(.id)` wird `.id` gegen `$ids` ausgewertet — die ID **vorher binden**: `.id as $cid` |
 | **PowerShell 5.1 liest UTF-8 ohne BOM als ANSI** | `start.cmd` scheitert auf frischem Rechner mit wirren Parse-Fehlern (`lÃ¤uft`, „fehlende Klammer") | `start.cmd` ruft *Windows PowerShell 5.1* auf, die BOM-lose `.ps1` in der ANSI-Codepage liest. Ein Gedankenstrich (UTF-8 `E2 80 94`) enthält Byte `0x94` = cp1252-**Anführungszeichen** — das schließt Strings vorzeitig. Lösung: `.ps1` **mit UTF-8-BOM** speichern und typografische Zeichen im Skript meiden. (Tückisch: unter pwsh 7 funktioniert die Datei auch ohne BOM — testen muss man den `start.cmd`-Pfad.) |
+| **Git `autocrlf` bricht Container-Skripte** | `graph-builder` stirbt sofort: „exit 127" — ohne jede weitere Meldung | Git für Windows checkt mit `core.autocrlf=true` Shell-Skripte mit **CRLF** aus; im Linux-Container wird der Shebang zu `bash\r` → Interpreter „nicht gefunden" = exit 127. (ZIP-Downloads sind nicht betroffen — nur Git-Checkouts!) Doppelter Schutz: `.gitattributes` mit `*.sh text eol=lf` **und** `sed -i 's/\r$//'` im Dockerfile nach dem `COPY`. |
 
 ---
 
