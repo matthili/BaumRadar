@@ -11,6 +11,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.time.Duration;
+import java.util.List;
 
 /**
  * Lädt Katalog-Artefakte (Datenbanken, Signaturen) herunter.
@@ -28,23 +29,21 @@ final class Downloader implements AutoCloseable {
     /** Lädt die (ggf. gechunkte) .db.gz einer Stadt in das Zielverzeichnis. */
     Path downloadDb(Catalog.City city, Path targetDir) throws IOException, InterruptedException {
         Path gz = targetDir.resolve(city.id() + ".db.gz");
-        if (city.dbUrlChunks() != null && !city.dbUrlChunks().isEmpty()) {
-            try (OutputStream out = Files.newOutputStream(gz,
-                    StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
-                for (String chunkUrl : city.dbUrlChunks()) {
-                    streamTo(chunkUrl, out);
-                }
-            }
-        } else {
-            try (OutputStream out = Files.newOutputStream(gz,
-                    StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
-                streamTo(city.dbUrl(), out);
+        // Chunks sind Byte-Abschnitte EINER gz-Datei → in Reihenfolge in dieselbe
+        // Datei streamen; ohne Chunks ist die Liste einfach die eine dbUrl.
+        List<String> urls = (city.dbUrlChunks() != null && !city.dbUrlChunks().isEmpty())
+                ? city.dbUrlChunks()
+                : List.of(city.dbUrl());
+        try (OutputStream out = Files.newOutputStream(gz,
+                StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
+            for (String url : urls) {
+                streamTo(url, out);
             }
         }
         return gz;
     }
 
-    /** Kleine Artefakte (Signaturen) komplett in den Speicher. */
+    /** Kleine Artefakte (Signaturen, Katalog) komplett in den Speicher. */
     byte[] fetchBytes(String url) throws IOException, InterruptedException {
         HttpResponse<byte[]> resp = http.send(
                 HttpRequest.newBuilder(URI.create(cacheBusted(url))).GET().build(),
@@ -67,6 +66,7 @@ final class Downloader implements AutoCloseable {
         }
     }
 
+    /** raw.githubusercontent cached aggressiv — ein Zeitstempel-Parameter umgeht das. */
     private static String cacheBusted(String url) {
         return url + (url.contains("?") ? "&" : "?") + "t=" + System.currentTimeMillis();
     }

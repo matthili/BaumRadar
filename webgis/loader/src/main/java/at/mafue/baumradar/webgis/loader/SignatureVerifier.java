@@ -13,8 +13,9 @@ import java.util.Base64;
  * Ed25519-Signaturprüfung der heruntergeladenen .db.gz-Dateien.
  *
  * Fachlich identisch zur App-Klasse {@code at.mafue.baumradar.app.security.SignatureVerifier},
- * aber ohne BouncyCastle: Ed25519 ist seit JDK 15 Teil der Standard-JCE — die App
- * braucht die Extra-Dependency nur wegen alter Android-API-Level.
+ * aber ohne BouncyCastle: Ed25519 ist seit JDK 15 Teil der Standard-JCE. (Die App
+ * bündelt die Extra-Dependency nur, weil sie Geräte ab Android 10 unterstützt,
+ * deren System-Krypto-Provider Ed25519 noch nicht kennt.)
  * Signaturdatei = rohe 64 Signatur-Bytes; Public Key = Base64-kodiertes
  * X.509-SubjectPublicKeyInfo.
  */
