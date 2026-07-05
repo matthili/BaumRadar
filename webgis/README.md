@@ -6,14 +6,14 @@ Ergänzung zur Android-App. Kein Server-Betrieb nötig: alles läuft in Containe
 auf dem eigenen Rechner.
 
 ```
-┌─────────┐    ┌──────────────┐    ┌────────────┐    ┌─────────────────┐
-│ loader  │───▶│   PostGIS    │◀───│ GeoServer  │◀───│ Angular-Client  │
-│ (Java 25│    │ trees        │    │ WMS 1.3.0  │    │ (OpenLayers)    │
-│  Maven) │    │ allergy_zones│    │ WFS 2.0    │    └─────────────────┘
-└────┬────┘    └──────────────┘    │ OGC API    │    ┌─────────────────┐
-     │  catalog.json + *.db.gz     │ Features   │    │ GraphHopper     │
-     └── GitHub Pages (signiert) ──└────────────┘    │ (Insel-Graph)   │
-                                                     └─────────────────┘
+┌─────────┐     ┌──────────────┐    ┌────────────┐    ┌─────────────────┐
+│ loader  │───▶│   PostGIS     │◀──│ GeoServer  │◀──│ Angular-Client  │
+│ (Java 25│     │ trees        │    │ WMS 1.3.0  │    │ (OpenLayers)    │
+│  Maven) │     │ allergy_zones│    │ WFS 2.0    │    └─────────────────┘
+└────┬────┘     └──────────────┘    │ OGC API    │    ┌─────────────────┐
+     │  catalog.json + *.db.gz      │ Features   │    │ GraphHopper     │
+     └── GitHub Pages (signiert) ───└────────────┘    │ (Insel-Graph)   │
+                                                      └─────────────────┘
 ```
 
 ## Schnellstart
@@ -95,8 +95,11 @@ http://localhost:8081/geoserver/baumradar/wfs?service=WFS&version=2.0.0&request=
   und der Loader nutzt als Tech-Demo aktuelle Java-25-Features (Virtual Threads,
   Records, `java.net.http`), ohne Rücksicht auf Android-Toolchains.
 - **Kein BouncyCastle:** Ed25519 ist seit JDK 15 Teil der Standard-JCE — die
-  Signaturprüfung des Loaders kommt ohne Krypto-Dependency aus (die App braucht
-  BouncyCastle nur wegen alter Android-API-Level).
+  Signaturprüfung des Loaders kommt ohne Krypto-Dependency aus. (Die App bündelt
+  BouncyCastle nur, damit die Prüfung auch auf **älteren Android-Geräten** läuft:
+  sie unterstützt Geräte ab Android 10, und dort bringt der System-Krypto-Provider
+  noch kein Ed25519 mit — das Angebot der JCA hängt auf Android vom Geräte-OS ab,
+  nicht vom SDK, gegen das die App gebaut ist.)
 - **Ein GraphHopper mit „Insel-Graph"** (Phase 4): Die 19 Stadt-Ausschnitte werden
   per osmium zu einem PBF zusammengeführt. Routing funktioniert innerhalb jeder
   Stadt; zwischen Städten gibt es bewusst keine Verbindung. Allergiezonen werden

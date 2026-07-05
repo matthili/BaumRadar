@@ -51,7 +51,7 @@ The loader is the Java counterpart of the `data-processor` — consuming instead
 
 1. **Catalog + city selection**: `catalog.json` from GitHub Pages, filtered via `CITY_FILTER`.
 2. **Idempotency**: the imported `dataVersion` per city is recorded in `import_state` — a repeated `docker compose up` skips unchanged cities in milliseconds.
-3. **Signature checking without a crypto dependency**: Ed25519 has been part of the standard JCE since JDK 15 (`KeyFactory.getInstance("Ed25519")`). The app needs BouncyCastle only for old Android API levels — the loader does not.
+3. **Signature checking without a crypto dependency**: Ed25519 has been part of the standard JCE since JDK 15 (`KeyFactory.getInstance("Ed25519")`). The app bundles BouncyCastle only so verification also works on older Android *devices* (it supports Android 10+, where the system crypto provider does not yet offer Ed25519) — the loader on a desktop JDK doesn't need it.
 4. **Geodetically correct zones**: allergy zones arrive as *center + radius in metres*. Buffering in degrees would be latitude-dependent and wrong; hence:
    ```sql
    ST_Buffer(ST_SetSRID(ST_MakePoint(lon, lat), 4326)::geography, radius_m)::geometry
