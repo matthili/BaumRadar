@@ -97,7 +97,7 @@ genus_de IN ('Birke','Hasel') AND city_id = 'wien'
 
 1. WFS-Query: Zonen der im Profil gewählten Gattungen, begrenzt auf die **Start–Ziel-BBox + Puffer** (CQL `BBOX`), gedeckelt auf 300.
 2. Die Treffer werden client-seitig zu **einem MultiPolygon** gebündelt (eine Custom-Model-Area statt N einzelner — schlanker Request, eine Bedingung).
-3. GraphHopper bekommt `priority: [{ if: "in_avoid", multiply_by: 0.05 }]` — Kanten in Zonen werden stark abgewertet, aber nicht verboten (**weiche Vermeidung**: eine Route, die *in* einer Zone startet, funktioniert trotzdem).
+3. GraphHopper bekommt `priority: [{ if: "in_avoid", multiply_by: <Faktor> }]` — Kanten in Zonen werden abgewertet, aber nie verboten (**weiche Vermeidung**: eine Route, die *in* einer Zone startet, funktioniert immer). Die Stärke wählt man im Client unter „Erweiterte Optionen": *„lieber queren als N-facher Umweg"* mit N = 5/10/**20 (Standard)**/50/100 (≙ `multiply_by` 0,2 … 0,01) — bei 100-fach ist die Meidung praktisch strikt, ohne die Fallstricke einer harten Sperre.
 
 Messbeispiel (Zug, foot): Basis 1.438 m → mit 49 Ahorn-Zonen im Korridor 1.884 m (+446 m Umweg um die Zonen).
 

@@ -108,7 +108,8 @@ http://localhost:8081/geoserver/baumradar/wfs?service=WFS&version=2.0.0&request=
   per osmium zu einem PBF zusammengeführt. Routing funktioniert innerhalb jeder
   Stadt; zwischen Städten gibt es bewusst keine Verbindung. Allergiezonen werden
   pro Request als Custom-Model-Areas gemieden (weich — Start *in* einer Zone
-  funktioniert trotzdem).
+  funktioniert immer); die Meidungs-Stärke ist im Client wählbar
+  („lieber queren als 5/10/20/50/100-facher Umweg", Standard 20-fach).
 
 ## Konfiguration (`.env`)
 

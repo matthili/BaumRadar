@@ -44,7 +44,7 @@ this project. *(Deutsche Fassung: [glossary.md](glossary.md))*
 
 **GraphHopper** — Open-source routing engine based on OSM (Java). In the WebGIS it runs in *flexible mode* with the `foot` and `bike` profiles and accepts a custom model per request — the foundation of the allergy-zone avoidance.
 
-**Custom model (GraphHopper)** — A JSON rule set sent along with a routing request: it can adjust edge priorities and speeds and reference **areas** (polygons). BaumRadar bundles the allergy zones in the route corridor into one MultiPolygon and down-weights edges inside it by factor 0.05 — *soft* avoidance: a route that starts inside a zone still works.
+**Custom model (GraphHopper)** — A JSON rule set sent along with a routing request: it can adjust edge priorities and speeds and reference **areas** (polygons). BaumRadar bundles the allergy zones in the route corridor into one MultiPolygon and down-weights edges inside it — the factor is user-selectable in the client ("rather cross than a 5/10/20/50/100-fold detour", default 20× ≙ 0.05). *Soft* avoidance: a route that starts inside a zone always works.
 
 **Contraction Hierarchies (CH)** — A precomputation of the road graph for extremely fast queries. The catch: edge weights are frozen at preprocessing time — per-request custom models become impossible. That is why CH is deliberately disabled here (the small island graph is fast enough without it).
 

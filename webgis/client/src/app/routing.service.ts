@@ -38,14 +38,20 @@ export class RoutingService {
   private static readonly CORRIDOR_BUFFER_DEG = 0.012;
   /** Obergrenze der Zonen je Anfrage (deckelt dichte Innenstädte). */
   private static readonly MAX_ZONES = 300;
-  /** Prioritätsfaktor für Kanten in einer Zone (klein = stark meiden; nicht 0, damit stets eine Route existiert). */
-  private static readonly ZONE_PENALTY = '0.05';
 
+  /**
+   * @param avoidFactor Prioritätsfaktor für Kanten in Allergiezonen: jeder Meter
+   *        in einer Zone „kostet" das (1/avoidFactor)-fache eines normalen Meters.
+   *        0,05 = Umwege bis zum ~20-Fachen des Zonenabschnitts werden bevorzugt.
+   *        Bewusst nie 0 (hart gesperrt) — so existiert immer eine Route, auch
+   *        wenn der Start mitten in einer Zone liegt.
+   */
   async route(
     profile: RouteProfile,
     start: LonLat,
     end: LonLat,
     avoidGenera: ReadonlySet<string>,
+    avoidFactor: number,
   ): Promise<RouteResult> {
     const zones = avoidGenera.size ? await this.corridorZones(start, end, avoidGenera) : [];
     const body: Record<string, unknown> = {
@@ -57,7 +63,7 @@ export class RoutingService {
       points_encoded: false,
       'ch.disable': true,
     };
-    if (zones.length) body['custom_model'] = this.avoidModel(zones);
+    if (zones.length) body['custom_model'] = this.avoidModel(zones, avoidFactor);
 
     const resp = await firstValueFrom(this.http.post<GhResponse>(RoutingService.GH_URL, body));
     const path = resp.paths?.[0];
@@ -109,14 +115,14 @@ export class RoutingService {
    * eine Bedingung `in_avoid`) statt N Einzel-Areas — deutlich schlankerer Request.
    * Die Zonen sind Polygone (PostGIS-Schema); ein evtl. MultiPolygon wird flach übernommen.
    */
-  private avoidModel(zoneGeoms: GeoJsonGeometry[]): object {
+  private avoidModel(zoneGeoms: GeoJsonGeometry[], avoidFactor: number): object {
     const polygons: unknown[] = [];
     for (const g of zoneGeoms) {
       if (g.type === 'Polygon') polygons.push(g.coordinates);
       else if (g.type === 'MultiPolygon') polygons.push(...(g.coordinates as unknown[]));
     }
     return {
-      priority: [{ if: 'in_avoid', multiply_by: RoutingService.ZONE_PENALTY }],
+      priority: [{ if: 'in_avoid', multiply_by: String(avoidFactor) }],
       areas: {
         type: 'FeatureCollection',
         features: [

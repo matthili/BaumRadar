@@ -54,6 +54,18 @@
       {{ routingActive() ? 'Routing beenden' : 'Route planen' }}
     </button>
     @if (routingActive()) {
+      <details class="adv">
+        <summary>Erweiterte Optionen</summary>
+        <label class="adv-label" for="avoid-factor">Ich durchquere eine Allergiezone lieber,
+          als den folgenden Umweg zur&uuml;cklegen zu m&uuml;ssen:</label>
+        <select id="avoid-factor" (change)="setAvoidFactor($any($event.target).value)">
+          <option value="0.2"  [selected]="routeAvoidFactor() === 0.2">5-fach</option>
+          <option value="0.1"  [selected]="routeAvoidFactor() === 0.1">10-fach</option>
+          <option value="0.05" [selected]="routeAvoidFactor() === 0.05">20-fach (Standard)</option>
+          <option value="0.02" [selected]="routeAvoidFactor() === 0.02">50-fach</option>
+          <option value="0.01" [selected]="routeAvoidFactor() === 0.01">100-fach</option>
+        </select>
+      </details>
       <div class="geosearch">
         <input type="search" placeholder="Start: Adresse oder Ort &hellip;" autocomplete="off"
                [value]="startQuery()" (input)="onStartQuery($any($event.target).value)">

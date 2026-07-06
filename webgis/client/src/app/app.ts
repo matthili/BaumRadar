@@ -57,6 +57,8 @@ export class App implements AfterViewInit {
   // Routing (Phase 4) — Start/Ziel per Karten-Klick, Vermeidung nutzt selectedGenera.
   readonly routingActive = signal(false);
   readonly routeProfile = signal<RouteProfile>('foot');
+  /** Zonen-Meidefaktor: 0,05 = „lieber bis zu 20-facher Umweg als eine Zone queren". */
+  readonly routeAvoidFactor = signal(0.05);
   readonly routeStart = signal<LonLat | null>(null);
   readonly routeEnd = signal<LonLat | null>(null);
   readonly routeInfo = signal<RouteResult | null>(null);
@@ -296,6 +298,14 @@ export class App implements AfterViewInit {
     if (this.routeStart() && this.routeEnd()) void this.computeRoute();
   }
 
+  /** Meidefaktor aus dem Dropdown übernehmen und ggf. sofort neu rechnen. */
+  setAvoidFactor(value: string): void {
+    const factor = Number(value);
+    if (!factor || factor === this.routeAvoidFactor()) return;
+    this.routeAvoidFactor.set(factor);
+    if (this.routeStart() && this.routeEnd()) void this.computeRoute();
+  }
+
   clearRoutingUi(): void {
     this.resetRouting();
     this.mapService.clearRouting();
@@ -331,6 +341,7 @@ export class App implements AfterViewInit {
         start,
         end,
         this.selectedGenera(),
+        this.routeAvoidFactor(),
       );
       this.routeInfo.set(result);
       this.mapService.drawRoute(result.coords);

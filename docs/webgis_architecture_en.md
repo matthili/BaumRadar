@@ -97,7 +97,7 @@ genus_de IN ('Birke','Hasel') AND city_id = 'wien'
 
 1. WFS query: zones of the genera selected in the profile, restricted to the **start–destination bbox + buffer** (CQL `BBOX`), capped at 300.
 2. The hits are bundled client-side into **one MultiPolygon** (one custom-model area instead of N — a lean request, one condition).
-3. GraphHopper receives `priority: [{ if: "in_avoid", multiply_by: 0.05 }]` — edges inside zones are heavily penalised but not forbidden (**soft avoidance**: a route that *starts* inside a zone still works).
+3. GraphHopper receives `priority: [{ if: "in_avoid", multiply_by: <factor> }]` — edges inside zones are penalised but never forbidden (**soft avoidance**: a route that *starts* inside a zone always works). The strength is chosen in the client under "advanced options": *"rather cross a zone than take an N-fold detour"* with N = 5/10/**20 (default)**/50/100 (≙ `multiply_by` 0.2 … 0.01) — at 100× the avoidance is effectively strict, without the pitfalls of a hard block.
 
 Measured example (Zug, foot): baseline 1,438 m → with 49 maple zones in the corridor 1,884 m (+446 m detour around the zones).
 

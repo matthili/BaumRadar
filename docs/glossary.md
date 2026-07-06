@@ -44,7 +44,7 @@ Projekt. *(English version: [glossary_en.md](glossary_en.md))*
 
 **GraphHopper** — Open-Source-Routing-Engine auf OSM-Basis (Java). Im WebGIS läuft sie im *flexiblen Modus* mit den Profilen `foot` und `bike` und akzeptiert pro Anfrage ein Custom Model — die Grundlage der Allergiezonen-Vermeidung.
 
-**Custom Model (GraphHopper)** — Ein JSON-Regelwerk, das pro Routing-Anfrage mitgeschickt wird: Es kann Kanten-Prioritäten und -Geschwindigkeiten anpassen und **Areas** (Polygone) referenzieren. BaumRadar bündelt die Allergiezonen im Routen-Korridor zu einem MultiPolygon und wertet Kanten darin mit Faktor 0,05 ab — *weiche* Vermeidung: eine Route, die in einer Zone startet, funktioniert trotzdem.
+**Custom Model (GraphHopper)** — Ein JSON-Regelwerk, das pro Routing-Anfrage mitgeschickt wird: Es kann Kanten-Prioritäten und -Geschwindigkeiten anpassen und **Areas** (Polygone) referenzieren. BaumRadar bündelt die Allergiezonen im Routen-Korridor zu einem MultiPolygon und wertet Kanten darin ab — der Faktor ist im Client wählbar („lieber queren als 5/10/20/50/100-facher Umweg", Standard 20-fach ≙ 0,05). *Weiche* Vermeidung: eine Route, die in einer Zone startet, funktioniert immer.
 
 **Contraction Hierarchies (CH)** — Eine Vorverdichtung des Straßengraphen für extrem schnelle Anfragen. Der Haken: Die Kantengewichte werden beim Vorrechnen eingefroren — pro Anfrage veränderliche Custom Models sind damit unmöglich. Deshalb ist CH im Projekt bewusst deaktiviert (der kleine Insel-Graph ist auch ohne schnell genug).
 

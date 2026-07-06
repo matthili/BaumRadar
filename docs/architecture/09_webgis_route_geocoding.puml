@@ -29,7 +29,7 @@ U -> C : wählt Start & Ziel\n(oder Karten-Klick)
 C -> W : GetFeature allergy_zones\nCQL: genus IN (Profil)\nAND BBOX(Korridor,'EPSG:4326')
 W --> C : Zonen-Polygone (GeoJSON)
 C -> C : bündelt zu EINEM MultiPolygon\n(Custom-Model-Area „avoid")
-C -> G : POST /route {points, profile,\ncustom_model: in_avoid ×0.05}
+C -> G : POST /route {points, profile,\ncustom_model: in_avoid ×Faktor\n(wählbar: 5- bis 100-fach meiden)}
 G --> C : Route (LineString, Distanz, Zeit)
 C -> U : grüne Route + „meidet N Zonen"
 @enduml
