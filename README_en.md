@@ -173,6 +173,7 @@ Baumradar consists of two main parts and an open data structure:
 | [**Backend / Data-Processor**](docs/backend_architecture_en.md) | Java backend: read Open Data, translate, cluster, split into chunks, sign |
 | [**Data Structure & Third-Party Usage**](docs/data_structure_en.md) | Use the open, verified tree data in your own apps (iOS, Web) – with code examples |
 | [**WebGIS Tech Demo**](docs/webgis_architecture_en.md) | Docker stack: PostGIS, GeoServer (OGC), Angular/OpenLayers, local routing + geocoding – incl. a pitfalls collection |
+| [**Glossary**](docs/glossary_en.md) | All of the project's modules, services, standards and geo terms explained – from `catalog.json` to Zstandard |
 
 ### Architecture Diagrams
 

@@ -149,6 +149,7 @@ Things only real operation revealed — documented because they teach something:
 
 ## Related documents
 
+- [Glossary](glossary_en.md) — every term, service and standard used here, explained
 - [`webgis/README.md`](../webgis/README.md) — quick start, service table, configuration
 - [Backend / data-processor](backend_architecture_en.md) — the producing side of the pipeline (incl. GeocoderCutter)
 - [Data structure & third party](data_structure_en.md) — `catalog.json`, database schema, building your own consumers

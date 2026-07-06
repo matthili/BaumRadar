@@ -172,6 +172,7 @@ Baumradar besteht aus zwei Hauptteilen und einer offenen Datenstruktur:
 | [**Backend / Data-Processor**](docs/backend_architecture.md) | Java-Backend: Open Data einlesen, übersetzen, clustern, in Chunks splitten, signieren |
 | [**Datenstruktur & Third-Party**](docs/data_structure.md) | Offene, verifizierte Baumdaten für eigene Apps (iOS, Web) nutzen – mit Code-Beispielen |
 | [**WebGIS-Tech-Demo**](docs/webgis_architecture.md) | Docker-Stack: PostGIS, GeoServer (OGC), Angular/OpenLayers, lokales Routing + Geocoding – inkl. Stolperstein-Sammlung |
+| [**Glossar**](docs/glossary.md) | Alle Module, Dienste, Standards und Geo-Begriffe des Projekts erklärt – von `catalog.json` bis Zstandard |
 
 ### Architektur-Diagramme
 

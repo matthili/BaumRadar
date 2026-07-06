@@ -149,6 +149,7 @@ Dinge, die erst der echte Betrieb gezeigt hat — dokumentiert, weil man an ihne
 
 ## Verwandte Dokumente
 
+- [Glossar](glossary.md) — alle hier verwendeten Begriffe, Dienste und Standards erklärt
 - [`webgis/README.md`](../webgis/README.md) — Schnellstart, Dienste-Tabelle, Konfiguration
 - [Backend / Data-Processor](backend_architecture.md) — die produzierende Seite der Pipeline (inkl. GeocoderCutter)
 - [Datenstruktur & Third-Party](data_structure.md) — `catalog.json`, Datenbank-Schema, eigene Konsumenten bauen
