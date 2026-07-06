@@ -76,8 +76,18 @@ services:
     depends_on:
       geoserver:
         condition: service_started
+    environment:
+      # Für die Status-Anzeige im Client: was SOLL dieser Stack laden?
+      # Die Start-Skripte setzen die Werte passend zu den gewählten Profilen.
+      STACK_ROUTING: ${STACK_ROUTING:-1}
+      STACK_GEOCODING: ${STACK_GEOCODING:-1}
+      CITY_FILTER: ${CITY_FILTER:-}
     ports:
       - "${WEB_PORT:-8082}:80"
+    volumes:
+      # Live-Status der Lade-Jobs (photon/graphhopper/graph-builder schreiben,
+      # nginx serviert sie read-only unter /status/ an den Client).
+      - statusdata:/webstatus:ro
 
   # --- Phase 4: Routing (nur mit `--profile routing`) ------------------------
   # Einmaliger Job: extrahiert die Stadt-BBoxen aus den DE/AT/CH-Geofabrik-PBFs
@@ -96,6 +106,7 @@ services:
     volumes:
       - osmcache:/osm
       - routingdata:/data
+      - statusdata:/status
     restart: "no"
 
   # Ein GraphHopper-Dienst (foot + bike), flexibler Modus: der Client schickt die
@@ -117,6 +128,7 @@ services:
       - "${BIND_HOST:-127.0.0.1}:${GRAPHHOPPER_PORT:-8989}:8989"
     volumes:
       - routingdata:/data
+      - statusdata:/status
     restart: unless-stopped
 
   # --- Geocoder: Adress- & Ortssuche (nur mit `--profile geocoding`) ----------
@@ -137,6 +149,10 @@ services:
       - "${BIND_HOST:-127.0.0.1}:${PHOTON_PORT:-2322}:2322"
     volumes:
       - photondata:/photon
+      - statusdata:/status
+      # Liegt das Repo lokal vor, werden Katalog + Geocoder-Häppchen direkt von
+      # hier gelesen statt von GitHub geladen (bei Sparse-Checkouts einfach leer).
+      - ../docs/data:/local-data:ro
     restart: unless-stopped
 
 volumes:
@@ -145,3 +161,4 @@ volumes:
   osmcache:
   routingdata:
   photondata:
+  statusdata:

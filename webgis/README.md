@@ -50,6 +50,14 @@ das Routing (Standard; abwählbar mit `-NoRouting`) lädt die Länder-PBFs von
 Geofabrik (**DE ~4 GB**, AT/CH je ~0,5 GB — nur die Länder der gewählten Städte).
 Der erste Start baut danach Routing-Graph und Such-Index — **einige Minuten Geduld**;
 der Web-Client überbrückt die Adresssuche solange automatisch über photon.komoot.io.
+Liegt das Repository vollständig lokal vor, nimmt die Adresssuche die Geocoder-Dateien
+direkt aus `docs/data/` — ganz ohne GitHub-Download.
+
+**Woran erkenne ich, dass noch geladen wird?** Solange Module fehlen, rotiert im
+Web-Client ein Ring um das BaumRadar-Logo; Hover (oder Fokus) darüber öffnet ein
+Overlay mit dem echten Stand pro Modul — dieselben Meldungen wie `docker logs`
+(z. B. „schneidet Stadt-Ausschnitte 3–4/12"). Meldet sich eine laufende Phase
+15 Minuten nicht, markiert das Overlay sie als „hängt evtl.".
 
 ## Sicherheit (auch für Heim-/Schulnetz)
 

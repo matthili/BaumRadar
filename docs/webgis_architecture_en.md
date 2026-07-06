@@ -112,10 +112,22 @@ Address and POI search ("TU Wien", "Kolinplatz 1") locally, without 11 GB countr
 1. **Source** is the official **Photon planet dump** (`.jsonl.zst`, 25.9 GB) — line-wise JSON batches, every place with a `centroid` coordinate.
 2. The **GeocoderCutter** in the `data-processor` streams the dump **once** (zstd → Jackson streaming, ~38 min for 367 M places) and distributes each place into the city files whose bbox+15 km margin contains it. Every file keeps the header and CountryInfo lines — it remains a **standalone, Photon-importable dump**.
 3. Publication is per city (`geocoder_<city>.jsonl.gz`, signed, chunked above 50 MB); refreshes are triggered per city from the backend runner UI — street names change slowly, quarterly is plenty.
-4. The **photon container** downloads the slices for the `CITY_FILTER` cities on first start, merges them (skipping the preamble lines of subsequent files — Photon 1.x allows only *one* import per database) and then serves `/api` incl. typo tolerance, POIs and `bbox` scoping.
+4. The **photon container** obtains the slices for the `CITY_FILTER` cities on first start — if the repository is fully checked out locally, straight from `docs/data/` (read-only mount `/local-data`, **no GitHub download**), otherwise from GitHub Pages —, merges them (skipping the preamble lines of subsequent files — Photon 1.x allows only *one* import per database) and then serves `/api` incl. typo tolerance, POIs and `bbox` scoping.
 5. If the local instance is absent (profile not started), the client transparently falls back to **photon.komoot.io** — with a visible note that queries leave the machine.
 
 A place inside the overlap of two city margins (Ruhr area!) deliberately lands in both files — every file is self-contained; Photon deduplicates at import via the stable `place_id`.
+
+---
+
+## Loading status: honest, not guessed
+
+The first start downloads and builds for minutes to hours, depending on city selection and bandwidth. The web client makes that visible: a **spinning ring around the logo** while modules are missing; hovering it shows a per-module overlay. The display is fed by **real signals**, not wall-clock guesses:
+
+1. **`stack.json`** — an nginx entrypoint script records at container start what this stack is *supposed* to load (profiles `routing`/`geocoding` + `CITY_FILTER`, passed through by the start script). Deselected modules thus show as "disabled" instead of loading forever.
+2. **`/status/<job>.json`** — the entrypoint scripts of graph-builder, graphhopper and photon mirror their progress messages (`{phase, detail, updatedAt}`) into a shared volume that nginx serves read-only. The overlay therefore shows the same phase as `docker logs` — "cutting city extracts 3–4/12", "building search index" — just without a terminal.
+3. **Live probes** against GeoServer, WFS data, GraphHopper and Photon are the only source of "ready" — only what actually responds turns green.
+
+Deliberately **no timeout**: a first start may legitimately take hours (large cities, slow line). Instead there is a **staleness warning** — if the `updatedAt` stamp of a running phase does not move for 15 minutes, the overlay reports "possibly stuck (docker logs)". A job that is working keeps refreshing its stamp; only a truly stalled one stands out.
 
 ---
 

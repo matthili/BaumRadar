@@ -45,6 +45,9 @@ if (-not (Test-Path ".env")) {
 }
 
 if ($Cities) { $env:CITY_FILTER = $Cities }
+# Dem Web-Client mitteilen, was dieser Stack laden SOLL (fuer die Status-Anzeige).
+$env:STACK_ROUTING   = if ($NoRouting)   { "0" } else { "1" }
+$env:STACK_GEOCODING = if ($NoGeocoding) { "0" } else { "1" }
 
 Write-Host "Baue und starte Container (erster Lauf lädt Basis-Images und Stadtdaten) ..." -ForegroundColor Cyan
 docker compose @profiles up -d --build

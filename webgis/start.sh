@@ -46,6 +46,9 @@ if [ ! -f .env ]; then
 fi
 
 [ -n "$CITIES" ] && export CITY_FILTER="$CITIES"
+# Dem Web-Client mitteilen, was dieser Stack laden SOLL (für die Status-Anzeige).
+export STACK_ROUTING="$ROUTING"
+export STACK_GEOCODING="$GEOCODING"
 
 echo "Baue und starte Container (erster Lauf lädt Basis-Images und Stadtdaten) ..."
 docker compose "${PROFILES[@]}" up -d --build

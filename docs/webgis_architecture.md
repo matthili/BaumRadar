@@ -112,10 +112,22 @@ Adress- und POI-Suche („TU Wien", „Kolinplatz 1") lokal, ohne 11-GB-Länder-
 1. **Quelle** ist der offizielle **Photon-Planet-Dump** (`.jsonl.zst`, 25,9 GB) — zeilenweise JSON-Batches, jeder Ort mit `centroid`-Koordinate.
 2. Der **GeocoderCutter** im `data-processor` streamt den Dump **einmal** (zstd → Jackson-Streaming, ~38 min für 367 Mio Orte) und verteilt jeden Ort auf die Stadt-Dateien, deren BBox+15-km-Rand ihn enthält. Jede Datei behält Kopf- und CountryInfo-Zeile — sie bleibt ein **eigenständig Photon-importierbarer Dump**.
 3. Publiziert wird pro Stadt (`geocoder_<stadt>.jsonl.gz`, signiert, >50 MB gechunkt), Aktualisierung über die Backend-Runner-UI je Stadt einzeln — Straßennamen ändern sich träge, quartalsweise reicht.
-4. Der **photon-Container** lädt beim ersten Start die Häppchen der `CITY_FILTER`-Städte, merged sie (Präambel-Zeilen der Folge-Dateien überspringen — Photon 1.x erlaubt nur *einen* Import pro Datenbank) und bedient dann `/api` inkl. Tippfehler-Toleranz, POIs und `bbox`-Scoping.
+4. Der **photon-Container** besorgt sich beim ersten Start die Häppchen der `CITY_FILTER`-Städte — liegt das Repository vollständig lokal vor, direkt aus `docs/data/` (read-only-Mount `/local-data`, **kein GitHub-Download**), sonst von GitHub Pages —, merged sie (Präambel-Zeilen der Folge-Dateien überspringen — Photon 1.x erlaubt nur *einen* Import pro Datenbank) und bedient dann `/api` inkl. Tippfehler-Toleranz, POIs und `bbox`-Scoping.
 5. Fällt die lokale Instanz aus (Profil nicht gestartet), wechselt der Client transparent auf **photon.komoot.io** — mit sichtbarem Hinweis, dass Anfragen den Rechner verlassen.
 
 Ein Ort im Überlappungsbereich zweier Stadt-Ränder (Ruhrgebiet!) landet bewusst in beiden Dateien — jede Datei ist eigenständig vollständig; Photon dedupliziert beim Import über die stabile `place_id`.
+
+---
+
+## Lade-Status: ehrlich statt geraten
+
+Der erste Start lädt und baut — je nach Städte-Auswahl und Leitung — Minuten bis Stunden. Der Web-Client macht das sichtbar: ein **rotierender Ring um das Logo**, solange Module fehlen; per Hover ein Overlay mit dem Stand pro Modul. Die Anzeige speist sich aus **echten Signalen** statt aus Wanduhr-Schätzungen:
+
+1. **`stack.json`** — ein nginx-Entrypoint-Skript schreibt beim Container-Start, was dieser Stack laden *soll* (Profile `routing`/`geocoding` + `CITY_FILTER`, vom Start-Skript durchgereicht). Abgewählte Module erscheinen so als „deaktiviert" statt ewig als „lädt".
+2. **`/status/<job>.json`** — die Entrypoint-Skripte von graph-builder, graphhopper und photon spiegeln ihre Fortschritts-Meldungen (`{phase, detail, updatedAt}`) in ein geteiltes Volume, das nginx read-only ausliefert. Das Overlay zeigt damit dieselbe Phase wie `docker logs` — „schneidet Stadt-Ausschnitte 3–4/12", „baut Suchindex" —, nur ohne Terminal.
+3. **Live-Probes** gegen GeoServer, WFS-Daten, GraphHopper und Photon sind das einzige „bereit" — grün wird nur, was tatsächlich antwortet.
+
+Bewusst **kein Timeout**: ein Erststart darf legitim Stunden dauern (große Städte, langsame Leitung). Stattdessen eine **Staleness-Warnung** — bewegt sich der `updatedAt`-Stempel einer laufenden Phase 15 Minuten nicht, meldet das Overlay „hängt evtl. (docker logs)". Ein Job, der arbeitet, aktualisiert seinen Stempel ja laufend; nur ein wirklich stehender fällt auf.
 
 ---
 

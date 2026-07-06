@@ -14,6 +14,7 @@ import { MapService } from './map.service';
 import { GeocoderService } from './geocoder.service';
 import { City, GenusStat, GeocodeHit, LonLat, PopupData, RouteProfile, RouteResult, SpeciesStat } from './models';
 import { RoutingService } from './routing.service';
+import { StatusService } from './status.service';
 import { matchGenera } from './search';
 
 /**
@@ -37,6 +38,8 @@ export class App implements AfterViewInit {
   private readonly catalog = inject(CatalogService);
   private readonly routingService = inject(RoutingService);
   private readonly geocoder = inject(GeocoderService);
+  /** Lade-Status des Stacks (Ring ums Logo + Hover-Overlay). */
+  readonly status = inject(StatusService);
 
   private readonly mapHost = viewChild.required<ElementRef<HTMLDivElement>>('mapHost');
   private readonly popupHost = viewChild.required<ElementRef<HTMLDivElement>>('popupHost');
@@ -148,6 +151,7 @@ export class App implements AfterViewInit {
       (data) => this.popup.set(data),
       (name) => this.routeName.set(name),
     );
+    this.status.start();
     void this.loadData();
   }
 

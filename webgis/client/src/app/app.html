@@ -1,11 +1,44 @@
 <!-- Vollflächige Karte; alles andere schwebt als Glas-Panel darüber (App-Look). -->
 <div class="map-host" #mapHost></div>
 
-<header class="brand glass">
-  <img class="brand-logo" src="logo_baumradar.png" alt="BaumRadar-Logo" width="38" height="38">
+<header class="brand glass" [class.loading]="status.anyPending()">
+  <span class="logo-wrap">
+    <img class="brand-logo" src="logo_baumradar.png" alt="BaumRadar-Logo" width="38" height="38">
+    @if (status.anyPending()) {
+      <span class="logo-ring" aria-hidden="true"></span>
+    }
+  </span>
   <div>
     <h1>BaumRadar <span class="thin">WebGIS</span></h1>
     <p>OGC-Tech-Demo &middot; WMS 1.3.0 &middot; WFS 2.0 &middot; OGC API Features</p>
+  </div>
+
+  <!-- Hover/Focus-Overlay: echter Modul-Status aus stack.json + /status/ + Probes -->
+  <div class="status-pop glass" role="status">
+    <p class="status-head">
+      System-Status
+      @if (status.cityFilter()) {
+        <span class="cities">St&auml;dte: {{ status.cityFilter() }}</span>
+      } @else {
+        <span class="cities">alle St&auml;dte</span>
+      }
+    </p>
+    @for (m of status.modules(); track m.key) {
+      <div class="status-row" [class]="'st-' + m.state">
+        <span class="st-icon" aria-hidden="true">
+          @switch (m.state) {
+            @case ('ready') { &#10003; }
+            @case ('disabled') { &mdash; }
+            @case ('stalled') { &#9888; }
+            @default { <span class="st-spin"></span> }
+          }
+        </span>
+        <span class="st-label">{{ m.label }}</span>
+        <span class="st-text">{{ m.text }}</span>
+      </div>
+    } @empty {
+      <p class="status-row">pr&uuml;fe &hellip;</p>
+    }
   </div>
 </header>
 

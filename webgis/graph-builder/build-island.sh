@@ -10,6 +10,14 @@ CITY_FILTER="${CITY_FILTER:-}"        # kommagetrennt; leer = alle Städte
 OUT="/data/island.osm.pbf"
 mkdir -p /osm /data
 
+# Phase für die Status-Anzeige des Web-Clients (Best-Effort).
+status() {
+  [ -d /status ] || return 0
+  printf '{"phase":"%s","detail":"%s","updatedAt":"%s"}\n' \
+    "$1" "${2:-}" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > /status/graph-builder.json 2>/dev/null || true
+}
+status "startet"
+
 declare -A URL=(
   [Deutschland]="https://download.geofabrik.de/europe/germany-latest.osm.pbf"
   [Österreich]="https://download.geofabrik.de/europe/austria-latest.osm.pbf"
@@ -42,6 +50,7 @@ for COUNTRY in Deutschland Österreich Schweiz; do
 
   if [ ! -f "${PBF[$COUNTRY]}" ]; then
     echo "$COUNTRY-PBF laden (groß, wird danach gecacht)…"
+    status "lädt Länder-Daten" "$COUNTRY (einmalig, mehrere GB)"
     # Abbruchsicher: erst als .part laden (mit Resume, falls ein Vorlauf abbrach),
     # dann atomar umbenennen — der finale Name existiert nur vollständig.
     curl -fSL -C - "${URL[$COUNTRY]}" -o "${PBF[$COUNTRY]}.part"
@@ -64,6 +73,7 @@ for COUNTRY in Deutschland Österreich Schweiz; do
        '{directory:"/osm", extracts: $ex[$i:$i+$n]}' > "$CFG"
     upper=$(( i + BATCH > N ? N : i + BATCH ))
     echo "$COUNTRY: extrahiere Stadt-BBox $((i+1))–$upper von $N …"
+    status "schneidet Stadt-Ausschnitte" "$COUNTRY $((i+1))-$upper/$N"
     osmium extract -s simple -c "$CFG" --overwrite "${PBF[$COUNTRY]}"
     rm -f "$CFG"
     i=$(( i + BATCH ))
@@ -71,8 +81,10 @@ for COUNTRY in Deutschland Österreich Schweiz; do
   while IFS= read -r o; do ALL+=("/osm/$o"); done < <(jq -r '.[].output' <<<"$EX")
 done
 
-if [ "${#ALL[@]}" -eq 0 ]; then echo "Keine Extrakte erzeugt — nichts zu tun."; exit 1; fi
+if [ "${#ALL[@]}" -eq 0 ]; then status "Fehler" "keine Extrakte erzeugt"; echo "Keine Extrakte erzeugt — nichts zu tun."; exit 1; fi
 echo "Merge ${#ALL[@]} Stadt-Extrakt(e) → $OUT"
+status "führt Ausschnitte zusammen" "${#ALL[@]} Städte"
 osmium merge --overwrite "${ALL[@]}" -o "$OUT"
+status "fertig"
 echo "Insel-PBF fertig:"
 osmium fileinfo "$OUT" | grep -iE "size|nodes|ways|relations|box" || true

@@ -47,6 +47,104 @@
   flex: none;
 }
 
+/* Lade-Ring ums Logo (rotiert, solange irgendein Modul lädt). */
+.logo-wrap {
+  position: relative;
+  flex: none;
+  display: inline-flex;
+}
+
+.logo-ring {
+  position: absolute;
+  inset: -5px;
+  border-radius: 50%;
+  border: 2.5px solid rgba(176, 241, 167, 0.22);
+  border-top-color: var(--br-primary-bright);
+  animation: logo-spin 1.1s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes logo-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* System-Status-Overlay: erscheint beim Drüberfahren über den Marken-Kopf. */
+.status-pop {
+  display: none;
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  min-width: 320px;
+  max-width: 420px;
+  padding: 12px 14px;
+  font-size: 12.5px;
+  z-index: 6;
+}
+
+.brand:hover .status-pop,
+.brand:focus-within .status-pop {
+  display: block;
+}
+
+.status-head {
+  margin: 0 0 8px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--br-primary-container);
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+
+  .cities {
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: 0;
+    color: var(--br-on-glass-muted);
+  }
+}
+
+.status-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 3px 0;
+
+  .st-icon {
+    width: 16px;
+    flex: none;
+    text-align: center;
+  }
+
+  .st-label {
+    flex: none;
+    min-width: 110px;
+    font-weight: 550;
+  }
+
+  .st-text {
+    color: var(--br-on-glass-muted);
+    overflow-wrap: anywhere;
+  }
+
+  &.st-ready .st-icon { color: var(--br-primary-bright); }
+  &.st-disabled { opacity: 0.55; }
+  &.st-stalled .st-icon,
+  &.st-stalled .st-text { color: #ffb59b; }
+}
+
+/* Mini-Spinner in Statuszeilen, die gerade arbeiten. */
+.st-spin {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid rgba(176, 241, 167, 0.25);
+  border-top-color: var(--br-primary-bright);
+  animation: logo-spin 1.1s linear infinite;
+}
+
 /* --- Steuer-Panel rechts -------------------------------------------------- */
 .panel {
   position: absolute;
