@@ -47,7 +47,8 @@ PostGIS und provisioniert GeoServer per REST — idempotent, unveränderte Städ
 `CITY_FILTER` (Zug ~2 MB … alle 19 ~600 MB) · die Adresssuche (Standard; abwählbar mit
 `-NoGeocoding`) lädt die Geocoder-Häppchen der gewählten Städte (15–176 MB je Stadt) ·
 das Routing (Standard; abwählbar mit `-NoRouting`) lädt die Länder-PBFs von
-Geofabrik (**DE ~4 GB**, AT/CH je ~0,5 GB — nur die Länder der gewählten Städte).
+Geofabrik (**DE ~4 GB**, AT/CH je ~0,5 GB — nur die Länder der gewählten Städte;
+fällt Geofabrik aus, weicht der Download automatisch auf Mirrors aus: GWDG bzw. osm.fr).
 Der erste Start baut danach Routing-Graph und Such-Index — **einige Minuten Geduld**;
 der Web-Client überbrückt die Adresssuche solange automatisch über photon.komoot.io.
 Liegt das Repository vollständig lokal vor, nimmt die Adresssuche die Geocoder-Dateien

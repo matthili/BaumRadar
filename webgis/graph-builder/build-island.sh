@@ -18,16 +18,53 @@ status() {
 }
 status "startet"
 
-declare -A URL=(
-  [Deutschland]="https://download.geofabrik.de/europe/germany-latest.osm.pbf"
-  [Österreich]="https://download.geofabrik.de/europe/austria-latest.osm.pbf"
-  [Schweiz]="https://download.geofabrik.de/europe/switzerland-latest.osm.pbf"
+# Je Land: Primärquelle Geofabrik + verifizierter Ausweich-Mirror (Reihenfolge = Priorität).
+# Geofabrik kann ausfallen/drosseln (2026-07-06 live erlebt: Timeouts + kaputte 302);
+# GWDG spiegelt FLACH (kein europe/-Unterordner!), osm.fr schneidet eigene Extrakte.
+declare -A URLS=(
+  [Deutschland]="https://download.geofabrik.de/europe/germany-latest.osm.pbf https://ftp5.gwdg.de/pub/misc/openstreetmap/download.geofabrik.de/germany-latest.osm.pbf"
+  [Österreich]="https://download.geofabrik.de/europe/austria-latest.osm.pbf https://download.openstreetmap.fr/extracts/europe/austria.osm.pbf"
+  [Schweiz]="https://download.geofabrik.de/europe/switzerland-latest.osm.pbf https://download.openstreetmap.fr/extracts/europe/switzerland.osm.pbf"
 )
 declare -A PBF=(
   [Deutschland]="/osm/germany.osm.pbf"
   [Österreich]="/osm/austria.osm.pbf"
   [Schweiz]="/osm/switzerland.osm.pbf"
 )
+
+# Ein Land laden: Quellen der Reihe nach, bis zu 3 Runden. Statt eines Gesamt-Timeouts
+# (Erstdownloads dürfen lange dauern) bricht --speed-limit/--speed-time nur STEHENDE
+# Transfers ab (<10 KiB/s für 60 s — auch "verbunden, aber keine Antwort").
+# Abbruchsicher: erst als .part laden, dann atomar umbenennen. Das .part wird nur bei
+# DERSELBEN Quelle fortgesetzt (Merkzettel .part.src) — Mirrors tragen nicht byte-
+# identische Dateien, ein quellgemischtes .part wäre still korrupt.
+fetch_country() {
+  local country="$1" dest="$2"; shift 2
+  local round url host rc n=0
+  for round in 1 2 3; do
+    for url in "$@"; do
+      n=$((n+1)); host="${url#*//}"; host="${host%%/*}"
+      echo "$country: lade von $host (Anlauf $n) — $url"
+      status "lädt Länder-Daten" "$country von $host (einmalig, mehrere GB; Anlauf $n)"
+      if [ -f "$dest.part.src" ] && [ "$(cat "$dest.part.src")" != "$url" ]; then rm -f "$dest.part"; fi
+      printf '%s' "$url" > "$dest.part.src"
+      if curl -fSL --connect-timeout 20 --speed-limit 10240 --speed-time 60 -C - "$url" -o "$dest.part"; then
+        mv "$dest.part" "$dest"; rm -f "$dest.part.src"; return 0
+      else
+        rc=$?
+        echo "$country: $host liefert nicht (curl-Exit $rc) — probiere weiter …"
+      fi
+    done
+    if [ "$round" -lt 3 ]; then
+      echo "$country: alle Quellen fehlgeschlagen — 30 s Pause, dann Runde $((round+1)) …"
+      status "lädt Länder-Daten" "$country: Quellen antworten nicht, neuer Versuch in 30 s"
+      sleep 30
+    fi
+  done
+  status "Fehler" "$country-Download scheitert an allen Quellen"
+  echo "$country: Download endgültig fehlgeschlagen (Quellen: $*)." >&2
+  return 1
+}
 
 echo "Katalog laden: $CATALOG_URL"
 CAT="$(curl -fsSL "$CATALOG_URL")"
@@ -50,11 +87,7 @@ for COUNTRY in Deutschland Österreich Schweiz; do
 
   if [ ! -f "${PBF[$COUNTRY]}" ]; then
     echo "$COUNTRY-PBF laden (groß, wird danach gecacht)…"
-    status "lädt Länder-Daten" "$COUNTRY (einmalig, mehrere GB)"
-    # Abbruchsicher: erst als .part laden (mit Resume, falls ein Vorlauf abbrach),
-    # dann atomar umbenennen — der finale Name existiert nur vollständig.
-    curl -fSL -C - "${URL[$COUNTRY]}" -o "${PBF[$COUNTRY]}.part"
-    mv "${PBF[$COUNTRY]}.part" "${PBF[$COUNTRY]}"
+    fetch_country "$COUNTRY" "${PBF[$COUNTRY]}" ${URLS[$COUNTRY]}
   else
     echo "$COUNTRY: nutze gecachtes ${PBF[$COUNTRY]}"
   fi
