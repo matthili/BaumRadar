@@ -35,10 +35,12 @@ if (-not (Test-Path ".env")) {
     function New-Secret { -join ((48..57) + (97..122) + (65..90) | Get-Random -Count 24 | ForEach-Object { [char]$_ }) }
     $pgPw = New-Secret
     $gsPw = New-Secret
-    (Get-Content ".env.example" -Raw) `
-        -replace "(?m)^PG_PASSWORD=.*$", "PG_PASSWORD=$pgPw" `
-        -replace "(?m)^GEOSERVER_PASSWORD=.*$", "GEOSERVER_PASSWORD=$gsPw" |
-        Set-Content ".env" -Encoding utf8 -NoNewline
+    # Explizite .NET-UTF-8-APIs statt Get-Content/Set-Content: Windows PowerShell 5.1
+    # liest BOM-lose UTF-8-Dateien sonst als ANSI und brennt Umlaut-Salat in die .env.
+    $tpl = [System.IO.File]::ReadAllText((Join-Path $PSScriptRoot ".env.example"), [System.Text.Encoding]::UTF8)
+    $tpl = $tpl -replace "(?m)^PG_PASSWORD=.*$", "PG_PASSWORD=$pgPw" `
+                -replace "(?m)^GEOSERVER_PASSWORD=.*$", "GEOSERVER_PASSWORD=$gsPw"
+    [System.IO.File]::WriteAllText((Join-Path $PSScriptRoot ".env"), $tpl, [System.Text.UTF8Encoding]::new($false))
     Write-Host ".env angelegt - mit zufälligen Passwörtern (einsehbar in webgis\.env)." -ForegroundColor Green
 }
 

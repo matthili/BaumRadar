@@ -218,7 +218,7 @@ public class Translator {
         speciesDict.put("Spitz-Ahorn", "Norway Maple");
         speciesDict.put("Berg-Ahorn", "Sycamore Maple");
         speciesDict.put("Feld-Ahorn", "Field Maple");
-        speciesDict.put("HÃ¤nge-Birke", "Silver Birch");
+        speciesDict.put("Hänge-Birke", "Silver Birch");
         speciesDict.put("Stiel-Eiche", "English Oak");
         speciesDict.put("Winter-Linde", "Small-leaved Linden");
         speciesDict.put("Sommer-Linde", "Large-leaved Linden");

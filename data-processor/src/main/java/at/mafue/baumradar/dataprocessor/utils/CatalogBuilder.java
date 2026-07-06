@@ -128,7 +128,9 @@ public class CatalogBuilder {
         sb.append("\n  ]\n");
         sb.append("}\n");
 
-        try (FileWriter writer = new FileWriter(outputFile)) {
+        // Charset explizit: der Katalog enthält Umlaute („Österreich") und muss auf
+        // jeder JVM/Plattform identisch als UTF-8 entstehen.
+        try (FileWriter writer = new FileWriter(outputFile, StandardCharsets.UTF_8)) {
             writer.write(sb.toString());
         }
     }
