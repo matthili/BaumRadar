@@ -8,6 +8,7 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
+echo "BaumRadar WebGIS - Startskript"
 command -v docker >/dev/null || { echo "FEHLER: Docker ist nicht installiert."; exit 1; }
 docker compose version >/dev/null 2>&1 || { echo "FEHLER: Docker Compose v2 fehlt."; exit 1; }
 
@@ -37,7 +38,10 @@ if [ "$DOWN" = "1" ]; then
 fi
 
 if [ ! -f .env ]; then
-  secret() { tr -dc 'A-Za-z0-9' </dev/urandom | head -c 24; }
+  # Kein `tr </dev/urandom | head -c 24`: head schließt die Pipe nach 24 Zeichen,
+  # tr stirbt per SIGPIPE (Exit 141) und `set -euo pipefail` bricht das Skript
+  # LAUTLOS ab. Daher endliche Byte-Menge lesen und erst in Bash kürzen.
+  secret() { local raw; raw="$(head -c 512 /dev/urandom | tr -dc 'A-Za-z0-9')"; printf '%s' "${raw:0:24}"; }
   PG_PW="$(secret)"; GS_PW="$(secret)"
   sed -e "s/^PG_PASSWORD=.*/PG_PASSWORD=${PG_PW}/" \
       -e "s/^GEOSERVER_PASSWORD=.*/GEOSERVER_PASSWORD=${GS_PW}/" \
@@ -51,7 +55,8 @@ export STACK_ROUTING="$ROUTING"
 export STACK_GEOCODING="$GEOCODING"
 
 echo "Baue und starte Container (erster Lauf lädt Basis-Images und Stadtdaten) ..."
-docker compose "${PROFILES[@]}" up -d --build
+# ${arr[@]+...}: leeres Array unter `set -u` ist in bash < 4.4 (macOS!) ein Fehler.
+docker compose ${PROFILES[@]+"${PROFILES[@]}"} up -d --build
 
 WEB_PORT="$(grep -E '^WEB_PORT=' .env | cut -d= -f2)"; WEB_PORT="${WEB_PORT:-8082}"
 GS_PORT="$(grep -E '^GEOSERVER_PORT=' .env | cut -d= -f2)"; GS_PORT="${GS_PORT:-8081}"
