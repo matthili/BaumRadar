@@ -91,7 +91,7 @@ genus_de IN ('Birke','Hasel') AND city_id = 'wien'
 
 ![Route sequence](architecture/09_webgis_route_geocoding.png)
 
-**Island graph:** the `graph-builder` downloads the Geofabrik country PBFs (once, volume-cached), cuts out the 19 city bboxes (+ margin) with `osmium extract` and merges them into **one** `island.osm.pbf` (a few hundred MB instead of ~5 GB). Routing works within each city; between cities there is deliberately no connection. GraphHopper builds its graph from it on first start (cached in a volume) — profiles `foot` and `bike`, **flexible mode** (no contraction-hierarchies preprocessing), so each request can carry a custom model.
+**Island graph:** the `graph-builder` downloads the Geofabrik country PBFs (once, volume-cached), cuts out the 19 city bboxes (+ margin) with `osmium extract` and merges them into **one** `island.osm.pbf` (a few hundred MB instead of ~5 GB). Routing works within each city; between cities there is deliberately no connection. GraphHopper builds its graph from it on first start (cached in a volume) — profiles `foot` and `bike`, **flexible mode** (no contraction-hierarchies preprocessing), so each request can carry a custom model. A **build-plan marker** (`island.marker`: selected cities, bboxes, margin — same idea as Photon's `imported_versions`) makes the graph-builder idempotent: if the plan is unchanged and the island exists, a re-start skips extraction and merge in seconds, and the GraphHopper cache stays valid too. Force a rebuild with fresher OSM data by deleting the `routingdata` volume.
 
 **Zone avoidance (corridor approach):** you cannot feed GraphHopper thousands of circle zones globally. Instead, the client fetches only the relevant zones **per route request**:
 

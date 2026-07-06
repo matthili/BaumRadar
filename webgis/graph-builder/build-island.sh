@@ -78,11 +78,17 @@ fetch_country() {
 echo "Katalog laden: $CATALOG_URL"
 CAT="$(curl -fsSL "$CATALOG_URL")"
 
-ALL=()
+# Extract-Configs je Land VORAB berechnen — daraus entsteht auch der "Bauplan" (SPEC):
+# gewählte Städte, ihre BBoxen und der Rand. Ist der Bauplan unverändert und die Insel
+# vorhanden, gibt es nichts zu tun (gleiche Idee wie Photons imported_versions):
+# erneute Starts kosten Sekunden statt einer kompletten Extraktion, und GraphHoppers
+# Graph-Cache bleibt gültig, weil die Insel unangetastet bleibt.
+declare -A EXMAP NMAP
+SPEC="margin=$MARGIN"
 for COUNTRY in Deutschland Österreich Schweiz; do
   # osmium-Extract-Config aus den Katalog-BBoxen. Katalog-BBox = [minLat,minLon,maxLat,maxLon];
   # osmium erwartet bbox = [left,bottom,right,top] = [minLon,minLat,maxLon,maxLat] (+ Puffer).
-  EX="$(jq -c --arg c "$COUNTRY" --argjson m "$MARGIN" --arg f "$CITY_FILTER" '
+  EXMAP[$COUNTRY]="$(jq -c --arg c "$COUNTRY" --argjson m "$MARGIN" --arg f "$CITY_FILTER" '
     ($f | split(",") | map(select(length>0))) as $ids
     | .cities[]
     | select(.country==$c)
@@ -90,8 +96,26 @@ for COUNTRY in Deutschland Österreich Schweiz; do
     | select(($ids|length)==0 or ($ids|index($cid)))
     | {output:("city_"+.id+".osm.pbf"),
        bbox:[(.boundingBox[1]-$m),(.boundingBox[0]-$m),(.boundingBox[3]+$m),(.boundingBox[2]+$m)]}
-  ' <<<"$CAT" | jq -s '.')"
-  N="$(jq 'length' <<<"$EX")"
+  ' <<<"$CAT" | jq -sc '.')"
+  NMAP[$COUNTRY]="$(jq 'length' <<<"${EXMAP[$COUNTRY]}")"
+  if [ "${NMAP[$COUNTRY]}" -gt 0 ]; then SPEC="$SPEC|$COUNTRY:${EXMAP[$COUNTRY]}"; fi
+done
+
+MARKER="/data/island.marker"
+if [ -f "$OUT" ] && [ -f "$MARKER" ] && [ "$(cat "$MARKER")" = "$SPEC" ]; then
+  echo "Insel-PBF ist aktuell (Städte, BBoxen und Rand unverändert) — überspringe Extraktion."
+  echo "Erzwungener Neubau (z. B. für frischere OSM-Daten): Volume 'routingdata' löschen."
+  status "fertig" "Insel aktuell — übersprungen"
+  exit 0
+fi
+# Marker erst NACH erfolgreichem Merge schreiben — und vor dem Bau entfernen, damit
+# ein abgebrochener Lauf nie eine halbe Insel als "aktuell" hinterlässt.
+rm -f "$MARKER"
+
+ALL=()
+for COUNTRY in Deutschland Österreich Schweiz; do
+  EX="${EXMAP[$COUNTRY]}"
+  N="${NMAP[$COUNTRY]}"
   if [ "$N" -eq 0 ]; then echo "$COUNTRY: keine (passenden) Städte, überspringe."; continue; fi
 
   if [ ! -f "${PBF[$COUNTRY]}" ]; then
@@ -127,6 +151,7 @@ if [ "${#ALL[@]}" -eq 0 ]; then status "Fehler" "keine Extrakte erzeugt"; echo "
 echo "Merge ${#ALL[@]} Stadt-Extrakt(e) → $OUT"
 status "führt Ausschnitte zusammen" "${#ALL[@]} Städte"
 osmium merge --overwrite "${ALL[@]}" -o "$OUT"
+printf '%s' "$SPEC" > "$MARKER"
 status "fertig"
 echo "Insel-PBF fertig:"
 osmium fileinfo "$OUT" | grep -iE "size|nodes|ways|relations|box" || true
