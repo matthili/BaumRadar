@@ -59,7 +59,14 @@ if [ -d "$DATA_DIR/photon_data" ] && [ -f "$MARKER" ] && [ "$(cat "$MARKER")" = 
 else
   echo "Baue Photon-Index für: $(printf '%s\n' "${ROWS[@]}" | cut -f1 | paste -sd', ' -)"
   rm -rf "$DATA_DIR/photon_data"
-  TMP="$(mktemp -d)"
+  # Arbeitsdateien INS VOLUME legen, nicht nach /tmp (= Container-Layer): der
+  # gemergte Dump erreicht bei 19 Städten >20 GB — im Layer ist das ein unsicht-
+  # barer Plattenfresser und bleibt nach abgebrochenen Importen liegen. Im Volume
+  # ist er sichtbar (docker system df), wird hier von Resten befreit und von
+  # `down -v` mit entsorgt.
+  TMP="$DATA_DIR/tmp"
+  rm -rf "$TMP"
+  mkdir -p "$TMP"
   # Photon 1.x: EIN `import` pro Datenbank (jeder Aufruf verwirft bestehende Inhalte).
   # Deshalb alle Stadt-Dateien zu EINEM Dump mergen: erste Datei komplett, bei den
   # weiteren die 2 Präambel-Zeilen (Kopf + CountryInfo) überspringen.
@@ -71,23 +78,27 @@ else
     urls="$(cut -f3 <<<"$row")"
     n=$((n + 1))
     status "lädt Stadt-Daten" "$n/$total: $id"
+    # Lokale Einzeldatei direkt aus dem Repo-Mount lesen (keine Kopie); Chunks und
+    # Downloads landen erst vollständig in $TMP — nur komplette Dateien werden gemerged.
     if [ -f "$LOCAL_DATA/geocoder_$id.jsonl.gz" ]; then
       echo "  [$id] nutze lokale Datei"
-      cat "$LOCAL_DATA/geocoder_$id.jsonl.gz" > "$TMP/$id.jsonl.gz"
+      SRC="$LOCAL_DATA/geocoder_$id.jsonl.gz"
     elif [ -f "$LOCAL_DATA/geocoder_$id.jsonl.gz.001" ]; then
       echo "  [$id] nutze lokale Chunks"
       cat "$LOCAL_DATA/geocoder_$id.jsonl.gz."0* > "$TMP/$id.jsonl.gz"
+      SRC="$TMP/$id.jsonl.gz"
     else
       for u in $urls; do
         echo "  [$id] lade $(basename "$u") …"
         curl -fsSL "$u" >> "$TMP/$id.jsonl.gz"
       done
+      SRC="$TMP/$id.jsonl.gz"
     fi
     if [ "$first" = "1" ]; then
-      gunzip -c "$TMP/$id.jsonl.gz" >> "$TMP/merged.jsonl"
+      gunzip -c "$SRC" >> "$TMP/merged.jsonl"
       first=0
     else
-      gunzip -c "$TMP/$id.jsonl.gz" | tail -n +3 >> "$TMP/merged.jsonl"
+      gunzip -c "$SRC" | tail -n +3 >> "$TMP/merged.jsonl"
     fi
     rm -f "$TMP/$id.jsonl.gz"
   done

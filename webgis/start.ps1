@@ -2,13 +2,15 @@
 #   .\start.cmd                           Voll-Stack: Karte + Routing + Adresssuche, alle 19 Städte
 #   .\start.cmd -Cities zug,wien          nur bestimmte Städte (schneller Erststart, kleine Downloads)
 #   .\start.cmd -NoRouting -NoGeocoding   nur die Karte (kleinster Download)
-#   .\start.cmd -Down                     alles stoppen
+#   .\start.cmd -Down                     alles stoppen (Daten-Volumes bleiben)
+#   .\start.cmd -Purge                    ALLES entfernen: Container, Daten, Images
 # Beim ersten Lauf wird .env aus .env.example erzeugt - mit ZUFÄLLIGEN Passwörtern.
 param(
     [string]$Cities = "",
     [switch]$NoRouting,
     [switch]$NoGeocoding,
-    [switch]$Down
+    [switch]$Down,
+    [switch]$Purge
 )
 $ErrorActionPreference = "Stop"
 Set-Location $PSScriptRoot
@@ -24,9 +26,20 @@ $profiles = @()
 if (-not $NoRouting)   { $profiles += @("--profile", "routing") }
 if (-not $NoGeocoding) { $profiles += @("--profile", "geocoding") }
 
+if ($Purge) {
+    Write-Host "Entferne BaumRadar WebGIS vollstaendig: Container, Daten-Volumes und Images ..." -ForegroundColor Yellow
+    docker compose --profile routing --profile geocoding down -v --rmi all --remove-orphans
+    # Maven-Cache aus den Entwickler-Testkommandos (per Hand angelegt, kennt Compose nicht).
+    # cmd-Huelle: unter PS 5.1 kann natives stderr + 2>$null + EAP=Stop sonst als Fehler werten.
+    & cmd /c "docker volume rm baumradar-m2 >nul 2>&1"
+    Write-Host "Fertig. Es bleibt nur das Repository (und webgis\.env - bei Bedarf selbst loeschen)."
+    Write-Host "Hinweis: Meldungen wie 'image is being used' sind harmlos (Basis-Image anderweitig in Gebrauch)."
+    exit 0
+}
+
 if ($Down) {
     docker compose --profile routing --profile geocoding down
-    Write-Host "Gestoppt. Daten-Volumes bleiben erhalten (kompletter Reset: docker compose down -v)."
+    Write-Host "Gestoppt. Daten-Volumes bleiben erhalten (kompletter Reset: .\start.cmd -Purge)."
     exit 0
 }
 

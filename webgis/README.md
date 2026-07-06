@@ -33,8 +33,14 @@ Empfehlenswert zum ersten Ausprobieren (kleiner, schneller):
 ```powershell
 .\start.cmd -Cities zug,wien                       # nur bestimmte Städte (kleine Downloads)
 .\start.cmd -Cities zug -NoRouting -NoGeocoding    # nur die Karte (kleinster Download)
-.\start.cmd -Down                                  # alles stoppen
+.\start.cmd -Down                                  # alles stoppen (Daten-Volumes bleiben)
+.\start.cmd -Purge                                 # ALLES entfernen (Container, Daten, Images)
 ```
+
+Unter Linux/macOS heißen die Schalter `--cities`, `--no-routing`, `--no-geocoding`,
+`--down`, `--purge`. `-Down`/`--down` stoppt nur (der nächste Start setzt auf den
+gecachten Daten auf); `-Purge`/`--purge` baut alles zurück, bis nur noch das
+Repository übrig ist.
 
 Das Skript legt beim ersten Lauf die `.env` an — **mit zufällig generierten
 Passwörtern** statt Demo-Zugangsdaten — baut die Container und startet den Stack.
@@ -53,6 +59,12 @@ Der erste Start baut danach Routing-Graph und Such-Index — **einige Minuten Ge
 der Web-Client überbrückt die Adresssuche solange automatisch über photon.komoot.io.
 Liegt das Repository vollständig lokal vor, nimmt die Adresssuche die Geocoder-Dateien
 direkt aus `docs/data/` — ganz ohne GitHub-Download.
+
+**Plattenbedarf (Voll-Stack, alle 19 Städte):** dauerhaft ~50–60 GB Docker-Daten
+(Länder-PBFs ~6 GB, PostGIS ~3–4 GB, Photon-Suchindex ~15–25 GB, Routing-Graph,
+Images/Build-Cache ~8–10 GB) — **in der Spitze während des ersten Photon-Imports
+bis ~75 GB**, weil der gemergte Rohdump (>20 GB) neben dem entstehenden Index liegt.
+Mit `-Cities zug` zum Ausprobieren bleibt alles zusammen unter ~10 GB.
 
 **Woran erkenne ich, dass noch geladen wird?** Solange Module fehlen, rotiert im
 Web-Client ein Ring um das BaumRadar-Logo; Hover (oder Fokus) darüber öffnet ein

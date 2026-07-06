@@ -3,7 +3,8 @@
 #   ./start.sh                               Voll-Stack: Karte + Routing + Adresssuche
 #   ./start.sh --cities zug,wien             nur bestimmte Städte (schneller Erststart)
 #   ./start.sh --no-routing --no-geocoding   nur die Karte (kleinster Download)
-#   ./start.sh --down                        alles stoppen
+#   ./start.sh --down                        alles stoppen (Daten-Volumes bleiben)
+#   ./start.sh --purge                       ALLES entfernen: Container, Daten, Images
 # Beim ersten Lauf wird .env aus .env.example erzeugt - mit ZUFÄLLIGEN Passwörtern.
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -17,12 +18,14 @@ ROUTING=1
 GEOCODING=1
 CITIES=""
 DOWN=0
+PURGE=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --no-routing)   ROUTING=0 ;;
     --no-geocoding) GEOCODING=0 ;;
     --cities)       CITIES="${2:-}"; shift ;;
     --down)         DOWN=1 ;;
+    --purge)        PURGE=1 ;;
     *) echo "Unbekannte Option: $1"; exit 2 ;;
   esac
   shift
@@ -31,9 +34,19 @@ PROFILES=()
 [ "$ROUTING" = "1" ]   && PROFILES+=(--profile routing)
 [ "$GEOCODING" = "1" ] && PROFILES+=(--profile geocoding)
 
+if [ "$PURGE" = "1" ]; then
+  echo "Entferne BaumRadar WebGIS vollständig: Container, Daten-Volumes und Images ..."
+  docker compose --profile routing --profile geocoding down -v --rmi all --remove-orphans
+  # Maven-Cache aus den Entwickler-Testkommandos (per Hand angelegt, kennt Compose nicht).
+  docker volume rm baumradar-m2 >/dev/null 2>&1 || true
+  echo "Fertig. Es bleibt nur das Repository (und webgis/.env - bei Bedarf selbst löschen)."
+  echo "Hinweis: Meldungen wie 'image is being used' sind harmlos (Basis-Image anderweitig in Gebrauch)."
+  exit 0
+fi
+
 if [ "$DOWN" = "1" ]; then
   docker compose --profile routing --profile geocoding down
-  echo "Gestoppt. Daten-Volumes bleiben erhalten (kompletter Reset: docker compose down -v)."
+  echo "Gestoppt. Daten-Volumes bleiben erhalten (kompletter Reset: ./start.sh --purge)."
   exit 0
 fi
 
