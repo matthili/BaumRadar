@@ -40,7 +40,7 @@ declare -A PBF=(
 # identische Dateien, ein quellgemischtes .part wäre still korrupt.
 fetch_country() {
   local country="$1" dest="$2"; shift 2
-  local round url host rc n=0
+  local round url host rc hb n=0
   for round in 1 2 3; do
     for url in "$@"; do
       n=$((n+1)); host="${url#*//}"; host="${host%%/*}"
@@ -48,10 +48,19 @@ fetch_country() {
       status "lädt Länder-Daten" "$country von $host (einmalig, mehrere GB; Anlauf $n)"
       if [ -f "$dest.part.src" ] && [ "$(cat "$dest.part.src")" != "$url" ]; then rm -f "$dest.part"; fi
       printf '%s' "$url" > "$dest.part.src"
+      # Herzschlag mit Fortschritt: große Downloads (DE ~5 GB) dauern >15 min — ohne
+      # frische Stempel meldet das Status-Overlay fälschlich "hängt evtl.".
+      ( while sleep 60; do
+          mb="$(du -m "$dest.part" 2>/dev/null | cut -f1)"
+          status "lädt Länder-Daten" "$country von $host: ${mb:-0} MB geladen"
+        done ) &
+      hb=$!
       if curl -fSL --connect-timeout 20 --speed-limit 10240 --speed-time 60 -C - "$url" -o "$dest.part"; then
+        kill "$hb" 2>/dev/null || true
         mv "$dest.part" "$dest"; rm -f "$dest.part.src"; return 0
       else
         rc=$?
+        kill "$hb" 2>/dev/null || true
         echo "$country: $host liefert nicht (curl-Exit $rc) — probiere weiter …"
       fi
     done

@@ -25,7 +25,15 @@ fi
 if [ -d "$CACHE" ]; then
   status "startet Routing-Dienst"
 else
-  status "baut Routing-Graph" "$(du -m "$PBF" | cut -f1) MB OSM-Daten"
+  MB="$(du -m "$PBF" | cut -f1)"
+  status "baut Routing-Graph" "$MB MB OSM-Daten"
+  # Herzschlag, bis der Dienst antwortet: der Graph-Bau läuft komplett im exec'ten
+  # Java-Prozess — ohne frische Stempel meldet das Overlay nach 15 min "hängt evtl.".
+  ( S0=$SECONDS
+    while sleep 60; do
+      curl -sf -o /dev/null http://127.0.0.1:8989/info && break || true
+      status "baut Routing-Graph" "$MB MB OSM-Daten, läuft seit $(( (SECONDS - S0) / 60 )) min"
+    done ) &
 fi
 
 exec java ${JAVA_OPTS:--Xmx2g -Xms1g} -jar graphhopper-web.jar server config.yml

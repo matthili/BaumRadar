@@ -127,7 +127,7 @@ The first start downloads and builds for minutes to hours, depending on city sel
 2. **`/status/<job>.json`** — the entrypoint scripts of graph-builder, graphhopper and photon mirror their progress messages (`{phase, detail, updatedAt}`) into a shared volume that nginx serves read-only. The overlay therefore shows the same phase as `docker logs` — "cutting city extracts 3–4/12", "building search index" — just without a terminal.
 3. **Live probes** against GeoServer, WFS data, GraphHopper and Photon are the only source of "ready" — only what actually responds turns green.
 
-Deliberately **no timeout**: a first start may legitimately take hours (large cities, slow line). Instead there is a **staleness warning** — if the `updatedAt` stamp of a running phase does not move for 15 minutes, the overlay reports "possibly stuck (docker logs)". A job that is working keeps refreshing its stamp; only a truly stalled one stands out.
+Deliberately **no timeout**: a first start may legitimately take hours (large cities, slow line). Instead there is a **staleness warning** — if the `updatedAt` stamp of a running phase does not move for 15 minutes, the overlay reports "possibly stuck (docker logs)". So that long *single steps* (a 5 GB download, an hours-long index build inside one Java call) are not falsely flagged as stuck, they re-stamp via a **heartbeat** every minute — downloads even with progress ("Deutschland von download.geofabrik.de: 3,412 MB geladen"). Only a truly stalled job stands out.
 
 ---
 

@@ -102,10 +102,17 @@ else
     fi
     rm -f "$TMP/$id.jsonl.gz"
   done
-  status "baut Suchindex" "$(du -m "$TMP/merged.jsonl" | cut -f1) MB Rohdaten"
-  echo "  Importiere $(du -m "$TMP/merged.jsonl" | cut -f1) MB (unkomprimiert) …"
+  MB="$(du -m "$TMP/merged.jsonl" | cut -f1)"
+  status "baut Suchindex" "$MB MB Rohdaten"
+  echo "  Importiere $MB MB (unkomprimiert) …"
+  # Herzschlag: bei vielen Städten läuft der Import stundenlang in EINEM Java-Aufruf.
+  # Ohne frische Stempel meldet das Status-Overlay nach 15 min fälschlich "hängt evtl.".
+  S0=$SECONDS
+  ( while sleep 60; do status "baut Suchindex" "$MB MB Rohdaten, läuft seit $(( (SECONDS - S0) / 60 )) min"; done ) &
+  HEARTBEAT=$!
   java ${IMPORT_JAVA_OPTS:--Xmx2g} -jar "$JAR" import -data-dir "$DATA_DIR" \
     -import-file "$TMP/merged.jsonl"
+  kill "$HEARTBEAT" 2>/dev/null || true
   rm -rf "$TMP"
   echo "$WANT" > "$MARKER"
   echo "Import abgeschlossen."
