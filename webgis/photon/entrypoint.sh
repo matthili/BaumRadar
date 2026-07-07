@@ -57,6 +57,28 @@ MARKER="$DATA_DIR/imported_versions"
 if [ -d "$DATA_DIR/photon_data" ] && [ -f "$MARKER" ] && [ "$(cat "$MARKER")" = "$WANT" ]; then
   echo "Photon-Index ist aktuell — Import übersprungen."
 else
+  # Absturz-Wächter: `restart: unless-stopped` würde einen crashenden Import ENDLOS
+  # wiederholen (~18 GB Schreiblast pro Runde auf die SSD). Nach 3 Fehlversuchen
+  # ehrlich stehen bleiben. Der Zähler merkt sich die Java-Optionen der Fehlversuche:
+  # GEÄNDERTE Optionen (= der Nutzer hat reagiert) setzen ihn automatisch zurück —
+  # sonst wäre die dokumentierte Abhilfe (Heap erhöhen, neu starten) wirkungslos.
+  ATTEMPTS_F="$DATA_DIR/import_attempts"
+  OPTS_NOW="${IMPORT_JAVA_OPTS:--Xmx4g}"
+  ATTEMPTS=0
+  if [ -f "$ATTEMPTS_F" ]; then
+    PREV="$(cat "$ATTEMPTS_F")"   # Format: <anzahl>|<java-optionen>
+    if [ "${PREV#*|}" = "$OPTS_NOW" ]; then ATTEMPTS="${PREV%%|*}"; fi
+    case "$ATTEMPTS" in ''|*[!0-9]*) ATTEMPTS=0 ;; esac
+  fi
+  if [ "$ATTEMPTS" -ge 3 ]; then
+    rm -rf "$DATA_DIR/tmp"
+    status "Fehler" "Import ${ATTEMPTS}x abgestürzt (mit $OPTS_NOW) — meist zu wenig Speicher: PHOTON_IMPORT_JAVA_OPTS in .env erhöhen (z. B. -Xmx6g), dann Container neu starten. Details: docker logs baumradar-photon"
+    echo "FEHLER: Import bereits ${ATTEMPTS}x abgestürzt (mit $OPTS_NOW) — halte an, statt endlos neu zu versuchen."
+    echo "Abhilfe: PHOTON_IMPORT_JAVA_OPTS in .env erhöhen und Container neu starten — geänderte Einstellungen setzen den Zähler automatisch zurück."
+    sleep infinity
+  fi
+  printf '%s|%s' "$((ATTEMPTS + 1))" "$OPTS_NOW" > "$ATTEMPTS_F"
+
   echo "Baue Photon-Index für: $(printf '%s\n' "${ROWS[@]}" | cut -f1 | paste -sd', ' -)"
   rm -rf "$DATA_DIR/photon_data"
   # Arbeitsdateien INS VOLUME legen, nicht nach /tmp (= Container-Layer): der
@@ -108,12 +130,20 @@ else
   # Herzschlag: bei vielen Städten läuft der Import stundenlang in EINEM Java-Aufruf.
   # Ohne frische Stempel meldet das Status-Overlay nach 15 min fälschlich "hängt evtl.".
   S0=$SECONDS
-  ( while sleep 60; do status "baut Suchindex" "$MB MB Rohdaten, läuft seit $(( (SECONDS - S0) / 60 )) min"; done ) &
+  ( while sleep 60; do status "baut Suchindex" "$MB MB Rohdaten, läuft seit $(( (SECONDS - S0) / 60 )) min (Versuch $((ATTEMPTS + 1)))"; done ) &
   HEARTBEAT=$!
-  java ${IMPORT_JAVA_OPTS:--Xmx2g} -jar "$JAR" import -data-dir "$DATA_DIR" \
-    -import-file "$TMP/merged.jsonl"
-  kill "$HEARTBEAT" 2>/dev/null || true
+  if java ${IMPORT_JAVA_OPTS:--Xmx4g} -jar "$JAR" import -data-dir "$DATA_DIR" \
+       -import-file "$TMP/merged.jsonl"; then
+    kill "$HEARTBEAT" 2>/dev/null || true
+  else
+    kill "$HEARTBEAT" 2>/dev/null || true
+    rm -rf "$TMP"
+    status "Fehler" "Import abgestürzt (Versuch $((ATTEMPTS + 1)) von 3) — docker logs baumradar-photon"
+    echo "FEHLER: Photon-Import abgestürzt (Versuch $((ATTEMPTS + 1)) von 3)."
+    exit 1
+  fi
   rm -rf "$TMP"
+  rm -f "$ATTEMPTS_F"
   echo "$WANT" > "$MARKER"
   echo "Import abgeschlossen."
 fi

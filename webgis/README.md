@@ -151,6 +151,8 @@ http://localhost:8081/geoserver/baumradar/wfs?service=WFS&version=2.0.0&request=
 | `GH_VERSION` / `GRAPHHOPPER_PORT` / `GH_JAVA_OPTS` | `10.0` / `8989` / `-Xmx2g` | GraphHopper (Profil `routing`) |
 | `BBOX_MARGIN_DEG` | `0.03` | Rand um Stadt-BBoxen beim Insel-Graph |
 | `PHOTON_VERSION` / `PHOTON_PORT` | `1.2.1` / `2322` | Photon-Geocoder (Profil `geocoding`) |
+| `PHOTON_IMPORT_JAVA_OPTS` | `-Xmx4g` | Heap für den **einmaligen** Index-Import — bei allen 19 Städten (~18 GB Rohdaten) ggf. auf `-Xmx6g`/`-Xmx8g` erhöhen, wenn der Import abstürzt |
+| `PHOTON_JAVA_OPTS` | `-Xmx1g` | Heap des laufenden Suchdienstes |
 
 ## Entwicklung
 

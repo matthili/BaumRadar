@@ -145,6 +145,10 @@ services:
     environment:
       CATALOG_URL: ${CATALOG_URL:-https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/catalog.json}
       CITY_FILTER: ${CITY_FILTER:-}
+      # Heap für den einmaligen Index-Import: viele Städte = viel RAM (19 Städte
+      # ≈ 18 GB Rohdaten). Bei Import-Abstürzen in .env erhöhen (z. B. -Xmx6g).
+      IMPORT_JAVA_OPTS: ${PHOTON_IMPORT_JAVA_OPTS:--Xmx4g}
+      JAVA_OPTS: ${PHOTON_JAVA_OPTS:--Xmx1g}
     ports:
       - "${BIND_HOST:-127.0.0.1}:${PHOTON_PORT:-2322}:2322"
     volumes:
