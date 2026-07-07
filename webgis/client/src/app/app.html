@@ -138,7 +138,10 @@
           <span class="dist">{{ fmtDistance(ri.distanceM) }}</span>
           <span>{{ fmtDuration(ri.timeMs) }}</span>
           @if (ri.avoidedZones > 0) {
-            <span class="avoided">{{ ri.avoidedZones }} Zonen</span>
+            <span class="avoided"
+                  title="Allergiezonen im Start-Ziel-Korridor, die in die Berechnung als Meide-Fl&auml;chen eingingen — nicht: von der Route ber&uuml;hrte Zonen.">
+              {{ ri.avoidedZones }}{{ ri.zonesCapped ? '+' : '' }} Zonen gemieden
+            </span>
           }
         </div>
       }

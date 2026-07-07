@@ -76,6 +76,9 @@ export class App implements AfterViewInit {
   readonly geocoderOnline = this.geocoder.online;
   private startTimer?: ReturnType<typeof setTimeout>;
   private endTimer?: ReturnType<typeof setTimeout>;
+  private rerouteTimer?: ReturnType<typeof setTimeout>;
+  /** Laufnummer der Routen-Anfragen: nur die Antwort auf die JÜNGSTE zählt. */
+  private routeSeq = 0;
   /** Aufgeklappte Gattungen (zeigen ihre Arten-Liste wie im App-Profil). */
   readonly expandedGenera = signal<ReadonlySet<string>>(new Set<string>());
 
@@ -113,9 +116,12 @@ export class App implements AfterViewInit {
   );
 
   readonly routingHint = computed(() => {
-    if (!this.routeStart()) return 'Startpunkt auf die Karte klicken.';
-    if (!this.routeEnd()) return 'Zielpunkt auf die Karte klicken.';
-    return this.routing() ? 'Berechne Route …' : 'Neuer Klick startet eine neue Route.';
+    if (!this.routeStart()) return 'Start: Adresse suchen oder auf die Karte klicken.';
+    if (!this.routeEnd()) return 'Ziel: Adresse suchen oder auf die Karte klicken.';
+    return this.routing()
+      ? 'Berechne Route …'
+      : 'Gattungs- oder Umweg-Änderungen berechnen die Route automatisch neu. '
+        + 'Ein Kartenklick beginnt eine NEUE Route (setzt den Start).';
   });
 
   constructor() {
@@ -187,10 +193,23 @@ export class App implements AfterViewInit {
       next.add(genus);
     }
     this.selectedGenera.set(next);
+    this.scheduleReroute();
   }
 
   clearGenera(): void {
     this.selectedGenera.set(new Set<string>());
+    this.scheduleReroute();
+  }
+
+  /**
+   * Gattungs-Änderungen berechnen eine bestehende Route automatisch neu — die
+   * Zonenauswahl ist Teil der Routenfrage. Entprellt, damit schnelles Durchklicken
+   * mehrerer Gattungen nur EINE Anfrage auslöst.
+   */
+  private scheduleReroute(): void {
+    if (!this.routingActive() || !this.routeStart() || !this.routeEnd()) return;
+    clearTimeout(this.rerouteTimer);
+    this.rerouteTimer = setTimeout(() => void this.computeRoute(), 400);
   }
 
   toggleExpand(genus: string): void {
@@ -315,7 +334,12 @@ export class App implements AfterViewInit {
     this.mapService.clearRouting();
   }
 
-  /** 1. Klick = Start, 2. = Ziel (dann berechnen); ein weiterer Klick startet neu. */
+  /**
+   * 1. Klick = Start, 2. = Ziel (dann berechnen); ein weiterer Klick startet neu.
+   * Die Klickpunkte tragen sich in die Suchfelder ein — Felder und Route zeigen
+   * damit IMMER denselben Zustand (vorher blieben alte Adressen stehen, während
+   * längst zwischen Klickpunkten geroutet wurde).
+   */
   private addRoutingPoint(p: LonLat): void {
     const start = this.routeStart();
     const end = this.routeEnd();
@@ -325,18 +349,33 @@ export class App implements AfterViewInit {
       this.routeEnd.set(null);
       this.routeInfo.set(null);
       this.routeError.set(null);
+      this.startQuery.set(App.fmtPoint(p));
+      this.endQuery.set('');
+      this.startHits.set([]);
+      this.endHits.set([]);
       this.mapService.setRouteMarkers(p, null);
     } else {
       this.routeEnd.set(p);
+      this.endQuery.set(App.fmtPoint(p));
+      this.endHits.set([]);
       this.mapService.setRouteMarkers(start, p);
       void this.computeRoute();
     }
+  }
+
+  /** Kartenklick als lesbarer Feldinhalt, z. B. „Kartenpunkt 48,2094 / 16,3831". */
+  private static fmtPoint(p: LonLat): string {
+    const f = (n: number) => n.toFixed(4).replace('.', ',');
+    return `Kartenpunkt ${f(p.lat)} / ${f(p.lon)}`;
   }
 
   private async computeRoute(): Promise<void> {
     const start = this.routeStart();
     const end = this.routeEnd();
     if (!start || !end) return;
+    // Schnelle Folge-Änderungen (Gattung an/aus, Faktor) können sich überholen —
+    // eine verspätete ältere Antwort darf die jüngere nicht überschreiben.
+    const seq = ++this.routeSeq;
     this.routing.set(true);
     this.routeError.set(null);
     try {
@@ -347,9 +386,11 @@ export class App implements AfterViewInit {
         this.selectedGenera(),
         this.routeAvoidFactor(),
       );
+      if (seq !== this.routeSeq) return;
       this.routeInfo.set(result);
       this.mapService.drawRoute(result.coords);
     } catch (err) {
+      if (seq !== this.routeSeq) return;
       // Unterscheiden: Dienst gar nicht erreichbar (Profil »routing« aus oder
       // Graph baut noch) vs. GraphHopper hat geantwortet, findet aber keine Route.
       const status = (err as { status?: number }).status;
@@ -361,7 +402,7 @@ export class App implements AfterViewInit {
         : 'Keine Route gefunden — liegen Start und Ziel im Gebiet derselben Stadt?');
       console.error('Routing fehlgeschlagen', err);
     } finally {
-      this.routing.set(false);
+      if (seq === this.routeSeq) this.routing.set(false);
     }
   }
 

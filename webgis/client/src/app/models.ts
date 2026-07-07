@@ -76,6 +76,8 @@ export interface RouteResult {
   coords: [number, number][];
   distanceM: number;
   timeMs: number;
-  /** Wie viele Allergiezonen als Block-Areas mitgegeben wurden (0 = keine Vermeidung). */
+  /** Wie viele Allergiezonen im Korridor als Meide-Flächen mitgegeben wurden (0 = keine Vermeidung). */
   avoidedZones: number;
+  /** true, wenn das Zonen-Limit der Anfrage erreicht wurde (es gäbe noch mehr Zonen im Korridor). */
+  zonesCapped: boolean;
 }

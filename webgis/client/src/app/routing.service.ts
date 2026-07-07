@@ -73,6 +73,7 @@ export class RoutingService {
       distanceM: path.distance,
       timeMs: path.time,
       avoidedZones: zones.length,
+      zonesCapped: zones.length >= RoutingService.MAX_ZONES,
     };
   }
 
