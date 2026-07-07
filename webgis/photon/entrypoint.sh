@@ -92,38 +92,64 @@ else
   # Photon 1.x: EIN `import` pro Datenbank (jeder Aufruf verwirft bestehende Inhalte).
   # Deshalb alle Stadt-Dateien zu EINEM Dump mergen: erste Datei komplett, bei den
   # weiteren die 2 Präambel-Zeilen (Kopf + CountryInfo) überspringen.
+  # Merge + DEDUPLIZIERUNG in einem Strom. Die Stadt-Ränder überlappen sich bewusst
+  # (Ruhrgebiet!), Photon importiert aber mit op_type=create: ein doppelter place_id
+  # ist dort ein 409-Fehler und lässt den GESAMTEN Import platzen ("N failed items
+  # in bulk"). Deshalb: jq zerlegt Batch-Zeilen (content[] kann mehrere Orte tragen)
+  # in Ein-Ort-Zeilen, awk lässt je place_id nur die erste Fundstelle durch (Reihen-
+  # folge und damit die Länder-Sortierung bleiben erhalten; das Duplikat trägt
+  # dieselben Daten). RAM: einige hundert MB für Millionen gesehener IDs.
+  # Fortschritts-Ausgaben gehen auf stderr — stdout IST hier der Datenstrom.
+  DUPF="$TMP/duplicate_count"
   total="${#ROWS[@]}"
   n=0
   first=1
-  for row in "${ROWS[@]}"; do
-    id="$(cut -f1 <<<"$row")"
-    urls="$(cut -f3 <<<"$row")"
-    n=$((n + 1))
-    status "lädt Stadt-Daten" "$n/$total: $id"
-    # Lokale Einzeldatei direkt aus dem Repo-Mount lesen (keine Kopie); Chunks und
-    # Downloads landen erst vollständig in $TMP — nur komplette Dateien werden gemerged.
-    if [ -f "$LOCAL_DATA/geocoder_$id.jsonl.gz" ]; then
-      echo "  [$id] nutze lokale Datei"
-      SRC="$LOCAL_DATA/geocoder_$id.jsonl.gz"
-    elif [ -f "$LOCAL_DATA/geocoder_$id.jsonl.gz.001" ]; then
-      echo "  [$id] nutze lokale Chunks"
-      cat "$LOCAL_DATA/geocoder_$id.jsonl.gz."0* > "$TMP/$id.jsonl.gz"
-      SRC="$TMP/$id.jsonl.gz"
-    else
-      for u in $urls; do
-        echo "  [$id] lade $(basename "$u") …"
-        curl -fsSL "$u" >> "$TMP/$id.jsonl.gz"
-      done
-      SRC="$TMP/$id.jsonl.gz"
-    fi
-    if [ "$first" = "1" ]; then
-      gunzip -c "$SRC" >> "$TMP/merged.jsonl"
-      first=0
-    else
-      gunzip -c "$SRC" | tail -n +3 >> "$TMP/merged.jsonl"
-    fi
-    rm -f "$TMP/$id.jsonl.gz"
-  done
+  {
+    for row in "${ROWS[@]}"; do
+      id="$(cut -f1 <<<"$row")"
+      urls="$(cut -f3 <<<"$row")"
+      n=$((n + 1))
+      status "lädt Stadt-Daten" "$n/$total: $id"
+      # Lokale Einzeldatei direkt aus dem Repo-Mount lesen (keine Kopie); Chunks und
+      # Downloads landen erst vollständig in $TMP — nur komplette Dateien werden gemerged.
+      if [ -f "$LOCAL_DATA/geocoder_$id.jsonl.gz" ]; then
+        echo "  [$id] nutze lokale Datei" >&2
+        SRC="$LOCAL_DATA/geocoder_$id.jsonl.gz"
+      elif [ -f "$LOCAL_DATA/geocoder_$id.jsonl.gz.001" ]; then
+        echo "  [$id] nutze lokale Chunks" >&2
+        cat "$LOCAL_DATA/geocoder_$id.jsonl.gz."0* > "$TMP/$id.jsonl.gz"
+        SRC="$TMP/$id.jsonl.gz"
+      else
+        for u in $urls; do
+          echo "  [$id] lade $(basename "$u") …" >&2
+          curl -fsSL "$u" >> "$TMP/$id.jsonl.gz"
+        done
+        SRC="$TMP/$id.jsonl.gz"
+      fi
+      if [ "$first" = "1" ]; then
+        gunzip -c "$SRC"
+        first=0
+      else
+        gunzip -c "$SRC" | tail -n +3
+      fi
+      rm -f "$TMP/$id.jsonl.gz"
+    done
+  } \
+  | jq -c 'if .type == "Place" then (.content[] | {type: "Place", content: [.]}) else . end' \
+  | awk -v dupf="$DUPF" '
+      /"type":"Place"/ {
+        i = index($0, "\"place_id\":\"")
+        if (i > 0) {
+          r = substr($0, i + 12); q = index(r, "\""); id = substr(r, 1, q - 1)
+          if (id in seen) { dup++; next }
+          seen[id] = 1
+        }
+      }
+      { print }
+      END { print dup + 0 > dupf }
+    ' > "$TMP/merged.jsonl"
+  DUPS="$(cat "$DUPF" 2>/dev/null || echo 0)"
+  echo "  Duplikate aus Rand-Überlappungen übersprungen: $DUPS"
   MB="$(du -m "$TMP/merged.jsonl" | cut -f1)"
   status "baut Suchindex" "$MB MB Rohdaten"
   echo "  Importiere $MB MB (unkomprimiert) …"
