@@ -65,6 +65,18 @@ export class RoutingService {
    */
   private static readonly MAX_ZONES = 800;
 
+  // --- Zonen-Cache je Strecke ------------------------------------------------
+  // Faktor- und Gattungswechsel auf derselben Strecke sollen nicht jedes Mal die
+  // volle Pipeline kosten: Basisroute und bereits konvergierte Zonen werden je
+  // (Profil, Start, Ziel) behalten; Gattungen werden einzeln abgedeckt. WICHTIG
+  // für die Stabilität: Der Cache ist nur ein STARTWERT — die Konvergenz-Schleife
+  // verifiziert immer weiter gegen frische Abfragen und füttert den Cache additiv.
+  private cacheKey = '';
+  private cachedBase: GhPath | null = null;
+  private cachedZones: Zone[] = [];
+  private readonly cachedGenera = new Set<string>();
+  private cachedCapped = false;
+
   /**
    * @param avoidFactor Prioritätsfaktor für Kanten in Allergiezonen: jeder Meter
    *        in einer Zone „kostet" das (1/avoidFactor)-fache eines normalen Meters.
@@ -78,7 +90,16 @@ export class RoutingService {
     avoidGenera: ReadonlySet<string>,
     avoidFactor: number,
   ): Promise<RouteResult> {
-    const base = await this.ghRoute(profile, start, end);
+    // Cache-Schlüssel: gleiche Strecke + Profil ⇒ Basisroute und Zonen wiederverwendbar.
+    const key = `${profile}|${start.lon},${start.lat}|${end.lon},${end.lat}`;
+    if (key !== this.cacheKey) {
+      this.cacheKey = key;
+      this.cachedBase = null;
+      this.cachedZones = [];
+      this.cachedGenera.clear();
+      this.cachedCapped = false;
+    }
+    const base = this.cachedBase ?? (this.cachedBase = await this.ghRoute(profile, start, end));
     if (!avoidGenera.size) {
       return {
         ...base,
@@ -86,14 +107,22 @@ export class RoutingService {
         crossedZones: 0, crossedByGenus: {}, zoneMeters: 0, direct: null,
       };
     }
+    // Noch nicht abgedeckte Gattungen entlang der Basisroute nachladen (nur diese).
+    const missing = [...avoidGenera].filter((g) => !this.cachedGenera.has(g));
+    if (missing.length) {
+      const fetched = await this.zonesAlongLine(base.coords, new Set(missing));
+      this.cachedZones = RoutingService.unionZones(this.cachedZones, fetched.zones);
+      for (const g of missing) this.cachedGenera.add(g);
+      this.cachedCapped = this.cachedCapped || fetched.capped;
+    }
     // Konvergenz-Schleife: Zonen im Schlauch um die AKTUELLE Route laden, Menge
     // vereinigen, neu rechnen — bis kein neuer Fund mehr (max. 2 Nachrunden).
     // Die Meidung kann die Route in Gebiete schieben, deren Zonen sie noch nicht
     // kannte; erst wenn Optimierung und Zählung DIESELBE Menge sehen, sind die
     // Vergleichszahlen widerspruchsfrei (sonst „quert der Umweg mehr als direkt").
-    const first = await this.zonesAlongLine(base.coords, avoidGenera);
-    let zones = first.zones;
-    let capped = first.capped;
+    // Startmenge aus dem Cache (auf die gewählten Gattungen gefiltert).
+    let zones = this.cachedZones.filter((z) => avoidGenera.has(z.genusDe));
+    let capped = this.cachedCapped;
     let path = base;
     if (zones.length) {
       path = await this.ghRoute(
@@ -103,6 +132,9 @@ export class RoutingService {
       for (let round = 0; round < 2; round++) {
         const more = await this.zonesAlongLine(path.coords, avoidGenera);
         capped = capped || more.capped;
+        // Jede Verifikationsrunde füttert auch den Cache (additiv, je Strecke).
+        this.cachedZones = RoutingService.unionZones(this.cachedZones, more.zones);
+        this.cachedCapped = this.cachedCapped || more.capped;
         const merged = RoutingService.unionZones(zones, more.zones);
         if (merged.length === zones.length) break; // nichts Neues → konvergiert
         zones = merged;
