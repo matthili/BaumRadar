@@ -417,6 +417,17 @@ export class App implements AfterViewInit {
     this.endHits.set([]);
   }
 
+  /** Tooltip der Querungs-Anzeige: Aufschlüsselung je Gattung. */
+  crossedTitle(ri: RouteResult): string {
+    if (ri.crossedZones === 0) {
+      return 'Die Route durchquert keine der berücksichtigten Allergiezonen.';
+    }
+    const parts = Object.entries(ri.crossedByGenus)
+      .sort((a, b) => b[1] - a[1])
+      .map(([g, n]) => `${g}: ${n}`);
+    return `Die Route durchquert Zonen von: ${parts.join(' · ')}`;
+  }
+
   fmtDistance(m: number): string {
     return m >= 1000 ? (m / 1000).toFixed(1) + ' km' : Math.round(m) + ' m';
   }

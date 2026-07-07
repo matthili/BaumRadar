@@ -549,22 +549,39 @@
 .route-info {
   display: flex;
   align-items: baseline;
-  gap: 12px;
+  gap: 8px;
   font-size: 13px;
   padding: 4px 0;
+  flex-wrap: wrap;
 
   .dist {
     font-weight: 700;
     font-size: 15px;
   }
 
-  .avoided {
+  // Querungs-Chip: orange = Route führt durch Zonen, grün = zonenfrei.
+  .crossed {
     margin-left: auto;
     font-size: 11px;
     padding: 2px 8px;
     border-radius: 999px;
-    background: rgba(211, 47, 47, 0.22);
-    border: 1px solid rgba(211, 47, 47, 0.4);
+    background: rgba(230, 126, 34, 0.24);
+    border: 1px solid rgba(230, 126, 34, 0.45);
+    cursor: help;
+
+    &.ok {
+      background: rgba(76, 175, 80, 0.22);
+      border-color: rgba(76, 175, 80, 0.45);
+    }
+  }
+
+  .avoided {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: rgba(211, 47, 47, 0.18);
+    border: 1px solid rgba(211, 47, 47, 0.35);
+    cursor: help;
   }
 }
 

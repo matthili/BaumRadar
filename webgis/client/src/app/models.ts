@@ -76,8 +76,12 @@ export interface RouteResult {
   coords: [number, number][];
   distanceM: number;
   timeMs: number;
-  /** Wie viele Allergiezonen im Korridor als Meide-Flächen mitgegeben wurden (0 = keine Vermeidung). */
+  /** Wie viele Allergiezonen im Routen-Schlauch als Meide-Flächen mitgegeben wurden (0 = keine Vermeidung). */
   avoidedZones: number;
-  /** true, wenn das Zonen-Limit der Anfrage erreicht wurde (es gäbe noch mehr Zonen im Korridor). */
+  /** true, wenn das Zonen-Limit einer Gattungs-Abfrage erreicht wurde (es gäbe noch mehr Zonen). */
   zonesCapped: boolean;
+  /** Wie viele der Meide-Zonen die finale Route tatsächlich durchquert. */
+  crossedZones: number;
+  /** Querungen aufgeschlüsselt je Gattung (nur Gattungen mit mindestens einer Querung). */
+  crossedByGenus: Record<string, number>;
 }

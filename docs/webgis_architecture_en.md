@@ -93,13 +93,14 @@ genus_de IN ('Birke','Hasel') AND city_id = 'wien'
 
 **Island graph:** the `graph-builder` downloads the Geofabrik country PBFs (once, volume-cached), cuts out the 19 city bboxes (+ margin) with `osmium extract` and merges them into **one** `island.osm.pbf` (a few hundred MB instead of ~5 GB). Routing works within each city; between cities there is deliberately no connection. GraphHopper builds its graph from it on first start (cached in a volume) — profiles `foot` and `bike`, **flexible mode** (no contraction-hierarchies preprocessing), so each request can carry a custom model. A **build-plan marker** (`island.marker`: selected cities, bboxes, margin — same idea as Photon's `imported_versions`) makes the graph-builder idempotent: if the plan is unchanged and the island exists, a re-start skips extraction and merge in seconds, and the GraphHopper cache stays valid too. Force a rebuild with fresher OSM data by deleting the `routingdata` volume.
 
-**Zone avoidance (corridor approach):** you cannot feed GraphHopper thousands of circle zones globally. Instead, the client fetches only the relevant zones **per route request**:
+**Zone avoidance (tube approach, two passes):** you cannot feed GraphHopper thousands of circle zones globally. Instead, the client fetches only the relevant zones **per route request**:
 
-1. WFS query: zones of the genera selected in the profile, restricted to the **start–destination bbox + buffer** (CQL `BBOX`), capped at 300.
-2. The hits are bundled client-side into **one MultiPolygon** (one custom-model area instead of N — a lean request, one condition).
+1. Compute a **baseline route without avoidance** — it defines the **tube** (segment bboxes ~400 m around the line, as a CQL `OR` chain) in which zones are relevant at all. A single start–destination bbox would cover half the city on diagonal routes: zones 10 km off-route counted and ate up the limit.
+2. WFS query of the tube zones **per genus separately** (budget: 300 ÷ number of genera). Important: a shared `IN (…)` limit favours the genus with the "first" table rows at the cap and silently swallows the others — observed live: birch+lime yielded exactly the birch-only route. The hits are bundled into **one MultiPolygon** (one custom-model area, one condition).
 3. GraphHopper receives `priority: [{ if: "in_avoid", multiply_by: <factor> }]` — edges inside zones are penalised but never forbidden (**soft avoidance**: a route that *starts* inside a zone always works). The strength is chosen in the client under "advanced options": *"rather cross a zone than take an N-fold detour"* with N = 5/10/**20 (default)**/50/100 (≙ `multiply_by` 0.2 … 0.01) — at 100× the avoidance is effectively strict, without the pitfalls of a hard block.
+4. **Crossing statistics in the client:** GraphHopper does not report which areas a route crosses — so the client samples the final line in ~25 m steps (ray casting against the zone polygons) and honestly shows "crosses N zones" (green at 0, tooltip with a per-genus breakdown) next to "M considered" ("300+" = limit reached).
 
-Measured example (Zug, foot): baseline 1,438 m → with 49 maple zones in the corridor 1,884 m (+446 m detour around the zones).
+Measured example (Zug, foot): baseline 1,438 m → with 49 maple zones in the tube 1,884 m (+446 m detour around the zones). Genus and factor changes recompute an existing route automatically.
 
 *Deliberately rejected:* globally pre-merging all zones (they are already clustered — another `ST_Union` merely wraps disjoint circles) and marking affected graph edges at import time (more scalable, but requires a custom GraphHopper build; the corridor approach works with stock GraphHopper).
 
