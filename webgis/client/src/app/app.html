@@ -175,6 +175,16 @@
   <section class="genera">
     <div class="sec-row">
       <label class="sec" for="genus-search">Gattungsfilter</label>
+      <span class="sort-chips" role="group" aria-label="Sortierung">
+        <button class="sort-chip" type="button" [class.active]="genusSortKey() === 'count'"
+                (click)="toggleGenusSort('count')" title="Nach Anzahl sortieren (Klick dreht die Richtung)">
+          Anzahl {{ genusSortKey() === 'count' ? (genusSortDir() === 'desc' ? '▾' : '▴') : '' }}
+        </button>
+        <button class="sort-chip" type="button" [class.active]="genusSortKey() === 'name'"
+                (click)="toggleGenusSort('name')" title="Alphabetisch sortieren (Klick dreht die Richtung)">
+          Name {{ genusSortKey() === 'name' ? (genusSortDir() === 'asc' ? '▴' : '▾') : '' }}
+        </button>
+      </span>
       @if (selectedGenera().size > 0) {
         <button class="chip" type="button" (click)="clearGenera()">
           {{ selectedGenera().size }} aktiv &middot; zur&uuml;cksetzen

@@ -111,9 +111,31 @@ export class App implements AfterViewInit {
     return id ? (this.cities().find((c) => c.id === id)?.name ?? null) : null;
   });
 
-  readonly filteredGenera = computed(() =>
-    matchGenera(this.genusQuery(), this.genera(), this.speciesByGenus()),
-  );
+  /** Sortierung der Gattungsliste: Anzahl (Standard) oder Name, jeweils beide Richtungen. */
+  readonly genusSortKey = signal<'count' | 'name'>('count');
+  readonly genusSortDir = signal<'asc' | 'desc'>('desc');
+
+  readonly filteredGenera = computed(() => {
+    const list = [...matchGenera(this.genusQuery(), this.genera(), this.speciesByGenus())];
+    const key = this.genusSortKey();
+    const dir = this.genusSortDir() === 'asc' ? 1 : -1;
+    list.sort((a, b) =>
+      key === 'count'
+        ? dir * (a.treeCount - b.treeCount)
+        : dir * a.genusDe.localeCompare(b.genusDe, 'de'),
+    );
+    return list;
+  });
+
+  /** Klick auf aktives Kriterium dreht die Richtung; neues Kriterium startet sinnvoll. */
+  toggleGenusSort(key: 'count' | 'name'): void {
+    if (this.genusSortKey() === key) {
+      this.genusSortDir.set(this.genusSortDir() === 'asc' ? 'desc' : 'asc');
+    } else {
+      this.genusSortKey.set(key);
+      this.genusSortDir.set(key === 'count' ? 'desc' : 'asc');
+    }
+  }
 
   /** Logo-Ring: dreht bei Systemstart UND während einer Routenberechnung. */
   readonly busyRing = computed(() => this.status.anyPending() || this.routing());
