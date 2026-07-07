@@ -59,25 +59,27 @@ if [ -d "$DATA_DIR/photon_data" ] && [ -f "$MARKER" ] && [ "$(cat "$MARKER")" = 
 else
   # Absturz-Wächter: `restart: unless-stopped` würde einen crashenden Import ENDLOS
   # wiederholen (~18 GB Schreiblast pro Runde auf die SSD). Nach 3 Fehlversuchen
-  # ehrlich stehen bleiben. Der Zähler merkt sich die Java-Optionen der Fehlversuche:
-  # GEÄNDERTE Optionen (= der Nutzer hat reagiert) setzen ihn automatisch zurück —
-  # sonst wäre die dokumentierte Abhilfe (Heap erhöhen, neu starten) wirkungslos.
+  # ehrlich stehen bleiben. Der Zähler-Schlüssel = Java-Optionen + Fingerabdruck
+  # dieses Skripts: eine geänderte Einstellung ODER ein Software-Update (neues Image
+  # nach `git pull`) zählt als neuer Anlauf und setzt den Zähler zurück — sonst
+  # würde der Wächter auch den bereits GEFIXTEN Import verweigern.
   ATTEMPTS_F="$DATA_DIR/import_attempts"
   OPTS_NOW="${IMPORT_JAVA_OPTS:--Xmx4g}"
+  KEY="$OPTS_NOW|$(md5sum "$0" | cut -c1-12)"
   ATTEMPTS=0
   if [ -f "$ATTEMPTS_F" ]; then
-    PREV="$(cat "$ATTEMPTS_F")"   # Format: <anzahl>|<java-optionen>
-    if [ "${PREV#*|}" = "$OPTS_NOW" ]; then ATTEMPTS="${PREV%%|*}"; fi
+    PREV="$(cat "$ATTEMPTS_F")"   # Format: <anzahl>|<java-optionen>|<skript-hash>
+    if [ "${PREV#*|}" = "$KEY" ]; then ATTEMPTS="${PREV%%|*}"; fi
     case "$ATTEMPTS" in ''|*[!0-9]*) ATTEMPTS=0 ;; esac
   fi
   if [ "$ATTEMPTS" -ge 3 ]; then
     rm -rf "$DATA_DIR/tmp"
-    status "Fehler" "Import ${ATTEMPTS}x abgestürzt (mit $OPTS_NOW) — meist zu wenig Speicher: PHOTON_IMPORT_JAVA_OPTS in .env erhöhen (z. B. -Xmx6g), dann Container neu starten. Details: docker logs baumradar-photon"
+    status "Fehler" "Import ${ATTEMPTS}x abgestürzt (mit $OPTS_NOW) — Ursache in: docker logs baumradar-photon. Abhilfe: Update einspielen (git pull + start) oder PHOTON_IMPORT_JAVA_OPTS in .env erhöhen — beides setzt den Zähler zurück."
     echo "FEHLER: Import bereits ${ATTEMPTS}x abgestürzt (mit $OPTS_NOW) — halte an, statt endlos neu zu versuchen."
-    echo "Abhilfe: PHOTON_IMPORT_JAVA_OPTS in .env erhöhen und Container neu starten — geänderte Einstellungen setzen den Zähler automatisch zurück."
+    echo "Abhilfe: Software-Update einspielen (git pull + start.sh) oder PHOTON_IMPORT_JAVA_OPTS ändern — beides setzt den Zähler automatisch zurück."
     sleep infinity
   fi
-  printf '%s|%s' "$((ATTEMPTS + 1))" "$OPTS_NOW" > "$ATTEMPTS_F"
+  printf '%s|%s' "$((ATTEMPTS + 1))" "$KEY" > "$ATTEMPTS_F"
 
   echo "Baue Photon-Index für: $(printf '%s\n' "${ROWS[@]}" | cut -f1 | paste -sd', ' -)"
   rm -rf "$DATA_DIR/photon_data"
