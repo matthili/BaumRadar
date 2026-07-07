@@ -389,6 +389,7 @@ export class App implements AfterViewInit {
       if (seq !== this.routeSeq) return;
       this.routeInfo.set(result);
       this.mapService.drawRoute(result.coords);
+      this.mapService.drawDirectRoute(result.direct?.coords ?? null);
     } catch (err) {
       if (seq !== this.routeSeq) return;
       // Unterscheiden: Dienst gar nicht erreichbar (Profil »routing« aus oder

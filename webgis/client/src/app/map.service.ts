@@ -198,6 +198,21 @@ export class MapService {
     });
   }
 
+  /** Direktroute (ohne Meidung) als gestrichelte Vergleichslinie; null entfernt sie. */
+  drawDirectRoute(coords: [number, number][] | null): void {
+    this.zone.runOutsideAngular(() => {
+      const src = this.routingSource;
+      if (!src) return;
+      src.getFeatures()
+        .filter((f) => f.get('kind') === 'direct')
+        .forEach((f) => src.removeFeature(f));
+      if (!coords || coords.length === 0) return;
+      const line = new Feature({ geometry: new LineString(coords.map((c) => fromLonLat(c))) });
+      line.set('kind', 'direct');
+      src.addFeature(line);
+    });
+  }
+
   /** Start, Ziel und Routenlinie entfernen. */
   clearRouting(): void {
     this.routingSource?.clear();
@@ -211,7 +226,14 @@ export class MapService {
 
   private routingStyle(feature: FeatureLike): Style {
     if (feature.get('kind') === 'route') {
-      return new Style({ stroke: new Stroke({ color: '#2E6B2E', width: 6 }) });
+      return new Style({ stroke: new Stroke({ color: '#2E6B2E', width: 6 }), zIndex: 2 });
+    }
+    if (feature.get('kind') === 'direct') {
+      // Vergleichslinie: gestrichelt und unter der Hauptroute, bewusst unauffällig.
+      return new Style({
+        stroke: new Stroke({ color: 'rgba(66, 66, 66, 0.8)', width: 4, lineDash: [10, 10] }),
+        zIndex: 1,
+      });
     }
     const isStart = feature.get('kind') === 'start';
     return new Style({

@@ -585,6 +585,22 @@
   }
 }
 
+// Vergleichszeile zur gestrichelten Direktroute auf der Karte.
+.route-direct {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 2px 0 0;
+  font-size: 11.5px;
+  color: var(--br-on-glass-muted);
+
+  .dash-sample {
+    flex: 0 0 auto;
+    width: 20px;
+    border-top: 3px dashed rgba(120, 120, 120, 0.95);
+  }
+}
+
 .route-clear {
   align-self: flex-start;
   border: none;

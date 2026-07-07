@@ -57,8 +57,13 @@ export class RoutingService {
   private static readonly WFS_URL = '/geoserver/baumradar/wfs';
   /** Rand (Grad) der Schlauch-Segmente um die Basisroute (~400 m je Seite). */
   private static readonly TUBE_PAD_DEG = 0.004;
-  /** Gesamt-Budget an Meide-Zonen je Anfrage (wird auf die Gattungen aufgeteilt). */
-  private static readonly MAX_ZONES = 300;
+  /**
+   * Gesamt-Budget an Meide-Zonen je Anfrage (auf die Gattungen aufgeteilt).
+   * Wien-kalibriert: 19-km-Fußrouten durch die Linden-Hauptstadt sprengten 300
+   * mühelos — ungeladene Zonen werden weder gemieden noch gezählt. Die Polygone
+   * gehen als POST-Body an GraphHopper (nginx-Limit dafür: 16 MB).
+   */
+  private static readonly MAX_ZONES = 800;
 
   /**
    * @param avoidFactor Prioritätsfaktor für Kanten in Allergiezonen: jeder Meter
@@ -75,19 +80,78 @@ export class RoutingService {
   ): Promise<RouteResult> {
     const base = await this.ghRoute(profile, start, end);
     if (!avoidGenera.size) {
-      return { ...base, avoidedZones: 0, zonesCapped: false, crossedZones: 0, crossedByGenus: {} };
+      return {
+        ...base,
+        avoidedZones: 0, zonesCapped: false,
+        crossedZones: 0, crossedByGenus: {}, zoneMeters: 0, direct: null,
+      };
     }
-    const { zones, capped } = await this.zonesAlongLine(base.coords, avoidGenera);
+    // Konvergenz-Schleife: Zonen im Schlauch um die AKTUELLE Route laden, Menge
+    // vereinigen, neu rechnen — bis kein neuer Fund mehr (max. 2 Nachrunden).
+    // Die Meidung kann die Route in Gebiete schieben, deren Zonen sie noch nicht
+    // kannte; erst wenn Optimierung und Zählung DIESELBE Menge sehen, sind die
+    // Vergleichszahlen widerspruchsfrei (sonst „quert der Umweg mehr als direkt").
+    const first = await this.zonesAlongLine(base.coords, avoidGenera);
+    let zones = first.zones;
+    let capped = first.capped;
     let path = base;
     if (zones.length) {
       path = await this.ghRoute(
         profile, start, end,
         this.avoidModel(zones.map((z) => z.geometry), avoidFactor),
       );
+      for (let round = 0; round < 2; round++) {
+        const more = await this.zonesAlongLine(path.coords, avoidGenera);
+        capped = capped || more.capped;
+        const merged = RoutingService.unionZones(zones, more.zones);
+        if (merged.length === zones.length) break; // nichts Neues → konvergiert
+        zones = merged;
+        path = await this.ghRoute(
+          profile, start, end,
+          this.avoidModel(zones.map((z) => z.geometry), avoidFactor),
+        );
+      }
     }
-    const crossedByGenus = RoutingService.crossings(path.coords, zones);
-    const crossedZones = Object.values(crossedByGenus).reduce((a, b) => a + b, 0);
-    return { ...path, avoidedZones: zones.length, zonesCapped: capped, crossedZones, crossedByGenus };
+    const main = RoutingService.crossings(path.coords, zones);
+    const crossedZones = Object.values(main.byGenus).reduce((a, b) => a + b, 0);
+    const direct = RoutingService.crossings(base.coords, zones);
+    const directCrossed = Object.values(direct.byGenus).reduce((a, b) => a + b, 0);
+    const differs = path.distanceM !== base.distanceM || crossedZones !== directCrossed;
+    return {
+      ...path,
+      avoidedZones: zones.length,
+      zonesCapped: capped,
+      crossedZones,
+      crossedByGenus: main.byGenus,
+      zoneMeters: main.meters,
+      direct: differs
+        ? {
+            coords: base.coords,
+            distanceM: base.distanceM,
+            timeMs: base.timeMs,
+            crossedZones: directCrossed,
+            zoneMeters: direct.meters,
+          }
+        : null,
+    };
+  }
+
+  /** Zonen zweier Abfragen vereinigen (Duplikate über Gattung + ersten Ringpunkt). */
+  private static unionZones(a: Zone[], b: Zone[]): Zone[] {
+    const key = (z: Zone) => {
+      const ring =
+        z.geometry.type === 'Polygon'
+          ? (z.geometry.coordinates as number[][][])[0]
+          : (z.geometry.coordinates as number[][][][])[0]?.[0];
+      const p = ring?.[0] ?? [0, 0];
+      return `${z.genusDe}|${p[0]}|${p[1]}`;
+    };
+    const seen = new Map<string, Zone>();
+    for (const z of [...a, ...b]) {
+      const k = key(z);
+      if (!seen.has(k)) seen.set(k, z);
+    }
+    return [...seen.values()];
   }
 
   private async ghRoute(
@@ -202,28 +266,68 @@ export class RoutingService {
    * Außenring (die Zonen sind gepufferte Kreise ohne Löcher). Jede Zone zählt
    * höchstens einmal. GraphHopper liefert diese Information nicht selbst.
    */
-  private static crossings(coords: [number, number][], zones: Zone[]): Record<string, number> {
+  private static crossings(
+    coords: [number, number][],
+    zones: Zone[],
+  ): { byGenus: Record<string, number>; meters: number } {
     const byGenus: Record<string, number> = {};
-    if (!zones.length || coords.length < 2) return byGenus;
+    if (!zones.length || coords.length < 2) return { byGenus, meters: 0 };
+    // Vorab je Zone die BBox — der billige Verwurf macht das Abtasten auch bei
+    // 800 Zonen × 20-km-Routen schnell (Ray-Casting nur für BBox-Treffer).
+    const boxes = zones.map((z) => RoutingService.geomBbox(z.geometry));
     const hit = new Set<number>();
+    let meters = 0;
     const stepDeg = 0.00025; // ≈ 25 m
     for (let s = 0; s < coords.length - 1; s++) {
       const [x1, y1] = coords[s];
       const [x2, y2] = coords[s + 1];
       const n = Math.max(1, Math.ceil(Math.max(Math.abs(x2 - x1), Math.abs(y2 - y1)) / stepDeg));
+      // Schrittlänge in Metern (lokale Näherung; für eine Anzeige völlig ausreichend).
+      const midLat = ((y1 + y2) / 2) * (Math.PI / 180);
+      const stepM =
+        Math.hypot(((x2 - x1) / n) * 111320 * Math.cos(midLat), ((y2 - y1) / n) * 110540);
       for (let k = 0; k <= n; k++) {
         const x = x1 + ((x2 - x1) * k) / n;
         const y = y1 + ((y2 - y1) * k) / n;
+        let inside = false;
         for (let z = 0; z < zones.length; z++) {
-          if (!hit.has(z) && RoutingService.inZone(x, y, zones[z].geometry)) hit.add(z);
+          const b = boxes[z];
+          if (x < b[0] || x > b[2] || y < b[1] || y > b[3]) continue;
+          if (hit.has(z)) {
+            if (!inside) inside = RoutingService.inZone(x, y, zones[z].geometry);
+            continue;
+          }
+          if (RoutingService.inZone(x, y, zones[z].geometry)) {
+            hit.add(z);
+            inside = true;
+          }
         }
+        if (inside && k < n) meters += stepM;
       }
     }
     for (const z of hit) {
       const g = zones[z].genusDe;
       byGenus[g] = (byGenus[g] ?? 0) + 1;
     }
-    return byGenus;
+    return { byGenus, meters: Math.round(meters) };
+  }
+
+  /** [minLon, minLat, maxLon, maxLat] über alle Ringe einer Zonen-Geometrie. */
+  private static geomBbox(g: GeoJsonGeometry): [number, number, number, number] {
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    const rings: number[][][] =
+      g.type === 'Polygon'
+        ? (g.coordinates as number[][][])
+        : (g.coordinates as number[][][][]).flat();
+    for (const ring of rings) {
+      for (const [x, y] of ring) {
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+    }
+    return [minX, minY, maxX, maxY];
   }
 
   private static inZone(x: number, y: number, g: GeoJsonGeometry): boolean {

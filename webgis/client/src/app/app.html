@@ -140,7 +140,8 @@
           @if (ri.avoidedZones > 0) {
             <span class="crossed" [class.ok]="ri.crossedZones === 0" [title]="crossedTitle(ri)">
               @if (ri.crossedZones === 0) { quert keine Zone }
-              @else { quert {{ ri.crossedZones }} {{ ri.crossedZones === 1 ? 'Zone' : 'Zonen' }} }
+              @else { quert {{ ri.crossedZones }} {{ ri.crossedZones === 1 ? 'Zone' : 'Zonen' }}
+                ({{ fmtDistance(ri.zoneMeters) }}) }
             </span>
             <span class="avoided"
                   title="Meide-Zonen der gew&auml;hlten Gattungen im Schlauch um die Route, die in die Berechnung eingingen ('+' = Limit erreicht, es g&auml;be noch mehr).">
@@ -148,6 +149,15 @@
             </span>
           }
         </div>
+        @if (ri.direct; as d) {
+          <p class="route-direct">
+            <span class="dash-sample" aria-hidden="true"></span>
+            Direktroute: {{ fmtDistance(d.distanceM) }} &middot; {{ fmtDuration(d.timeMs) }} &middot;
+            @if (d.crossedZones === 0) { quert keine Zone }
+            @else { quert {{ d.crossedZones }} {{ d.crossedZones === 1 ? 'Zone' : 'Zonen' }}
+              ({{ fmtDistance(d.zoneMeters) }} in Zonen) }
+          </p>
+        }
       }
       @if (routeStart()) {
         <button type="button" class="route-clear" (click)="clearRoutingUi()">Route l&ouml;schen</button>

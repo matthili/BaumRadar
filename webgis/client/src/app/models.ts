@@ -84,4 +84,15 @@ export interface RouteResult {
   crossedZones: number;
   /** Querungen aufgeschlüsselt je Gattung (nur Gattungen mit mindestens einer Querung). */
   crossedByGenus: Record<string, number>;
+  /** Streckenanteil in Metern, der innerhalb von Meide-Zonen verläuft. */
+  zoneMeters: number;
+  /** Direktroute (ohne Meidung) zum Vergleich — null, wenn sie der Hauptroute entspricht.
+   *  Querungen/Zonen-Meter zählen gegen DIESELBE Zonen-Menge wie die Hauptroute. */
+  direct: {
+    coords: [number, number][];
+    distanceM: number;
+    timeMs: number;
+    crossedZones: number;
+    zoneMeters: number;
+  } | null;
 }
