@@ -1,10 +1,10 @@
 <!-- Vollflächige Karte; alles andere schwebt als Glas-Panel darüber (App-Look). -->
 <div class="map-host" #mapHost></div>
 
-<header class="brand glass" [class.loading]="status.anyPending()">
+<header class="brand glass" [class.loading]="busyRing()">
   <span class="logo-wrap">
     <img class="brand-logo" src="logo_baumradar.png" alt="BaumRadar-Logo" width="38" height="38">
-    @if (status.anyPending()) {
+    @if (busyRing()) {
       <span class="logo-ring" aria-hidden="true"></span>
     }
   </span>
@@ -38,6 +38,13 @@
       </div>
     } @empty {
       <p class="status-row">pr&uuml;fe &hellip;</p>
+    }
+    @if (routing()) {
+      <div class="status-row st-pending">
+        <span class="st-icon" aria-hidden="true"><span class="st-spin"></span></span>
+        <span class="st-label">Routenberechnung</span>
+        <span class="st-text">berechnet Route &hellip;</span>
+      </div>
     }
   </div>
 </header>

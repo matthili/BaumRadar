@@ -115,6 +115,9 @@ export class App implements AfterViewInit {
     matchGenera(this.genusQuery(), this.genera(), this.speciesByGenus()),
   );
 
+  /** Logo-Ring: dreht bei Systemstart UND während einer Routenberechnung. */
+  readonly busyRing = computed(() => this.status.anyPending() || this.routing());
+
   readonly routingHint = computed(() => {
     if (!this.routeStart()) return 'Start: Adresse suchen oder auf die Karte klicken.';
     if (!this.routeEnd()) return 'Ziel: Adresse suchen oder auf die Karte klicken.';
@@ -378,6 +381,16 @@ export class App implements AfterViewInit {
     const seq = ++this.routeSeq;
     this.routing.set(true);
     this.routeError.set(null);
+    // Watchdog als letztes Netz: Sollte trotz HTTP-Timeouts je ein Weg existieren,
+    // auf dem das finally nie erreicht wird, stoppt er das "rechnet"-Signal (und
+    // damit den Logo-Ring) hart — ein endlos drehender Ring ist damit unmöglich.
+    // Eine später doch noch eintreffende gültige Antwort setzt ihr Ergebnis normal.
+    const watchdog = setTimeout(() => {
+      if (seq === this.routeSeq && this.routing()) {
+        this.routing.set(false);
+        this.routeError.set('Routenberechnung abgebrochen (Zeitüberschreitung nach 60 s).');
+      }
+    }, 60_000);
     try {
       const result = await this.routingService.route(
         this.routeProfile(),
@@ -403,6 +416,7 @@ export class App implements AfterViewInit {
         : 'Keine Route gefunden — liegen Start und Ziel im Gebiet derselben Stadt?');
       console.error('Routing fehlgeschlagen', err);
     } finally {
+      clearTimeout(watchdog);
       if (seq === this.routeSeq) this.routing.set(false);
     }
   }

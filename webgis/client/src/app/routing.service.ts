@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, timeout } from 'rxjs';
 import { LonLat, RouteProfile, RouteResult } from './models';
 
 /** Minimal-Ausschnitt der GraphHopper-Antwort (nur, was wir lesen). */
@@ -202,7 +202,11 @@ export class RoutingService {
       'ch.disable': true,
     };
     if (customModel) body['custom_model'] = customModel;
-    const resp = await firstValueFrom(this.http.post<GhResponse>(RoutingService.GH_URL, body));
+    // Harter Timeout: ein hängender Request (Server nimmt an, antwortet nie) würde
+    // sonst das "rechnet"-Signal — und damit den Logo-Ring — ewig festhalten.
+    const resp = await firstValueFrom(
+      this.http.post<GhResponse>(RoutingService.GH_URL, body).pipe(timeout(30_000)),
+    );
     const path = resp.paths?.[0];
     if (!path) throw new Error(resp.message ?? 'Keine Route gefunden');
     return { coords: path.points.coordinates ?? [], distanceM: path.distance, timeMs: path.time };
@@ -255,7 +259,9 @@ export class RoutingService {
             CQL_FILTER: cql,
           },
         });
-        const fc = await firstValueFrom(this.http.get<GeoJsonFc>(RoutingService.WFS_URL, { params }));
+        const fc = await firstValueFrom(
+          this.http.get<GeoJsonFc>(RoutingService.WFS_URL, { params }).pipe(timeout(20_000)),
+        );
         const zones = (fc.features ?? [])
           .filter((f) => !!f.geometry)
           .map((f) => ({ geometry: f.geometry as GeoJsonGeometry, genusDe: f.properties?.genus_de ?? g }));
