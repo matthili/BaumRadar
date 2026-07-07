@@ -36,18 +36,24 @@ interface GhPath {
 
 /**
  * Routing über den lokalen GraphHopper (same-origin `/graphhopper`) mit
- * Allergiezonen-Vermeidung in zwei Pässen:
+ * Allergiezonen-Vermeidung:
  *
  * 1. Basisroute OHNE Meidung — sie definiert den SCHLAUCH, in dem Zonen überhaupt
- *    relevant sind. (Eine einzige Start–Ziel-BBox deckte bei Diagonalen die halbe
- *    Stadt ab: Zonen 10 km abseits zählten mit und fraßen das Limit auf.)
+ *    relevant sind (eine einzige Start–Ziel-BBox deckte bei Diagonalen die halbe
+ *    Stadt ab), und dient zugleich als Direktrouten-Vergleich in der Anzeige.
  * 2. Zonen der gewählten Gattungen im Schlauch holen — mit Budget JE GATTUNG,
  *    denn ein gemeinsames `IN (…)`-Limit bevorzugt am Deckel die Gattung mit den
  *    "ersten" Tabellenzeilen und verschluckt andere komplett (live beobachtet:
- *    Birke+Linde ergab exakt die Birken-Route). Dann finale Route MIT Meidung.
+ *    Birke+Linde ergab exakt die Birken-Route).
+ * 3. KONVERGENZ: Route mit Meidung rechnen, Zonen entlang der NEUEN Route
+ *    nachladen, vereinigen, neu rechnen — bis nichts Neues auftaucht (max. 2
+ *    Nachrunden). Erst wenn Optimierung und Zählung dieselbe Menge sehen, sind
+ *    die Vergleichszahlen widerspruchsfrei.
  *
- * Zum Schluss zählt der Client, welche der Zonen die finale Route tatsächlich
- * durchquert — GraphHopper selbst meldet das nicht.
+ * Querungen und Zonen-Meter beider Routen zählt der Client selbst (Ray-Casting) —
+ * GraphHopper meldet das nicht. Ein Cache je Strecke (Basisroute + konvergierte
+ * Zonen, Gattungen einzeln) macht Faktor-/Gattungswechsel billig; er ist nur
+ * Startwert, die Konvergenz-Verifikation läuft immer mit.
  */
 @Injectable({ providedIn: 'root' })
 export class RoutingService {
@@ -124,11 +130,10 @@ export class RoutingService {
     let zones = this.cachedZones.filter((z) => avoidGenera.has(z.genusDe));
     let capped = this.cachedCapped;
     let path = base;
+    const avoidRoute = (zs: Zone[]) =>
+      this.ghRoute(profile, start, end, this.avoidModel(zs.map((z) => z.geometry), avoidFactor));
     if (zones.length) {
-      path = await this.ghRoute(
-        profile, start, end,
-        this.avoidModel(zones.map((z) => z.geometry), avoidFactor),
-      );
+      path = await avoidRoute(zones);
       for (let round = 0; round < 2; round++) {
         const more = await this.zonesAlongLine(path.coords, avoidGenera);
         capped = capped || more.capped;
@@ -138,10 +143,7 @@ export class RoutingService {
         const merged = RoutingService.unionZones(zones, more.zones);
         if (merged.length === zones.length) break; // nichts Neues → konvergiert
         zones = merged;
-        path = await this.ghRoute(
-          profile, start, end,
-          this.avoidModel(zones.map((z) => z.geometry), avoidFactor),
-        );
+        path = await avoidRoute(zones);
       }
     }
     const main = RoutingService.crossings(path.coords, zones);

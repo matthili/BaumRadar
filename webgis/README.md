@@ -133,7 +133,11 @@ http://localhost:8081/geoserver/baumradar/wfs?service=WFS&version=2.0.0&request=
   `docker volume rm baumradar-webgis_routingdata`). Allergiezonen werden
   pro Request als Custom-Model-Areas gemieden (weich — Start *in* einer Zone
   funktioniert immer); die Meidungs-Stärke ist im Client wählbar
-  („lieber queren als 5/10/20/50/100-facher Umweg", Standard 20-fach).
+  („lieber queren als 5/10/20/50/100-facher Umweg", Standard 20-fach). Der Client
+  zieht nur die Zonen im **Schlauch um die Route** heran (je Gattung eigenes Budget),
+  zählt selbst die tatsächlichen Querungen (mit Zonen-Metern) und zeigt die
+  **Direktroute** als gestrichelten Vergleich; Gattungs-/Faktor-Wechsel rechnen
+  automatisch neu (Zonen-Cache je Strecke).
 
 ## Konfiguration (`.env`)
 
@@ -189,8 +193,8 @@ mvn test -Pit
 - [x] Phase 0 – Gerüst (compose, README)
 - [x] Phase 1 – Loader (Download → Verify → PostGIS → GeoServer-Provisionierung)
 - [x] Phase 2 – GeoServer-Dienste end-to-end verifiziert (WMS-GetMap, WFS-GetFeature+CQL, OGC API Features)
-- [x] Phase 3 – Angular-Client (OpenLayers, Signals, GetFeatureInfo-Popup, GPX-Drop; Filter-Suche über Gattungs- **und** Artnamen, deutsch wie botanisch — Auswahl bleibt gattungsweit, passend zu den genus-geclusterten Zonen; Stadt-Auswahl scopt Zahlen + Karte)
-- [x] Phase 4 – GraphHopper-Routing (Insel-Graph, Korridor-Zonen-Vermeidung per Custom-Model, Start/Ziel per Klick **oder** Adresssuche)
+- [x] Phase 3 – Angular-Client (OpenLayers, Signals, GetFeatureInfo-Popup, GPX-Drop; Filter-Suche über Gattungs- **und** Artnamen, deutsch wie botanisch — Auswahl bleibt gattungsweit, passend zu den genus-geclusterten Zonen; Liste sortierbar nach Anzahl/Name; Stadt-Auswahl scopt Zahlen + Karte)
+- [x] Phase 4 – GraphHopper-Routing (Insel-Graph, Schlauch-Zonen-Vermeidung per Custom-Model mit Konvergenz + Querungs-Zähler + Direktrouten-Vergleich, Start/Ziel per Klick **oder** Adresssuche)
 - [x] Geocoding – Photon aus den pro-Stadt-Häppchen des Katalogs (lokal, `CITY_FILTER`-bewusst; Fallback photon.komoot.io)
 - [x] Phase 5 – Doku: [Architektur (DE)](../docs/webgis_architecture.md) / [EN](../docs/webgis_architecture_en.md) inkl. Diagrammen + Lessons Learned, Verlinkung im Haupt-README
 

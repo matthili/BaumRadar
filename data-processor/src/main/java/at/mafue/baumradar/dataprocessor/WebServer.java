@@ -265,6 +265,13 @@ public class WebServer {
         }
     }
 
+    /**
+     * Beendet den Prozess verzögert. Die Verzögerung gibt dem Browser Zeit, das
+     * abschließende SSE-Ereignis (z. B. {@code done}) noch zu empfangen, bevor
+     * {@code System.exit(0)} die Verbindung kappt — sonst bliebe das UI im
+     * "läuft"-Zustand hängen. 2500 ms nach Pipeline-Ende, 600 ms beim manuellen
+     * UI-Shutdown (da wartet kein längerer Datenstrom mehr).
+     */
     private void scheduleShutdown(long delayMs) {
         if (!shuttingDown.compareAndSet(false, true)) return; // nur einmal auslösen
         Thread t = new Thread(() -> {

@@ -66,7 +66,7 @@ public final class GeocoderCutter {
     }
 
     /** Ergebnis je Stadt: Ausgabedatei (vor dem Chunking), Ortszahl und Inhalts-Version. */
-    public record Result(File file, long places, long bytes, String version) {
+    public record Result(File file, long places, String version) {
     }
 
     /** Stadt-BBox, bereits um den Rand erweitert (Grenzen in Grad). */
@@ -76,6 +76,8 @@ public final class GeocoderCutter {
         public static CityBox of(String cityId, double[] boundingBox) {
             double midLat = (boundingBox[0] + boundingBox[2]) / 2.0;
             double dLat = MARGIN_METERS / 111_320.0;
+            // 0.2 = Untergrenze für cos: verhindert eine explodierende Längengrad-Marge
+            // nahe den Polen (cos → 0); für die mitteleuropäischen Städte greift sie nie.
             double dLon = MARGIN_METERS / (111_320.0 * Math.max(0.2, Math.cos(Math.toRadians(midLat))));
             return new CityBox(cityId,
                     boundingBox[0] - dLat, boundingBox[1] - dLon,
@@ -206,7 +208,7 @@ public final class GeocoderCutter {
         for (Map.Entry<String, CityWriter> e : writers.entrySet()) {
             CityWriter w = e.getValue();
             w.close();
-            results.put(e.getKey(), new Result(w.file, w.places, w.uncompressedBytes, w.version()));
+            results.put(e.getKey(), new Result(w.file, w.places, w.version()));
         }
         note.accept(String.format("Geocoder-Schnitt fertig: %,d Mio Orte gescannt, %d Stadt-Dateien.",
                 scanned / 1_000_000, results.size()));
@@ -219,7 +221,6 @@ public final class GeocoderCutter {
         final OutputStream out;
         final MessageDigest digest;
         long places = 0;
-        long uncompressedBytes = 0;
 
         CityWriter(File file, byte[][] preamble) throws IOException {
             this.file = file;
@@ -241,7 +242,6 @@ public final class GeocoderCutter {
             out.write('\n');
             digest.update(jsonBytes);
             digest.update((byte) '\n');
-            uncompressedBytes += jsonBytes.length + 1;
         }
 
         void close() throws IOException {

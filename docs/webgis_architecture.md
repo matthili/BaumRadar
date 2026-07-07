@@ -130,6 +130,8 @@ Der erste Start lädt und baut — je nach Städte-Auswahl und Leitung — Minut
 
 Bewusst **kein Timeout**: ein Erststart darf legitim Stunden dauern (große Städte, langsame Leitung). Stattdessen eine **Staleness-Warnung** — bewegt sich der `updatedAt`-Stempel einer laufenden Phase 15 Minuten nicht, meldet das Overlay „hängt evtl. (docker logs)". Damit lange *Einzelschritte* (5-GB-Download, stundenlanger Index-Bau in einem einzigen Java-Aufruf) nicht fälschlich als hängend gelten, stempeln sie per **Herzschlag** minütlich neu — beim Download gleich mit Fortschritt („Deutschland von download.geofabrik.de: 3.412 MB geladen"). So fällt nur ein wirklich stehender Job auf.
 
+Derselbe Ring dreht auch **während einer Routenberechnung** (Overlay-Zeile „berechnet Route …"), und auch hier gilt „nichts kann ewig drehen": jede HTTP-Anfrage hat einen harten rxjs-Timeout, das `finally` räumt immer auf, eine Sequenznummer verwirft überholte Antworten, und ein 60-s-Watchdog stoppt die Anzeige notfalls hart — ein endlos drehender Ring ist damit konstruktiv ausgeschlossen.
+
 ---
 
 ## Sicherheit (Heim-/Schulnetz-tauglich)

@@ -185,7 +185,7 @@ public class Pipeline {
     /**
      * Processes a single city end-to-end: SQLite build → snapshot content version →
      * GZIP (with retry for transient Windows file locks) → delete raw DB → Ed25519
-     * signature → split into chunks if the archive exceeds {@link #MAX_SIZE}.
+     * signature → split into chunks if the archive exceeds {@link Chunks#MAX_SIZE}.
      *
      * @return the number of trees written for this city
      */

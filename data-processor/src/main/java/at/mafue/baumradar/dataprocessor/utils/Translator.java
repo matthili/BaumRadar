@@ -1,12 +1,5 @@
 package at.mafue.baumradar.dataprocessor.utils;
 
-import at.mafue.baumradar.dataprocessor.providers.*;
-import at.mafue.baumradar.dataprocessor.providers.austria.*;
-import at.mafue.baumradar.dataprocessor.providers.germany.*;
-import at.mafue.baumradar.dataprocessor.providers.switzerland.*;
-import at.mafue.baumradar.dataprocessor.models.*;
-import at.mafue.baumradar.dataprocessor.utils.*;
-
 import java.util.HashMap;
 import java.util.Map;
 

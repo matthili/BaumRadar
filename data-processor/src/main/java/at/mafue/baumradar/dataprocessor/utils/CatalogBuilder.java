@@ -1,10 +1,6 @@
 package at.mafue.baumradar.dataprocessor.utils;
 
 import at.mafue.baumradar.dataprocessor.providers.*;
-import at.mafue.baumradar.dataprocessor.providers.austria.*;
-import at.mafue.baumradar.dataprocessor.providers.germany.*;
-import at.mafue.baumradar.dataprocessor.providers.switzerland.*;
-import at.mafue.baumradar.dataprocessor.models.*;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -181,14 +177,7 @@ public class CatalogBuilder {
         sb.append("],\n");
 
         sb.append("      \"dbUrl\": \"").append(dbUrl).append("\",\n");
-        if (!chunks.isEmpty()) {
-            sb.append("      \"dbUrlChunks\": [");
-            for (int c = 0; c < chunks.size(); c++) {
-                sb.append("\"").append(chunks.get(c)).append("\"");
-                if (c < chunks.size() - 1) sb.append(", ");
-            }
-            sb.append("],\n");
-        }
+        appendUrlArray(sb, "dbUrlChunks", chunks);
         sb.append("      \"sigUrl\": \"").append(sigUrl).append("\",\n");
 
         // Optionale Geocoder-Daten (Adress- & Ortssuche): nur wenn publiziert.
@@ -196,14 +185,7 @@ public class CatalogBuilder {
         List<String> geoChunks = chunkUrls(outDir, geoName, baseUrl);
         if (new File(outDir, geoName).exists() || !geoChunks.isEmpty()) {
             sb.append("      \"geocoderUrl\": \"").append(baseUrl).append(geoName).append("\",\n");
-            if (!geoChunks.isEmpty()) {
-                sb.append("      \"geocoderUrlChunks\": [");
-                for (int c = 0; c < geoChunks.size(); c++) {
-                    sb.append("\"").append(geoChunks.get(c)).append("\"");
-                    if (c < geoChunks.size() - 1) sb.append(", ");
-                }
-                sb.append("],\n");
-            }
+            appendUrlArray(sb, "geocoderUrlChunks", geoChunks);
             sb.append("      \"geocoderSigUrl\": \"").append(baseUrl).append(geoName).append(".sig\",\n");
             String gv = geocoderVersions == null ? null : geocoderVersions.get(p.getCityId());
             sb.append("      \"geocoderVersion\": \"").append(gv == null ? "" : gv).append("\",\n");
@@ -213,5 +195,16 @@ public class CatalogBuilder {
         sb.append("      \"dataVersion\": \"").append(dataVersion == null ? "" : dataVersion).append("\"\n");
         sb.append("    }");
         return sb.toString();
+    }
+
+    /** Hängt ein JSON-Array {@code "field": ["u1", "u2", …]} an — nur, wenn URLs vorliegen. */
+    private static void appendUrlArray(StringBuilder sb, String field, List<String> urls) {
+        if (urls.isEmpty()) return;
+        sb.append("      \"").append(field).append("\": [");
+        for (int c = 0; c < urls.size(); c++) {
+            sb.append("\"").append(urls.get(c)).append("\"");
+            if (c < urls.size() - 1) sb.append(", ");
+        }
+        sb.append("],\n");
     }
 }

@@ -60,17 +60,19 @@ public final class Chunks {
             }
         }
         // Ältere, überzählige Chunks eines früheren (größeren) Laufs entfernen.
-        for (int i = chunkIndex + 1; i < 100; i++) {
-            File old = new File(dir, String.format("%s.%03d", file.getName(), i));
-            if (old.exists()) old.delete(); else break;
-        }
+        deleteChunksFrom(dir, file.getName(), chunkIndex + 1);
         file.delete();
         return chunkIndex;
     }
 
     /** Entfernt alle nummerierten Chunks zu {@code baseName} (Lauf wurde wieder klein). */
     private static void deleteStaleChunks(File dir, String baseName) {
-        for (int i = 1; i < 100; i++) {
+        deleteChunksFrom(dir, baseName, 1);
+    }
+
+    /** Löscht nummerierte Chunks {@code baseName.NNN} ab {@code start} bis zur ersten Lücke. */
+    private static void deleteChunksFrom(File dir, String baseName, int start) {
+        for (int i = start; i < 100; i++) {
             File old = new File(dir, String.format("%s.%03d", baseName, i));
             if (old.exists()) old.delete(); else break;
         }

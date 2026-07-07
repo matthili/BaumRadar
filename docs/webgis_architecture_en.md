@@ -130,6 +130,8 @@ The first start downloads and builds for minutes to hours, depending on city sel
 
 Deliberately **no timeout**: a first start may legitimately take hours (large cities, slow line). Instead there is a **staleness warning** — if the `updatedAt` stamp of a running phase does not move for 15 minutes, the overlay reports "possibly stuck (docker logs)". So that long *single steps* (a 5 GB download, an hours-long index build inside one Java call) are not falsely flagged as stuck, they re-stamp via a **heartbeat** every minute — downloads even with progress ("Deutschland von download.geofabrik.de: 3,412 MB geladen"). Only a truly stalled job stands out.
 
+The same ring also spins **during a route computation** (overlay line "berechnet Route …"), and here too "nothing can spin forever" holds: every HTTP request has a hard rxjs timeout, the `finally` always cleans up, a sequence number discards superseded answers, and a 60 s watchdog stops the display as a last resort — an endlessly spinning ring is structurally impossible.
+
 ---
 
 ## Security (home/school-network friendly)
