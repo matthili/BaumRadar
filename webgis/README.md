@@ -1,4 +1,10 @@
+<p align="center">
+  <img src="../assets/favicons/web-app-manifest-192x192.png" alt="BaumRadar WebGIS" width="120"/>
+</p>
+
 # BaumRadar WebGIS — Tech-Demo
+
+*(For the English documentation, see [README_en.md](README_en.md))*
 
 Ein lokal betreibbares Web-GIS auf Basis von **OGC-Standards**, das die signierten
 BaumRadar-Datenbestände (19 Städte, ~2,6 Mio Bäume) konsumiert — als eigenständige

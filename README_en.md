@@ -10,7 +10,7 @@
 [![Java](https://img.shields.io/badge/Java-21_·_25-red.svg)](https://openjdk.org)
 [![Angular](https://img.shields.io/badge/Angular-22-dd0031.svg)](https://angular.dev)
 [![OGC](https://img.shields.io/badge/OGC-WMS_·_WFS_·_API_Features-1f6feb.svg)](docs/webgis_architecture_en.md)
-[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED.svg)](webgis/README.md)
+[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED.svg)](webgis/README_en.md)
 [![Tests](https://img.shields.io/badge/Tests-passing-brightgreen.svg)](#-technical-documentation)
 [![Open Data](https://img.shields.io/badge/Open_Data-19_Cities-orange.svg)](#-multi-city-support)
 [![Trees](https://img.shields.io/badge/Trees-~2.6_M-forestgreen.svg)](docs/data_structure_en.md)
@@ -102,14 +102,14 @@ The data is processed by the backend and cryptographically signed using **Ed2551
 On startup the app checks for updates: if a newer app version exists in the GitHub releases, it can download and install itself on request (explaining the required install permission and jumping straight to the relevant setting). It likewise detects updated or corrected **tree data** – each city carries a content-based data version, and already-downloaded cities are offered a refresh whenever their data changes.
 
 ### 🖥️ WebGIS Tech Demo (Docker)
-Alongside the app there is a **complete self-hostable web GIS** ([`webgis/`](webgis/README.md)): PostGIS and GeoServer publish the same signed datasets as **OGC services** (WMS 1.3.0, WFS 2.0, OGC API Features), an Angular/OpenLayers client provides the map, genus filters and city scoping — plus **local routing** (GraphHopper island graph, allergy-zone avoidance via custom models — with selectable avoidance strength from "5-fold" to "effectively strict") and **local address/POI search** (Photon). The special twist: routing OSM data and the geocoder index are also fed from **per-city, signed slices** — someone trying just Zug downloads 25 MB for the address search instead of the 11 GB of pre-built country indexes. One command is all it takes (only Docker required):
+Alongside the app there is a **complete self-hostable web GIS** ([`webgis/`](webgis/README_en.md)): PostGIS and GeoServer publish the same signed datasets as **OGC services** (WMS 1.3.0, WFS 2.0, OGC API Features), an Angular/OpenLayers client provides the map, genus filters and city scoping — plus **local routing** (GraphHopper island graph, allergy-zone avoidance via custom models — with selectable avoidance strength from "5-fold" to "effectively strict") and **local address/POI search** (Photon). The special twist: routing OSM data and the geocoder index are also fed from **per-city, signed slices** — someone trying just Zug downloads 25 MB for the address search instead of the 11 GB of pre-built country indexes. One command is all it takes (only Docker required):
 
 ```powershell
 cd webgis
 .\start.cmd -Cities zug      # map + local routing + local address search for Zug
 ```
 
-→ [Quick start & services](webgis/README.md) · [Architecture doc incl. lessons learned](docs/webgis_architecture_en.md)
+→ [Quick start & services](webgis/README_en.md) · [Architecture doc incl. lessons learned](docs/webgis_architecture_en.md)
 
 ---
 
