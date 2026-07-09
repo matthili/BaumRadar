@@ -116,7 +116,7 @@ Vorberechnete Zonen für Baumgruppen derselben Gattung. Ein Geofence fasst mehre
 | `genus_de` | TEXT | **Die Relation zu `trees`!** Deutscher Gattungsname – entspricht `trees.genus_de` |
 
 **Wie hängen die Tabellen zusammen?**
-Die Spalte `geofences.genus_de` enthält exakt denselben Wert wie `trees.genus_de`. Wenn ein Nutzer eine Allergie gegen `"Birke"` auswählt, kannst du sowohl die einzelnen Bäume (`SELECT * FROM trees WHERE genus_de = 'Birke'`) als auch die vorberechneten Zonen (`SELECT * FROM geofences WHERE genus_de = 'Birke'`) abfragen.
+Die Spalte `geofences.genus_de` enthält exakt den gleichen Wert wie `trees.genus_de`. Wenn ein Nutzer eine Allergie gegen `"Birke"` auswählt, kannst du sowohl die einzelnen Bäume (`SELECT * FROM trees WHERE genus_de = 'Birke'`) als auch die vorberechneten Zonen (`SELECT * FROM geofences WHERE genus_de = 'Birke'`) abfragen.
 
 ---
 

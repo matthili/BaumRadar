@@ -185,7 +185,7 @@ Startfehler).
 curl -s http://localhost:8082/stack.json                        # {"routing":…, "geocoding":…, "cityFilter":…}
 curl -s "http://localhost:8082/geoserver/baumradar/wfs?service=WFS&version=2.0.0&request=GetFeature&typeNames=baumradar:genus_stats&outputFormat=application/json&count=1"
 ```
-Beides muss über 8082 dasselbe liefern wie in Phase 2 über 8081 — dann proxied nginx korrekt.
+Beides muss über 8082 das Gleiche liefern wie in Phase 2 über 8081 — dann proxied nginx korrekt.
 
 ---
 
