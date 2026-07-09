@@ -10,7 +10,12 @@
   </span>
   <div>
     <h1>BaumRadar <span class="thin">WebGIS</span></h1>
-    <p>OGC-Tech-Demo &middot; WMS 1.3.0 &middot; WFS 2.0 &middot; OGC API Features</p>
+    <!-- Die vorhandene Untertitel-Zeile ist zugleich der „Über"-Auslöser — kein
+         zusätzliches Element im Badge; die Klickbarkeit zeigt sich erst beim Hover. -->
+    <p class="subtitle" role="button" tabindex="0" title="Über dieses WebGIS"
+       (click)="openAbout()" (keydown.enter)="openAbout()" (keydown.space)="openAbout()">
+      OGC-Tech-Demo &middot; WMS 1.3.0 &middot; WFS 2.0 &middot; OGC API Features
+    </p>
   </div>
 
   <!-- Hover/Focus-Overlay: echter Modul-Status aus stack.json + /status/ + Probes -->
@@ -280,3 +285,35 @@
     }
   }
 </div>
+
+<!-- „Über"-Overlay: mittig über der Karte, beim ersten Besuch automatisch,
+     sonst über die klickbare Untertitel-Zeile. Klick auf den Hintergrund oder „OK" schließt. -->
+@if (showAbout()) {
+  <div class="about-backdrop" (click)="closeAbout()">
+    <div class="about-card glass" role="dialog" aria-modal="true" aria-labelledby="about-title"
+         (click)="$event.stopPropagation()">
+      <img class="about-logo" src="logo_baumradar.png" alt="" width="44" height="44">
+      <h2 id="about-title">&Uuml;ber BaumRadar WebGIS</h2>
+      <p>
+        Eine offene Technik-Demo rund um die Baumkataster von 19 St&auml;dten in
+        Deutschland, &Ouml;sterreich und der Schweiz &mdash; als eigenst&auml;ndige
+        Erg&auml;nzung zur BaumRadar-App.
+      </p>
+      <p>
+        <strong>Die Baumdaten liegen wie kleine Inseln vor:</strong> Die Hintergrundkarte
+        ist durchgehend, doch B&auml;ume und Allergiezonen gibt es nur &uuml;ber den
+        erfassten St&auml;dten. Dazwischen bleibt die Karte leer.
+      </p>
+      <p>
+        <strong>F&uuml;r die Routenplanung gilt dasselbe:</strong> Routen werden
+        <em>innerhalb</em> einer Stadt berechnet. Eine Route <em>zwischen</em> zwei
+        St&auml;dten ist bewusst nicht vorgesehen &mdash; Start und Ziel m&uuml;ssen im
+        selben Stadtgebiet liegen.
+      </p>
+      <p class="about-foot">
+        Die Daten stammen aus offenen Katastern und werden signiert ausgeliefert.
+      </p>
+      <button type="button" class="about-ok" (click)="closeAbout()">OK, verstanden</button>
+    </div>
+  </div>
+}

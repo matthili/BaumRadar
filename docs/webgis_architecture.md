@@ -168,6 +168,7 @@ Dinge, die erst der echte Betrieb gezeigt hat — dokumentiert, weil man an ihne
 
 ## Verwandte Dokumente
 
+- [WebGIS von Grund auf aufbauen](webgis_bootstrap.md) — From-Scratch-Anleitung: was wo herunterladen, wie die sieben Container verdrahtet werden, Verifikation je Phase
 - [Glossar](glossary.md) — alle hier verwendeten Begriffe, Dienste und Standards erklärt
 - [`webgis/README.md`](../webgis/README.md) — Schnellstart, Dienste-Tabelle, Konfiguration
 - [Backend / Data-Processor](backend_architecture.md) — die produzierende Seite der Pipeline (inkl. GeocoderCutter)

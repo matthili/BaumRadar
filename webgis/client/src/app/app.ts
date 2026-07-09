@@ -140,6 +140,24 @@ export class App implements AfterViewInit {
   /** Logo-Ring: dreht bei Systemstart UND während einer Routenberechnung. */
   readonly busyRing = computed(() => this.status.anyPending() || this.routing());
 
+  /** „Über"-Overlay: beim ersten Besuch automatisch, danach über die Untertitel-Zeile. */
+  readonly showAbout = signal(false);
+  private static readonly ABOUT_SEEN_KEY = 'br-about-seen';
+
+  openAbout(): void {
+    this.showAbout.set(true);
+  }
+
+  closeAbout(): void {
+    this.showAbout.set(false);
+    // Erstbesuch merken, damit das Overlay nicht bei jedem Aufruf wieder aufpoppt.
+    try {
+      globalThis.localStorage?.setItem(App.ABOUT_SEEN_KEY, '1');
+    } catch {
+      // Privater Modus o. Ä.: dann erscheint es eben erneut — kein Beinbruch.
+    }
+  }
+
   readonly routingHint = computed(() => {
     if (!this.routeStart()) return 'Start: Adresse suchen oder auf die Karte klicken.';
     if (!this.routeEnd()) return 'Ziel: Adresse suchen oder auf die Karte klicken.';
@@ -160,6 +178,12 @@ export class App implements AfterViewInit {
     const initialOpen = urlParams.get('open');
     if (initialOpen) {
       this.expandedGenera.set(new Set(initialOpen.split(',').map((s) => s.trim())));
+    }
+    // „Über"-Overlay beim allerersten Besuch einmalig zeigen (localStorage-gemerkt).
+    try {
+      if (!globalThis.localStorage?.getItem(App.ABOUT_SEEN_KEY)) this.showAbout.set(true);
+    } catch {
+      // localStorage nicht verfügbar → Overlay bleibt zu; per Untertitel erreichbar.
     }
     // Zustands-Änderungen an die (Angular-fremde) Karte durchreichen.
     // Vor createMap() sind die MapService-Methoden No-ops (optional chaining).

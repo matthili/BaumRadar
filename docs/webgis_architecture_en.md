@@ -168,6 +168,7 @@ Things only real operation revealed — documented because they teach something:
 
 ## Related documents
 
+- [Building the WebGIS from scratch](webgis_bootstrap_en.md) — from-scratch guide: what to download where, how the seven containers are wired, verification per phase
 - [Glossary](glossary_en.md) — every term, service and standard used here, explained
 - [`webgis/README.md`](../webgis/README.md) — quick start, service table, configuration
 - [Backend / data-processor](backend_architecture_en.md) — the producing side of the pipeline (incl. GeocoderCutter)

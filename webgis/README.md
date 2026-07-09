@@ -201,4 +201,7 @@ mvn test -Pit
 Die ausführliche Architektur-Dokumentation (Datenweg, Routing, Geocoding, Stolpersteine):
 **[docs/webgis_architecture.md](../docs/webgis_architecture.md)** · [English version](../docs/webgis_architecture_en.md)
 
+Den Stack **von Grund auf aufbauen** (was wo herunterladen, Verdrahtung, Verifikation je Phase):
+**[docs/webgis_bootstrap.md](../docs/webgis_bootstrap.md)** · [English version](../docs/webgis_bootstrap_en.md)
+
 Unbekannte Begriffe (PBF? Photon? CQL?) erklärt das **[Glossar](../docs/glossary.md)** ([EN](../docs/glossary_en.md)).

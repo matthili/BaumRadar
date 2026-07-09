@@ -38,6 +38,78 @@
     font-size: 11px;
     color: var(--br-on-glass-muted);
   }
+
+  // Untertitel ist der „Über"-Auslöser — bei Ruhe unverändert, erst beim Hover als
+  // klickbar erkennbar (dezent unterstrichen), damit das Badge nicht voller wirkt.
+  .subtitle {
+    cursor: pointer;
+
+    &:hover,
+    &:focus-visible {
+      color: var(--br-on-glass);
+      text-decoration: underline dotted;
+      text-underline-offset: 2px;
+      outline: none;
+    }
+  }
+}
+
+// „Über"-Overlay mittig über der Karte.
+.about-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.about-card {
+  max-width: 440px;
+  padding: 22px 24px 20px;
+  text-align: left;
+
+  .about-logo {
+    border-radius: 10px;
+    display: block;
+    margin-bottom: 8px;
+  }
+
+  h2 {
+    margin: 0 0 10px;
+    font-size: 19px;
+  }
+
+  p {
+    margin: 0 0 10px;
+    font-size: 13.5px;
+    line-height: 1.5;
+    color: var(--br-on-glass);
+
+    strong { color: var(--br-primary-container); }
+  }
+
+  .about-foot {
+    font-size: 12px;
+    color: var(--br-on-glass-muted);
+  }
+
+  .about-ok {
+    margin-top: 6px;
+    width: 100%;
+    padding: 10px;
+    border: none;
+    border-radius: 10px;
+    background: var(--br-primary-bright);
+    color: #0b1a0b;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+
+    &:hover { filter: brightness(1.06); }
+  }
 }
 
 .brand-logo {
