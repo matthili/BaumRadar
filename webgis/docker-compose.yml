@@ -1,10 +1,21 @@
 name: baumradar-webgis
 
+# Docker-JSON-Logs sind ab Werk UNBEGRENZT — ein dauerhaft öffentlicher Web-Client
+# (nginx-Access-Log!) oder ein gesprächiger GeoServer füllt sonst über Monate die
+# Platte. Deckel je Dienst: 10 MB × 3 Dateien (rollierend) — Dauerbetriebs-sicher,
+# ohne auf eine host-seitige daemon.json angewiesen zu sein.
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   # Räumliche Datenbank: Bäume (Punkte) + Allergiezonen (gebufferte Polygone)
   postgis:
     image: postgis/postgis:17-3.5
     container_name: baumradar-postgis
+    logging: *default-logging
     environment:
       POSTGRES_DB: ${PG_DB:-baumradar}
       POSTGRES_USER: ${PG_USER:-baumradar}
@@ -26,6 +37,7 @@ services:
     # Mindestens 2.27: erst ab dort gibt es "ogcapi-features" als stabile Extension.
     image: docker.osgeo.org/geoserver:${GEOSERVER_VERSION:-2.28.0}
     container_name: baumradar-geoserver
+    logging: *default-logging
     depends_on:
       postgis:
         condition: service_healthy
@@ -47,6 +59,7 @@ services:
   loader:
     build: ./loader
     container_name: baumradar-loader
+    logging: *default-logging
     depends_on:
       postgis:
         condition: service_healthy
@@ -73,6 +86,7 @@ services:
   web:
     build: ./client
     container_name: baumradar-web
+    logging: *default-logging
     depends_on:
       geoserver:
         condition: service_started
@@ -95,6 +109,7 @@ services:
   graph-builder:
     build: ./graph-builder
     container_name: baumradar-graph-builder
+    logging: *default-logging
     profiles: ["routing"]
     environment:
       CATALOG_URL: ${CATALOG_URL:-https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/catalog.json}
@@ -118,6 +133,7 @@ services:
       args:
         GH_VERSION: ${GH_VERSION:-10.0}
     container_name: baumradar-graphhopper
+    logging: *default-logging
     profiles: ["routing"]
     depends_on:
       graph-builder:
@@ -141,6 +157,7 @@ services:
       args:
         PHOTON_VERSION: ${PHOTON_VERSION:-1.2.1}
     container_name: baumradar-photon
+    logging: *default-logging
     profiles: ["geocoding"]
     environment:
       CATALOG_URL: ${CATALOG_URL:-https://raw.githubusercontent.com/matthili/BaumRadar/master/docs/data/catalog.json}

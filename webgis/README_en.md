@@ -73,6 +73,19 @@ graph, images/build cache ~8–10 GB) — **peaking during the first Photon impo
 up to ~75 GB**, because the merged raw dump (>20 GB) sits next to the index being
 built. With `-Cities zug` for a try, everything together stays under ~10 GB.
 
+**Continuous operation:** the stack is designed for unattended long-term operation —
+all runtime data is bounded or cleans up after itself: container logs are capped via
+Compose at 10 MB × 3 per service (important for the publicly reachable web client),
+Photon working files and city extracts are deleted after use, re-imports replace
+their predecessors, and PostgreSQL handles WAL recycling/autovacuum on its own.
+The only occasional host-side chore: repeated update builds feed the **global
+Docker build cache** (measured: >20 GB after a few weeks). `docker system df`
+shows the state; `docker builder prune -f --filter until=168h` removes only cache
+entries older than 7 days (costs nothing but rebuild time). On engines with the
+classic image store (e.g. Debian servers) rebuilds additionally leave untagged
+old images — there `docker image prune -f` helps (removes only untagged images);
+newer Docker Desktop versions (containerd store) clean these up on their own.
+
 **How do I tell it is still loading?** As long as modules are missing, a ring
 spins around the BaumRadar logo in the web client; hovering (or focusing) it opens
 an overlay with the real per-module state — the same messages as `docker logs`

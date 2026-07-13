@@ -144,6 +144,20 @@ export class App implements AfterViewInit {
   readonly showAbout = signal(false);
   private static readonly ABOUT_SEEN_KEY = 'br-about-seen';
 
+  /** Schmal-Bildschirm-Hinweis: sichtbar macht ihn NUR die CSS-Media-Query (≤ 700 px);
+   *  dieses Signal steuert lediglich „wurde er schon weggeklickt". */
+  readonly showMobileHint = signal(false);
+  private static readonly MOBILE_HINT_KEY = 'br-mobile-hint-seen';
+
+  dismissMobileHint(): void {
+    this.showMobileHint.set(false);
+    try {
+      globalThis.localStorage?.setItem(App.MOBILE_HINT_KEY, '1');
+    } catch {
+      // Privater Modus o. Ä.: dann erscheint er eben erneut — kein Beinbruch.
+    }
+  }
+
   openAbout(): void {
     this.showAbout.set(true);
   }
@@ -184,6 +198,12 @@ export class App implements AfterViewInit {
       if (!globalThis.localStorage?.getItem(App.ABOUT_SEEN_KEY)) this.showAbout.set(true);
     } catch {
       // localStorage nicht verfügbar → Overlay bleibt zu; per Untertitel erreichbar.
+    }
+    // Schmal-Bildschirm-Hinweis, solange er noch nie weggeklickt wurde.
+    try {
+      if (!globalThis.localStorage?.getItem(App.MOBILE_HINT_KEY)) this.showMobileHint.set(true);
+    } catch {
+      this.showMobileHint.set(true);
     }
     // Zustands-Änderungen an die (Angular-fremde) Karte durchreichen.
     // Vor createMap() sind die MapService-Methoden No-ops (optional chaining).

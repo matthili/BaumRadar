@@ -151,6 +151,11 @@ if [ "${#ALL[@]}" -eq 0 ]; then status "Fehler" "keine Extrakte erzeugt"; echo "
 echo "Merge ${#ALL[@]} Stadt-Extrakt(e) → $OUT"
 status "führt Ausschnitte zusammen" "${#ALL[@]} Städte"
 osmium merge --overwrite "${ALL[@]}" -o "$OUT"
+# Stadt-Extrakte sind reine Zwischenprodukte: nach dem Merge nutzlos (ein Neubau
+# extrahiert ohnehin frisch aus den gecachten Länder-PBFs) — und bei geändertem
+# CITY_FILTER blieben sonst Leichen liegen (~50 MB je Großstadt). Der Glob räumt
+# bewusst ALLE city_-Dateien, auch die von früheren Städte-Sets.
+rm -f /osm/city_*.osm.pbf
 printf '%s' "$SPEC" > "$MARKER"
 status "fertig"
 echo "Insel-PBF fertig:"

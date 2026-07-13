@@ -72,6 +72,19 @@ Images/Build-Cache ~8–10 GB) — **in der Spitze während des ersten Photon-Im
 bis ~75 GB**, weil der gemergte Rohdump (>20 GB) neben dem entstehenden Index liegt.
 Mit `-Cities zug` zum Ausprobieren bleibt alles zusammen unter ~10 GB.
 
+**Dauerbetrieb:** Der Stack ist auf unbeaufsichtigten Langzeitbetrieb ausgelegt — alle
+Laufzeitdaten sind begrenzt oder räumen sich selbst: Container-Logs sind per Compose
+auf 10 MB × 3 je Dienst gedeckelt (wichtig beim öffentlich erreichbaren Web-Client),
+Photon-Arbeitsdateien und Stadt-Extrakte werden nach Gebrauch gelöscht, Neu-Importe
+ersetzen ihre Vorgänger, und PostgreSQL erledigt WAL-Recycling/Autovacuum selbst.
+Einzige gelegentliche Host-Pflege: Wiederholte Update-Builds füttern den **globalen
+Docker-Build-Cache** (gemessen: nach Wochen >20 GB). `docker system df` zeigt den
+Stand; `docker builder prune -f --filter until=168h` räumt nur Cache-Einträge, die
+älter als 7 Tage sind (kostet nichts außer Rebuild-Zeit). Auf Engines mit klassischem
+Image-Store (z. B. Debian-Server) hinterlassen Rebuilds zusätzlich ungetaggte
+Alt-Images — dort hilft `docker image prune -f` (entfernt nur Ungetaggtes); neuere
+Docker-Desktop-Versionen (containerd-Store) räumen diese selbst.
+
 **Woran erkenne ich, dass noch geladen wird?** Solange Module fehlen, rotiert im
 Web-Client ein Ring um das BaumRadar-Logo; Hover (oder Fokus) darüber öffnet ein
 Overlay mit dem echten Stand pro Modul — dieselben Meldungen wie `docker logs`

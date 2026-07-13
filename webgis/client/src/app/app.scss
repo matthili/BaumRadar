@@ -54,6 +54,38 @@
   }
 }
 
+// Schmal-Bildschirm-Hinweis: nur per Media-Query sichtbar (Handys/schmale Fenster),
+// über dem GPX-Hinweis (bottom 28px) platziert, unter dem „Über"-Overlay (z 10).
+.mobile-hint {
+  display: none;
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: 76px;
+  z-index: 9;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  font-size: 13px;
+  line-height: 1.4;
+
+  button {
+    flex: 0 0 auto;
+    margin-left: auto;
+    padding: 8px 12px;
+    border: none;
+    border-radius: 9px;
+    background: var(--br-primary-bright);
+    color: #0b1a0b;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  @media (max-width: 700px) {
+    display: flex;
+  }
+}
+
 // „Über"-Overlay mittig über der Karte.
 .about-backdrop {
   position: fixed;

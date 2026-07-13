@@ -286,6 +286,17 @@
   }
 </div>
 
+<!-- Schmal-Bildschirm-Hinweis: immer gerendert, solange nicht weggeklickt —
+     ob er SICHTBAR ist, entscheidet allein die CSS-Media-Query (<= 700 px).
+     So erscheint er auch, wenn ein Fenster erst nachträglich schmal wird. -->
+@if (showMobileHint()) {
+  <div class="mobile-hint glass" role="note">
+    <span>&#128241; Dieses WebGIS ist f&uuml;r <strong>Desktop und Tablet</strong> gedacht
+      &mdash; f&uuml;r unterwegs gibt es die BaumRadar-App.</span>
+    <button type="button" (click)="dismissMobileHint()">Verstanden</button>
+  </div>
+}
+
 <!-- „Über"-Overlay: mittig über der Karte, beim ersten Besuch automatisch,
      sonst über die klickbare Untertitel-Zeile. Klick auf den Hintergrund oder „OK" schließt. -->
 @if (showAbout()) {
@@ -297,7 +308,9 @@
       <p>
         Eine offene Technik-Demo rund um die Baumkataster von 19 St&auml;dten in
         Deutschland, &Ouml;sterreich und der Schweiz &mdash; als eigenst&auml;ndige
-        Erg&auml;nzung zur BaumRadar-App.
+        Erg&auml;nzung zur BaumRadar-App. Die Oberfl&auml;che ist f&uuml;r Browser auf
+        <strong>Desktop-Systemen und Tablets</strong> ausgelegt &mdash; f&uuml;r das
+        Smartphone gibt es die BaumRadar-App.
       </p>
       <p>
         <strong>Die Baumdaten liegen wie kleine Inseln vor:</strong> Die Hintergrundkarte
