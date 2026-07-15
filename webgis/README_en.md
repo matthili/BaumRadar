@@ -74,7 +74,10 @@ up to ~75 GB**, because the merged raw dump (>20 GB) sits next to the index bein
 built. With `-Cities zug` for a try, everything together stays under ~10 GB.
 
 **Continuous operation:** the stack is designed for unattended long-term operation —
-all runtime data is bounded or cleans up after itself: container logs are capped via
+after a host reboot (e.g. nightly OS updates) all long-running services come back on
+their own (`restart: unless-stopped`, which also covers crashes; only `--down`/
+`docker stop` is respected as a deliberate off), and all runtime data is bounded or
+cleans up after itself: container logs are capped via
 Compose at 10 MB × 3 per service (important for the publicly reachable web client),
 Photon working files and city extracts are deleted after use, re-imports replace
 their predecessors, and PostgreSQL handles WAL recycling/autovacuum on its own.

@@ -16,6 +16,9 @@ services:
     image: postgis/postgis:17-3.5
     container_name: baumradar-postgis
     logging: *default-logging
+    # Nach Host-Reboot/Absturz von selbst wiederkommen; nur `--down`/`docker stop`
+    # gilt als bewusstes Aus. (Einmal-Jobs wie loader/graph-builder bleiben "no".)
+    restart: unless-stopped
     environment:
       POSTGRES_DB: ${PG_DB:-baumradar}
       POSTGRES_USER: ${PG_USER:-baumradar}
@@ -38,6 +41,7 @@ services:
     image: docker.osgeo.org/geoserver:${GEOSERVER_VERSION:-2.28.0}
     container_name: baumradar-geoserver
     logging: *default-logging
+    restart: unless-stopped
     depends_on:
       postgis:
         condition: service_healthy
@@ -87,6 +91,7 @@ services:
     build: ./client
     container_name: baumradar-web
     logging: *default-logging
+    restart: unless-stopped
     depends_on:
       geoserver:
         condition: service_started

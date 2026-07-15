@@ -72,7 +72,10 @@ Images/Build-Cache ~8–10 GB) — **in der Spitze während des ersten Photon-Im
 bis ~75 GB**, weil der gemergte Rohdump (>20 GB) neben dem entstehenden Index liegt.
 Mit `-Cities zug` zum Ausprobieren bleibt alles zusammen unter ~10 GB.
 
-**Dauerbetrieb:** Der Stack ist auf unbeaufsichtigten Langzeitbetrieb ausgelegt — alle
+**Dauerbetrieb:** Der Stack ist auf unbeaufsichtigten Langzeitbetrieb ausgelegt — nach
+einem Host-Neustart (z. B. nächtliche OS-Updates) kommen alle Dauerdienste von selbst
+wieder (`restart: unless-stopped`, gilt auch nach Abstürzen; nur `--down`/`docker stop`
+wird als bewusstes Aus respektiert), und alle
 Laufzeitdaten sind begrenzt oder räumen sich selbst: Container-Logs sind per Compose
 auf 10 MB × 3 je Dienst gedeckelt (wichtig beim öffentlich erreichbaren Web-Client),
 Photon-Arbeitsdateien und Stadt-Extrakte werden nach Gebrauch gelöscht, Neu-Importe
