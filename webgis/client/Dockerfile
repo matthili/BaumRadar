@@ -1,10 +1,14 @@
 # Multi-Stage: Angular-Build in Node 24, Auslieferung über nginx.
 # nginx proxied /geoserver an den Compose-Service — Client und OGC-Dienste
 # sind damit same-origin (kein CORS nötig).
-FROM node:24-alpine AS build
+# Node-Minor gepinnt: Angular prüft zur Laufzeit eine Mindest-Node-Version —
+# ein alter gecachter ":24-alpine" auf dem Zielsystem würde den Build brechen.
+FROM node:24.18-alpine AS build
 WORKDIR /build
-COPY package.json ./
-RUN npm install
+# npm ci statt install: exakt die committeten Versionen aus package-lock.json,
+# sonst löst jeder Build die Abhängigkeiten neu auf (nicht reproduzierbar).
+COPY package.json package-lock.json ./
+RUN npm ci
 COPY . .
 RUN npm run build
 

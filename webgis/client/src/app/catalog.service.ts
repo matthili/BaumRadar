@@ -18,6 +18,15 @@ export class CatalogService {
     // Cache-Buster wie in der App: raw.githubusercontent cached aggressiv.
     const url = `${CatalogService.CATALOG_URL}?t=${Date.now()}`;
     const catalog = await firstValueFrom(this.http.get<Catalog>(url));
-    return catalog.cities;
+    return CatalogService.sortByName(catalog.cities);
+  }
+
+  /**
+   * Katalog-Reihenfolge = Provider-Registrierung; fürs Dropdown alphabetisch.
+   * de-Locale, damit Umlaute wie Basisbuchstaben einsortiert werden
+   * (Köln vor Konstanz — naiv nach Codepoints läge „ö" hinter „z").
+   */
+  static sortByName(cities: readonly City[]): City[] {
+    return [...cities].sort((a, b) => a.name.localeCompare(b.name, 'de'));
   }
 }
