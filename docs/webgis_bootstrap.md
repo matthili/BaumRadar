@@ -20,7 +20,7 @@ vor (`docs/data/`), liest der Geocoder sogar direkt von dort.
 
 | # | Container | Herkunft | Rolle |
 |---|---|---|---|
-| 1 | **postgis** | Fertig-Image `postgis/postgis:17-3.5` | Räumlicher Laufzeit-Store (`trees`, `allergy_zones`) |
+| 1 | **postgis** | Fertig-Image `postgis/postgis:17-3.5` | Räumliche Datenbank — PostgreSQL + Geo (`trees`, `allergy_zones`) |
 | 2 | **geoserver** | Fertig-Image `docker.osgeo.org/geoserver:2.28.0` | OGC-Dienste (WMS 1.3.0, WFS 2.0, OGC API Features) auf PostGIS |
 | 3 | **loader** | Selbstbau: `maven:3.9-eclipse-temurin-25` → `eclipse-temurin:25-jre` | Katalog → Signaturprüfung → PostGIS-Import → GeoServer-Provisionierung |
 | 4 | **web** | Selbstbau: `node:24-alpine` → `nginx:1.27-alpine` | Angular/OpenLayers-UI + Same-Origin-Reverse-Proxy |

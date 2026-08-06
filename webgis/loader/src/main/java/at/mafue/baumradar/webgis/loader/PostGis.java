@@ -11,6 +11,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -27,6 +28,19 @@ import java.util.Map;
 final class PostGis {
 
     private static final int BATCH_SIZE = 5000;
+
+    /**
+     * Zoom-Bänder der Vektorkachel-Generalisierung: ab welcher Kachel-Zoomstufe
+     * das Band gilt und wie groß seine Rasterzelle in Grad ist. Grob: 0,02° ≈ 1,5
+     * bis 2,2 km, je Band ein Viertel davon. Unter Band 8 zeigt der Client die
+     * Stadtpunkte, ab Zoom 14 die einzelnen Bäume.
+     */
+    record CellBand(int band, double cellDeg) {}
+
+    static final List<CellBand> CELL_BANDS = List.of(
+            new CellBand(8, 0.02),
+            new CellBand(11, 0.005),
+            new CellBand(13, 0.00125));
 
     private final Config cfg;
 
@@ -104,6 +118,80 @@ final class PostGis {
                     WHERE genus_de IS NOT NULL AND genus_de <> ''
                       AND (coalesce(species_de, '') <> '' OR coalesce(species_en, '') <> '')
                     GROUP BY 1, 2, 3""");
+        }
+    }
+
+    /**
+     * Rechnet die Rasterzellen aller Zoom-Bänder neu (Generalisierung für die
+     * Vektorkachel-Ansicht). Deterministisch: floor-Rasterung plus stabile
+     * Sortierung — dieselben Daten ergeben dieselben Zellen, der Kachel-Cache
+     * bleibt gültig wiederverwendbar.
+     *
+     * @return Anzahl der Zellen über alle Bänder
+     */
+    int refreshTreeCells() throws SQLException {
+        try (Connection c = connect(); Statement st = c.createStatement()) {
+            st.execute("TRUNCATE tree_cells");
+            int total = 0;
+            for (CellBand b : CELL_BANDS) {
+                total += st.executeUpdate("""
+                        INSERT INTO tree_cells
+                          (zoom_band, cell_x, cell_y, city_id, tree_count,
+                           dominant_genus, dominant_count, geom)
+                        SELECT %d, cx, cy, city_id, sum(cnt)::int,
+                               (array_agg(genus_de ORDER BY cnt DESC, genus_de)
+                                  FILTER (WHERE genus_de IS NOT NULL AND genus_de <> ''))[1],
+                               coalesce(max(cnt) FILTER (WHERE genus_de IS NOT NULL AND genus_de <> ''), 0),
+                               ST_SetSRID(ST_MakePoint((cx + 0.5) * %s, (cy + 0.5) * %s), 4326)
+                        FROM (
+                            SELECT floor(ST_X(geom) / %s)::int AS cx,
+                                   floor(ST_Y(geom) / %s)::int AS cy,
+                                   city_id, genus_de, count(*)::int AS cnt
+                            FROM trees
+                            GROUP BY 1, 2, 3, 4
+                        ) per_genus
+                        GROUP BY cx, cy, city_id"""
+                        .formatted(b.band(), b.cellDeg(), b.cellDeg(), b.cellDeg(), b.cellDeg()));
+            }
+            return total;
+        }
+    }
+
+    /**
+     * Rechnet die Stadtpunkte neu (ein Symbol je Stadt für die DACH-Übersicht):
+     * Schwerpunkt aller Bäume plus Gesamtzahl; Anzeigenamen kommen aus dem Katalog.
+     *
+     * @return Anzahl der Städte mit Datenbestand
+     */
+    int refreshCityPoints(List<Catalog.City> catalogCities) throws SQLException {
+        try (Connection c = connect()) {
+            c.setAutoCommit(false);
+            try {
+                int rows;
+                try (Statement st = c.createStatement()) {
+                    st.execute("TRUNCATE city_points");
+                    rows = st.executeUpdate("""
+                            INSERT INTO city_points (city_id, name, tree_count, geom)
+                            SELECT city_id, city_id, count(*)::int,
+                                   ST_SetSRID(ST_MakePoint(avg(ST_X(geom)), avg(ST_Y(geom))), 4326)
+                            FROM trees
+                            GROUP BY city_id""");
+                }
+                try (PreparedStatement up = c.prepareStatement(
+                        "UPDATE city_points SET name = ? WHERE city_id = ?")) {
+                    for (Catalog.City city : catalogCities) {
+                        up.setString(1, city.name());
+                        up.setString(2, city.id());
+                        up.addBatch();
+                    }
+                    up.executeBatch();
+                }
+                c.commit();
+                return rows;
+            } catch (SQLException e) {
+                c.rollback();
+                throw e;
+            }
         }
     }
 

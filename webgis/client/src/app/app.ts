@@ -207,14 +207,7 @@ export class App implements AfterViewInit {
     }
     // Zustands-Änderungen an die (Angular-fremde) Karte durchreichen.
     // Vor createMap() sind die MapService-Methoden No-ops (optional chaining).
-    effect(() =>
-      this.mapService.setLayerFilter(
-        GeoServerService.combineCql(
-          GeoServerService.genusCql(this.selectedGenera()),
-          GeoServerService.cityCql(this.selectedCity()),
-        ),
-      ),
-    );
+    effect(() => this.mapService.setFilter(this.selectedGenera(), this.selectedCity()));
     effect(() => this.mapService.setTreesVisible(this.showTrees()));
     effect(() => this.mapService.setZonesVisible(this.showZones()));
   }
@@ -294,6 +287,15 @@ export class App implements AfterViewInit {
   /** Arten-Liste einer Gattung (absteigend nach Häufigkeit; leer, bis geladen). */
   speciesFor(genusDe: string): SpeciesStat[] {
     return this.speciesByGenus().get(genusDe) ?? [];
+  }
+
+  /** Aktiver Karten-Motor (fürs Schalter-UI). */
+  readonly mapEngine = this.mapService.engineKind;
+
+  /** Ansicht wechseln: serverseitig (OpenLayers/WMS) ↔ lokal (MapLibre/Vektorkacheln). */
+  setMapEngine(kind: 'ol' | 'maplibre'): void {
+    this.closePopup();
+    void this.mapService.switchEngine(kind);
   }
 
   /** Stadt wählen: scopt Zahlen + Karte auf diese Stadt; leer = alle Städte. */

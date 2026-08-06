@@ -63,6 +63,41 @@ CREATE TABLE IF NOT EXISTS species_stats (
     PRIMARY KEY (genus_de, species_de, species_en)
 );
 
+-- Generalisierung für die Vektorkachel-Ansicht (MapLibre): vorgerechnete
+-- Aggregate, damit Kacheln transportieren, was ein Bildschirm unterscheiden
+-- kann — nicht jeden einzelnen Baum (Wien roh: ~4,5 MB pro Übersichts-Kachel).
+
+-- Ein Symbol je Stadt für die DACH-Übersicht (Zoom < 8).
+CREATE TABLE IF NOT EXISTS city_points (
+    city_id    TEXT PRIMARY KEY,
+    name       TEXT NOT NULL,
+    tree_count INTEGER NOT NULL,
+    geom       geometry(Point, 4326) NOT NULL
+);
+CREATE INDEX IF NOT EXISTS city_points_gix ON city_points USING GIST (geom);
+
+-- Rasterzellen je Zoom-Band (Zellgröße in Grad, floor-gerastert => deterministisch
+-- und damit kachel-cachebar). dominant_genus färbt die Aggregat-Ansicht allergie-
+-- relevant ein, ohne die volle Gattungs-Aufschlüsselung zu transportieren.
+CREATE TABLE IF NOT EXISTS tree_cells (
+    zoom_band      SMALLINT NOT NULL,
+    cell_x         INTEGER  NOT NULL,
+    cell_y         INTEGER  NOT NULL,
+    city_id        TEXT     NOT NULL,
+    tree_count     INTEGER  NOT NULL,
+    dominant_genus TEXT,
+    dominant_count INTEGER  NOT NULL DEFAULT 0,
+    geom           geometry(Point, 4326) NOT NULL,
+    PRIMARY KEY (zoom_band, cell_x, cell_y, city_id)
+);
+CREATE INDEX IF NOT EXISTS tree_cells_gix ON tree_cells USING GIST (geom);
+
+-- Ein View je Zoom-Band: so enthält eine Vektorkachel eines Bandes nur die
+-- eigenen Zellen (die gemeinsame Tabelle würde jedes Band dreifach ausliefern).
+CREATE OR REPLACE VIEW tree_cells_z8  AS SELECT * FROM tree_cells WHERE zoom_band = 8;
+CREATE OR REPLACE VIEW tree_cells_z11 AS SELECT * FROM tree_cells WHERE zoom_band = 11;
+CREATE OR REPLACE VIEW tree_cells_z13 AS SELECT * FROM tree_cells WHERE zoom_band = 13;
+
 -- Idempotenz-Buchführung: welche dataVersion je Stadt bereits importiert ist.
 CREATE TABLE IF NOT EXISTS import_state (
     city_id      TEXT PRIMARY KEY,

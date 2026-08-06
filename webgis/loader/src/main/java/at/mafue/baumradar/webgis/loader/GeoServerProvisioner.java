@@ -9,6 +9,7 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Base64;
+import java.util.List;
 
 /**
  * Provisioniert GeoServer idempotent per REST-API — „Konfiguration als Code"
@@ -64,8 +65,20 @@ final class GeoServerProvisioner {
         ensureFeatureType("genus_stats_city", "BaumRadar Gattungs-Statistik je Stadt");
         ensureFeatureType("species_stats", "BaumRadar Art-Statistik");
 
+        // Generalisierungs-Layer für die Vektorkachel-Ansicht (MapLibre): gestylt
+        // wird clientseitig (Style-JSON), deshalb bleiben die GeoServer-Defaults.
+        ensureFeatureType("city_points", "BaumRadar Stadtpunkte (Übersicht)");
+        ensureFeatureType("tree_cells_z8", "BaumRadar Rasterzellen (grob)");
+        ensureFeatureType("tree_cells_z11", "BaumRadar Rasterzellen (mittel)");
+        ensureFeatureType("tree_cells_z13", "BaumRadar Rasterzellen (fein)");
+
         setDefaultStyle("trees", "baumradar_trees");
         setDefaultStyle("allergy_zones", "baumradar_zones");
+
+        for (String layer : List.of("trees", "allergy_zones", "city_points",
+                "tree_cells_z8", "tree_cells_z11", "tree_cells_z13")) {
+            ensureMvtTileLayer(layer);
+        }
 
         System.out.println("  [geoserver] Provisionierung abgeschlossen");
         System.out.println("  [geoserver] WMS:  " + cfg.geoserverUrl() + "/" + WORKSPACE + "/wms");
@@ -123,6 +136,34 @@ final class GeoServerProvisioner {
                 </featureType>""".formatted(table, table, title);
         post(base, body);
         System.out.println("  [geoserver] Layer publiziert: " + WORKSPACE + ":" + table);
+    }
+
+    /**
+     * Schaltet auf dem GWC-Kachel-Layer das MVT-Format frei (Vektorkacheln für
+     * die MapLibre-Ansicht). Der Kachel-Layer selbst entsteht beim Publizieren
+     * automatisch (Direct-WMS-Integration); hier wird nur seine Konfiguration
+     * ersetzt — PUT ist idempotent. Meta-Kacheln bleiben aus (1×1): Vektor-
+     * kacheln werden einzeln gerechnet, nicht als Bildverbund.
+     */
+    private void ensureMvtTileLayer(String layer) throws IOException, InterruptedException {
+        String name = WORKSPACE + ":" + layer;
+        String body = """
+                <GeoServerLayer>
+                  <enabled>true</enabled>
+                  <name>%s</name>
+                  <mimeFormats>
+                    <string>application/vnd.mapbox-vector-tile</string>
+                    <string>image/png</string>
+                  </mimeFormats>
+                  <gridSubsets>
+                    <gridSubset><gridSetName>EPSG:900913</gridSetName></gridSubset>
+                    <gridSubset><gridSetName>EPSG:4326</gridSetName></gridSubset>
+                  </gridSubsets>
+                  <metaWidthHeight><int>1</int><int>1</int></metaWidthHeight>
+                </GeoServerLayer>""".formatted(name);
+        send(request("/gwc/rest/layers/" + name + ".xml")
+                .header("Content-Type", "application/xml")
+                .PUT(HttpRequest.BodyPublishers.ofString(body)).build(), 200);
     }
 
     private void setDefaultStyle(String layer, String style) throws IOException, InterruptedException {

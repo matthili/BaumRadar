@@ -6,6 +6,24 @@ Das BaumRadar-WebGIS ist ein **vollständig lokal betreibbares Geoinformationssy
 
 ---
 
+## Die Schichten im klassischen Modell
+
+Wer bei den vielen Akronymen den Faden verliert: Der ganze Stack ist die vertraute Kette **„Browser → Webserver → Server-Programm → Datenbank"** — nur dass die Server-Programm-Ebene aus drei Spezialisten besteht und jeder seinen eigenen Datenspeicher mitbringt.
+
+![WebGIS-Schichten im klassischen Modell](architecture/10_webgis_layers.png)
+
+| Klassisch | Hier | Aufgabe in einem Satz |
+|---|---|---|
+| Webseite (HTML + JS) | **Angular-App** | Die Bedienoberfläche; OpenLayers steckt als Karten-Bibliothek *in* ihr — beim Build zusammengefügt, wie eine DLL im Programm (nicht von nginx „verheiratet"). |
+| Webserver + Reverse-Proxy | **nginx** | Zwei Hüte: liefert die fertige App aus **und** reicht `/geoserver`, `/graphhopper`, `/photon` an die Dienste weiter. |
+| „das PHP" (Server-Programme) | **GeoServer** · **GraphHopper** · **Photon** | Malt Kartenbilder + liefert Rohdaten · berechnet Routen · findet Adressen — drei fertige Spezialisten statt eines Skripts, alle sprechen nur HTTP. |
+| „das MySQL" (Datenspeicher) | **PostGIS** · Graph-Datei · Suchindex | Nur GeoServer hängt an der Datenbank (PostgreSQL + Geo-Erweiterung); GraphHopper liest seinen Graphen ins RAM, Photon seinen Index von der Platte — ein Speicher pro Spezialist. |
+| Installationsprogramm | **loader** · **graph-builder** | Einmal-Jobs: befüllen Datenbank bzw. Graph-Datei und beenden sich — im Anfrageweg kommen sie nie vor. |
+
+Merksatz zur MapLibre-Frage: Ein Umstieg ersetzt **genau ein Kästchen** — die Karten-Bibliothek in der Angular-App. Alle Ebenen darunter blieben unverändert (sinnvoll würde er erst, wenn GeoServer zusätzlich Vektorkacheln liefert — siehe [Glossar](glossary.md)).
+
+---
+
 ## Leitidee: kleine, signierte Häppchen pro Stadt
 
 Die zentrale Design-Entscheidung des gesamten Projekts zieht sich auch durchs WebGIS: **Daten werden einmal zentral aufbereitet und pro Stadt publiziert** — jede Instanz lädt nur, was sie braucht.
@@ -27,7 +45,7 @@ Alle publizierten Artefakte sind **Ed25519-signiert** und tragen eine **inhaltsb
 | Service | Technik | Aufgabe | Compose-Profil |
 |---|---|---|---|
 | `loader` | Java 25, Maven, Virtual Threads | Katalog laden → Signaturen prüfen → PostGIS-Import → GeoServer-Provisionierung | *(Basis)* |
-| `postgis` | PostGIS 17/3.5 | Laufzeit-Store: `trees`, `allergy_zones`, Statistiken | *(Basis)* |
+| `postgis` | PostGIS 17/3.5 | Datenbank (PostgreSQL + Geo-Erweiterung): `trees`, `allergy_zones`, Statistiken | *(Basis)* |
 | `geoserver` | GeoServer 2.28 | OGC-Dienste: WMS 1.3.0, WFS 2.0 (+CQL), OGC API Features | *(Basis)* |
 | `web` | nginx + Angular 22/OpenLayers 10 | Karte, Filter, Routing-UI; same-origin-Proxys | *(Basis)* |
 | `graph-builder` | osmium-tool, jq | Stadt-BBoxen aus Länder-PBFs schneiden → `island.osm.pbf` | `routing` |

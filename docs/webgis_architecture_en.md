@@ -6,6 +6,24 @@ The BaumRadar WebGIS is a **fully self-hostable geographic information system** 
 
 ---
 
+## The layers in classic terms
+
+If the acronyms make you lose the thread: the whole stack is the familiar chain **"browser → web server → server program → database"** — except that the server-program layer consists of three specialists, and each brings its own data store.
+
+![WebGIS layers in the classic model](architecture/10_webgis_layers_en.png)
+
+| Classic | Here | Job in one sentence |
+|---|---|---|
+| Web page (HTML + JS) | **Angular app** | The user interface; OpenLayers sits *inside* it as the map library — joined at build time, like a DLL inside a program (not "married" by nginx). |
+| Web server + reverse proxy | **nginx** | Two hats: serves the finished app **and** forwards `/geoserver`, `/graphhopper`, `/photon` to the services. |
+| "the PHP" (server programs) | **GeoServer** · **GraphHopper** · **Photon** | Paints map images + delivers raw data · computes routes · finds addresses — three off-the-shelf specialists instead of one script, all speaking plain HTTP. |
+| "the MySQL" (data stores) | **PostGIS** · graph file · search index | Only GeoServer talks to the database (PostgreSQL + geo extension); GraphHopper loads its graph into RAM, Photon reads its index from disk — one store per specialist. |
+| Installer | **loader** · **graph-builder** | One-shot jobs: they fill the database resp. the graph file and exit — they never appear on the request path. |
+
+Mnemonic for the MapLibre question: a switch would replace **exactly one box** — the map library inside the Angular app. Every layer below stays untouched (it only becomes worthwhile once GeoServer also serves vector tiles — see the [glossary](glossary_en.md)).
+
+---
+
 ## Core idea: small, signed per-city artifacts
 
 The central design decision of the whole project carries through to the WebGIS: **data is prepared once, centrally, and published per city** — every instance downloads only what it needs.
@@ -27,7 +45,7 @@ All published artifacts are **Ed25519-signed** and carry a **content-based versi
 | Service | Tech | Purpose | Compose profile |
 |---|---|---|---|
 | `loader` | Java 25, Maven, virtual threads | fetch catalog → verify signatures → import into PostGIS → provision GeoServer | *(base)* |
-| `postgis` | PostGIS 17/3.5 | runtime store: `trees`, `allergy_zones`, statistics | *(base)* |
+| `postgis` | PostGIS 17/3.5 | the database (PostgreSQL + geo extension): `trees`, `allergy_zones`, statistics | *(base)* |
 | `geoserver` | GeoServer 2.28 | OGC services: WMS 1.3.0, WFS 2.0 (+CQL), OGC API Features | *(base)* |
 | `web` | nginx + Angular 22/OpenLayers 10 | map, filters, routing UI; same-origin proxies | *(base)* |
 | `graph-builder` | osmium-tool, jq | cut city bboxes from country PBFs → `island.osm.pbf` | `routing` |

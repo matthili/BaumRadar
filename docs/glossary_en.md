@@ -56,7 +56,11 @@ this project. *(Deutsche Fassung: [glossary.md](glossary.md))*
 
 **OSRM** — Open Source Routing Machine, a public routing service. The **Android app** fetches up to three route alternatives from it and checks them against the local zones; the **WebGIS** instead routes entirely locally with GraphHopper (only that makes custom-model zone avoidance possible).
 
-**OpenLayers** — JavaScript map library in the web client: renders the OSM base map, the WMS layers, markers and routes, and provides interactions (click, drag & drop). Used deliberately without an Angular wrapper; the map lives outside Angular's change detection.
+**OpenLayers** — JavaScript map library in the web client: renders the OSM base map, the WMS layers, markers and routes, and provides interactions (click, drag & drop). Used deliberately without an Angular wrapper; the map lives outside Angular's change detection. Renders classically via Canvas 2D (with a growing WebGL share) — the GPU counterpart is MapLibre.
+
+**MapLibre (GL JS / Native)** — Open-source rendering library for vector tiles, forked from Mapbox GL JS in December 2020 after Mapbox went proprietary. Renders on the GPU via WebGL (the browser's graphics-card interface): continuous zoom, rotation, 3D, globe; the appearance comes from a style specification. "GL JS" runs in the browser, "Native" on Android/iOS/desktop. No WFS, no GetFeatureInfo, essentially web Mercator only — which is why this project deliberately does **not** use it: the WebGIS lives on WFS+CQL, GetFeatureInfo and GPX, all home turf for OpenLayers. (OpenLayers can read MVT tiles too, by the way, including MapLibre styles via `ol-mapbox-style`.)
+
+**basemap.at** — Austria's "administrative base map": a nationwide background map built from official government geodata, run by the GIS offices of the nine federal states (geoland.at) together with the Association of Cities and Towns, ÖVDAT/GIP.at and the BEV, currently led by the City of Vienna; licensed CC-BY 4.0. Delivered classically as WMTS raster (EPSG:3857 and 31256) and increasingly as vector tiles with styles; the 2026 relaunch moves it to a daily-updated vector workflow. Not used in this project (our background is OSM) — but Austria's showcase for the raster-to-vector transition.
 
 **osmium (osmium-tool)** — The Swiss army knife for OSM files: `extract` (cut by bbox), `merge`, `tags-filter`, `fileinfo`. A memory quirk that earned us a pitfall entry: `extract` keeps a bitmap over the *global* node-ID space per cut-out — ~1.5 GB, no matter how small the city is.
 
@@ -72,13 +76,23 @@ this project. *(Deutsche Fassung: [glossary.md](glossary.md))*
 
 **WMS 1.3.0 (Web Map Service)** — Delivers **pre-rendered map images** (tiles) instead of raw data. That keeps 2.6 M trees fluid: the server renders, the browser only shows images. Styling comes from SLD files.
 
+**GetFeatureInfo** — The third core WMS operation next to GetCapabilities/GetMap: "what sits at this pixel?" — returns the attributes of the features hit. In the WebGIS the basis of the click popups: trees and zones at the click point, respecting the active CQL filter.
+
+**WMTS (Web Map Tile Service)** — OGC standard for **pre-computed** tile pyramids: the server renders once, afterwards only finished images are served — ideal for base maps (basemap.at, many government services). Contrast with WMS, which renders every tile on request (and can therefore honour dynamic CQL filters). Not used here: the OSM base map arrives via the de-facto "XYZ" scheme, the data layers via WMS.
+
 **WFS 2.0 (Web Feature Service)** — Delivers **raw features** (here as GeoJSON) with filtering. In this project the basis for statistics, the client search and the routing's corridor zones.
 
 **OGC API Features** — The modern REST/JSON successor of WFS (same data, contemporary interface). A stable GeoServer extension only since 2.27 — the reason for our version floor.
 
+**INSPIRE** — EU directive (2007) for a European spatial data infrastructure: obliges public authorities to publish their geodata through harmonised models and **OGC-based services** (view: WMS/WMTS; download: WFS/Atom, increasingly OGC API Features). No obligation for BaumRadar as a private project — but the reason the OGC track is a given in the public sector.
+
 **CQL (Common Query Language)** — GeoServer's filter language for WMS/WFS requests, e.g. `genus_de IN ('Birke') AND city_id = 'wien'`. Pitfall: for `BBOX(…)` in EPSG:4326 GeoServer expects **lat,lon** — unless the CRS is named explicitly.
 
 **SLD (Styled Layer Descriptor)** — XML format that gives WMS layers their appearance (symbols, colours, scale rules). The yellow tree dots and red zones come from two SLD files the loader provisions.
+
+**Style specification (MapLibre/Mapbox style spec)** — JSON document that gives a vector-tile map its appearance: sources, layers, data-driven expressions — evaluated only in the client. The client-side counterpart of server-side SLD. Not used here; our styling lives as SLD on the GeoServer.
+
+**Vector tiles / MVT (Mapbox Vector Tiles)** — Tiles containing **raw geometries + attributes** instead of finished images (compact Protobuf); rendering happens only in the browser (MapLibre), styled via a style specification. An open de-facto industry standard by Mapbox, but **not a ratified OGC standard** — OGC covers the tiling side through "OGC API – Tiles", which can deliver MVT. Benefits: tiny files, servable statically/via CDN (content delivery network), restyling without rebuilding a tile cache. Not used here; GeoServer could emit MVT via an extension — which would be the actual pay-off step of any MapLibre port.
 
 **GPX (GPS Exchange Format)** — XML interchange format for routes and tracks. The Android app exports planned routes as GPX (e.g. for navigation apps); the web client accepts GPX files via drag & drop onto the map.
 
@@ -100,7 +114,7 @@ this project. *(Deutsche Fassung: [glossary.md](glossary.md))*
 
 **BBox (bounding box)** — The enclosing rectangle of an area, given by two corner coordinates. Mind the conventions: the BaumRadar catalog uses `[minLat, minLon, maxLat, maxLon]`, while GeoJSON/Photon/GraphHopper are lon-first — mixing them up is *the* classic geo bug.
 
-**WGS84 / EPSG:4326** — The coordinate system of GPS: latitude/longitude in degrees on the ellipsoid; `EPSG:4326` is its catalogue number. Related: **EPSG:3857** ("web Mercator"), the projection of browser map tiles, and **UTM**, metric zone systems some cadastres deliver in (the backend converts to WGS84).
+**WGS84 / EPSG:4326** — The coordinate system of GPS: latitude/longitude in degrees on the ellipsoid; `EPSG:4326` is its catalogue number. Related: **EPSG:3857** ("web Mercator"), the projection of browser map tiles, and **UTM**, metric zone systems some cadastres deliver in (the backend converts to WGS84). Authorities often additionally work in official national systems — in Austria e.g. **MGI** (such as EPSG:31256, "Gauß-Krüger East"), in which basemap.at also delivers; OpenLayers can display such projections, MapLibre essentially only web Mercator.
 
 **Ed25519** — Modern, fast signature scheme (elliptic curves). The backend signs every published file; app and loader verify against a built-in public key — tampering or transfer corruption is caught before any data is used.
 

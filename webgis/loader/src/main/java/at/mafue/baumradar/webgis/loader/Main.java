@@ -84,6 +84,14 @@ public final class Main {
         System.out.printf("  Statistik: %d Gattungen (%d Stadt-Gattung-Paare), %d Art-Tupel%n",
                 genera, generaCity, species);
 
+        // Generalisierung für die Vektorkachel-Ansicht: bewusst bei jedem Lauf neu
+        // (voller GROUP-BY-Scan wie die Statistiken) — so heilt sich der Bestand
+        // auch nach einem Schema-Upgrade ohne Städte-Reimport von selbst.
+        int cells = pg.refreshTreeCells();
+        int cityPoints = pg.refreshCityPoints(catalog.cities());
+        System.out.printf("  Generalisierung: %,d Rasterzellen (%d Zoom-Bänder), %d Stadtpunkte%n",
+                cells, PostGis.CELL_BANDS.size(), cityPoints);
+
         if (cfg.skipGeoserver()) {
             System.out.println("  GeoServer-Provisionierung übersprungen (SKIP_GEOSERVER=true)");
         } else {

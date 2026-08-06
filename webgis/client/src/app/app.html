@@ -69,6 +69,17 @@
   </section>
 
   <section>
+    <label class="sec">Ansicht</label>
+    <!-- Tech-Demo-Schalter: gleiche Daten, zwei Auslieferungswege. -->
+    <div class="engine-toggle" role="radiogroup" aria-label="Karten-Ansicht">
+      <button type="button" [class.active]="mapEngine() === 'ol'" (click)="setMapEngine('ol')"
+              title="OpenLayers: fertige Kartenbilder vom Server (WMS)">am Server gerendert</button>
+      <button type="button" [class.active]="mapEngine() === 'maplibre'" (click)="setMapEngine('maplibre')"
+              title="MapLibre: Vektorkacheln, im Browser gerendert (Beta)">im Browser <span class="thin">(Beta)</span></button>
+    </div>
+  </section>
+
+  <section>
     <label class="sec">Ebenen</label>
     <label class="switch-row">
       <span class="dot trees" aria-hidden="true"></span>

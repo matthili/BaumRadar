@@ -1,0 +1,66 @@
+@startuml
+' Schichten-Sicht des WebGIS, verankert im klassischen Modell
+' "Browser -> Webserver -> Server-Programm -> Datenbank".
+' Ergänzt 08_webgis_architecture.puml (Datenfluss-Sicht) um die Ebenen-Sicht.
+skinparam backgroundColor #FFFFFF
+skinparam componentStyle rectangle
+skinparam shadowing false
+skinparam defaultFontName Inter
+skinparam roundCorner 12
+skinparam rectangleFontColor black
+skinparam databaseFontColor black
+skinparam databaseBackgroundColor #FBE9E7
+skinparam databaseBorderColor #E64A19
+
+skinparam rectangle {
+  BackgroundColor<<band>> #FAFAFA
+  BorderColor<<band>> #B0BEC5
+  BackgroundColor<<run>> #E0F2F1
+  BorderColor<<run>> #00897B
+  BackgroundColor<<lib>> #FFFFFF
+  BorderColor<<lib>> #78909C
+  BackgroundColor<<store>> #FBE9E7
+  BorderColor<<store>> #E64A19
+  BackgroundColor<<once>> #ECEFF1
+  BorderColor<<once>> #546E7A
+}
+
+rectangle "Ebene 1 · im Browser — „die Webseite"" as B1 <<band>> {
+  rectangle "🖥️  Angular-App — die Bedienoberfläche\n(ein gebautes Paket statischer Dateien)" as APP <<run>> {
+    rectangle "🧩  OpenLayers\neingebaute Karten-Bibliothek —\nder Steckplatz, den MapLibre ersetzen würde" as OL <<lib>>
+  }
+}
+
+rectangle "Ebene 2 · nginx — „der Webserver" (zwei Hüte)" as B2 <<band>> {
+  rectangle "📤  Hut 1: Webserver\nliefert die fertige App aus" as HUT1 <<run>>
+  rectangle "🔀  Hut 2: Reverse-Proxy\nreicht Anfragen an die Dienste weiter" as HUT2 <<run>>
+}
+
+rectangle "Ebene 3 · Server-Programme — „das PHP", als drei Spezialisten" as B3 <<band>> {
+  rectangle "🗺️  GeoServer\nmalt Kartenbilder (WMS)\nliefert Rohdaten (WFS)" as GS <<run>>
+  rectangle "🧭  GraphHopper\nberechnet Routen" as GHOP <<run>>
+  rectangle "📍  Photon\nfindet Adressen" as PH <<run>>
+}
+
+rectangle "Ebene 4 · Datenspeicher — „das MySQL"" as B4 <<band>> {
+  database "🐘  PostGIS = die Datenbank\nPostgreSQL + Geo-Erweiterung\ntrees · allergy_zones · Statistiken" as PG
+  rectangle "🕸️  Graph-Datei\nStraßennetz — liegt im RAM" as GRAPH <<store>>
+  rectangle "🔎  Suchindex\nAdressen — auf der Platte" as IDX <<store>>
+}
+
+rectangle "Einmal-Jobs — „das Installationsprogramm": befüllen, dann Ende" as B5 <<band>> {
+  rectangle "⚙️  loader\nfüllt PostGIS, richtet GeoServer ein" as LOADER <<once>>
+  rectangle "✂️  graph-builder\nbaut die Graph-Datei aus OSM" as GB <<once>>
+}
+
+APP -down-> HUT1 : Seite laden
+APP -down-> HUT2 : API-Anfragen
+HUT2 -down-> GS
+HUT2 -down-> GHOP
+HUT2 -down-> PH
+GS -down-> PG : SQL
+GHOP -down-> GRAPH
+PH -down-> IDX
+LOADER .up.> PG : befüllt einmalig
+GB .up.> GRAPH : erzeugt einmalig
+@enduml

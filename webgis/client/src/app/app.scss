@@ -296,6 +296,36 @@
   color: var(--br-primary-container);
 }
 
+// Schalter „Ansicht": zwei Segmente, aktives im Marken-Grün.
+.engine-toggle {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.18);
+
+  button {
+    flex: 1;
+    padding: 6px 8px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--br-on-glass-muted);
+    font-size: 12px;
+    cursor: pointer;
+
+    &.active {
+      background: var(--br-primary-bright);
+      color: #0b1a0b;
+      font-weight: 600;
+    }
+
+    &:not(.active):hover {
+      color: var(--br-on-glass);
+    }
+  }
+}
+
 .city-hint {
   margin: 2px 0 0;
   font-size: 11.5px;

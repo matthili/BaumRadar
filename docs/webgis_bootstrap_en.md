@@ -20,7 +20,7 @@ locally (`docs/data/`), the geocoder even reads straight from there.
 
 | # | Container | Origin | Role |
 |---|---|---|---|
-| 1 | **postgis** | Off-the-shelf `postgis/postgis:17-3.5` | Spatial runtime store (`trees`, `allergy_zones`) |
+| 1 | **postgis** | Off-the-shelf `postgis/postgis:17-3.5` | Spatial database — PostgreSQL + geo (`trees`, `allergy_zones`) |
 | 2 | **geoserver** | Off-the-shelf `docker.osgeo.org/geoserver:2.28.0` | OGC services (WMS 1.3.0, WFS 2.0, OGC API Features) on PostGIS |
 | 3 | **loader** | Self-built: `maven:3.9-eclipse-temurin-25` → `eclipse-temurin:25-jre` | Catalog → signature check → PostGIS import → GeoServer provisioning |
 | 4 | **web** | Self-built: `node:24-alpine` → `nginx:1.27-alpine` | Angular/OpenLayers UI + same-origin reverse proxy |

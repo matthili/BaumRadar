@@ -56,7 +56,11 @@ Projekt. *(English version: [glossary_en.md](glossary_en.md))*
 
 **OSRM** — Open Source Routing Machine, ein öffentlicher Routing-Dienst. Die **Android-App** holt sich dort bis zu drei Routen-Alternativen und prüft sie gegen die lokalen Zonen; das **WebGIS** routet dagegen komplett lokal mit GraphHopper (nur so ist Zonen-Vermeidung per Custom Model möglich).
 
-**OpenLayers** — JavaScript-Kartenbibliothek im Web-Client: rendert die OSM-Grundkarte, die WMS-Layer, Marker und Routen und liefert Interaktionen (Klick, Drag&Drop). Wird bewusst ohne Angular-Wrapper genutzt; die Karte lebt außerhalb der Angular-Change-Detection.
+**OpenLayers** — JavaScript-Kartenbibliothek im Web-Client: rendert die OSM-Grundkarte, die WMS-Layer, Marker und Routen und liefert Interaktionen (Klick, Drag&Drop). Wird bewusst ohne Angular-Wrapper genutzt; die Karte lebt außerhalb der Angular-Change-Detection. Rendert klassisch über Canvas 2D (mit wachsendem WebGL-Anteil) — das GPU-Gegenstück ist MapLibre.
+
+**MapLibre (GL JS / Native)** — Open-Source-Rendering-Bibliothek für Vektorkacheln, im Dezember 2020 als Fork von Mapbox GL JS entstanden, nachdem Mapbox proprietär wurde. Rendert per WebGL (der Browser-Schnittstelle zur Grafikkarte) direkt auf der GPU: stufenloses Zoomen, Rotieren, 3D, Globus; das Aussehen kommt aus einer Style-Spezifikation. „GL JS" läuft im Browser, „Native" auf Android/iOS/Desktop. Kein WFS, kein GetFeatureInfo, im Kern nur Web-Mercator — im Projekt darum bewusst **nicht** eingesetzt: Das WebGIS lebt von WFS+CQL, GetFeatureInfo und GPX, alles OpenLayers-Heimspiel. (OpenLayers kann MVT-Kacheln übrigens auch lesen, samt MapLibre-Styles via `ol-mapbox-style`.)
+
+**basemap.at** — Die „Verwaltungsgrundkarte von Österreich": flächendeckende Hintergrundkarte aus amtlichen Geodaten, betrieben von den GIS-Stellen der neun Bundesländer (geoland.at) mit Städtebund, ÖVDAT/GIP.at und BEV, Projektleitung derzeit Stadt Wien; Lizenz CC-BY 4.0. Ausgeliefert klassisch als WMTS-Raster (EPSG:3857 und 31256) und zunehmend als Vektorkacheln samt Styles; der Relaunch 2026 stellt auf einen täglich aktualisierten Vektor-Workflow um. Im Projekt nicht eingesetzt (Hintergrund ist OSM) — aber das österreichische Anschauungsbeispiel für den Umstieg Raster → Vektor.
 
 **osmium (osmium-tool)** — Das Schweizer Taschenmesser für OSM-Dateien: `extract` (Ausschneiden nach BBox), `merge`, `tags-filter`, `fileinfo`. Speicher-Eigenheit, die uns einen Stolperstein bescherte: `extract` hält pro Ausschnitt eine Bitmap über den *globalen* Node-ID-Raum — ~1,5 GB, egal wie klein die Stadt ist.
 
@@ -72,13 +76,23 @@ Projekt. *(English version: [glossary_en.md](glossary_en.md))*
 
 **WMS 1.3.0 (Web Map Service)** — Liefert **fertig gerenderte Kartenbilder** (Kacheln) statt Rohdaten. Dadurch bleibt die Darstellung von 2,6 Mio Bäumen flüssig: Der Server rendert, der Browser zeigt nur Bilder. Das Styling kommt aus SLD-Dateien.
 
+**GetFeatureInfo** — Die dritte WMS-Grundoperation neben GetCapabilities/GetMap: „Was liegt an diesem Pixel?" — liefert die Attribute der getroffenen Features. Im WebGIS die Basis der Klick-Popups: Bäume und Zonen am Klickpunkt, unter Berücksichtigung des aktiven CQL-Filters.
+
+**WMTS (Web Map Tile Service)** — OGC-Standard für **vorberechnete** Kachelpyramiden: Der Server rendert einmal, danach werden nur noch fertige Bilder ausgeliefert — ideal für Grundkarten (basemap.at, viele Behörden-Dienste). Abgrenzung zum WMS, der jede Kachel auf Anfrage frisch rendert (und darum dynamische CQL-Filter kann). Im Projekt selbst nicht genutzt: Die OSM-Grundkarte kommt im De-facto-„XYZ"-Schema, die Datenlayer als WMS.
+
 **WFS 2.0 (Web Feature Service)** — Liefert **rohe Features** (hier als GeoJSON) mit Filterung. Im Projekt die Grundlage für Statistiken, die Client-Suche und die Korridor-Zonen des Routings.
 
 **OGC API Features** — Der moderne REST/JSON-Nachfolger des WFS (gleiche Daten, zeitgemäße Schnittstelle). In GeoServer erst ab 2.27 eine stabile Erweiterung — der Grund für unsere Versions-Untergrenze.
 
+**INSPIRE** — EU-Richtlinie (2007) für eine europäische Geodateninfrastruktur: verpflichtet Behörden, ihre Geodaten über harmonisierte Modelle und **OGC-basierte Dienste** bereitzustellen (Darstellung: WMS/WMTS; Download: WFS/Atom, zunehmend OGC API Features). Für BaumRadar als Privatprojekt keine Pflicht — aber der Grund, warum die OGC-Schiene im Behördenumfeld gesetzt ist.
+
 **CQL (Common Query Language)** — Die Filtersprache von GeoServer für WMS/WFS-Anfragen, z. B. `genus_de IN ('Birke') AND city_id = 'wien'`. Stolperstein: Bei `BBOX(…)` in EPSG:4326 erwartet GeoServer **lat,lon** — außer man nennt das CRS explizit mit.
 
 **SLD (Styled Layer Descriptor)** — XML-Format, das WMS-Layern ihr Aussehen gibt (Symbole, Farben, Maßstabsregeln). Die gelben Baum-Punkte und roten Zonen kommen aus zwei SLD-Dateien, die der Loader mit provisioniert.
+
+**Style-Spezifikation (MapLibre/Mapbox Style Spec)** — JSON-Dokument, das einer Vektorkachel-Karte ihr Aussehen gibt: Quellen, Layer, datengetriebene Ausdrücke — ausgewertet erst im Client. Das clientseitige Gegenstück zum serverseitigen SLD. Im Projekt nicht genutzt; unser Styling liegt als SLD beim GeoServer.
+
+**Vektorkacheln / MVT (Mapbox Vector Tiles)** — Kacheln, die statt fertiger Bilder **rohe Geometrien + Attribute** enthalten (kompakt als Protobuf); gerendert wird erst im Browser (MapLibre), gestylt per Style-Spezifikation. Offener De-facto-Industriestandard von Mapbox, aber **kein ratifizierter OGC-Standard** — die OGC deckt den Kachel-Teil über „OGC API – Tiles" ab, das MVT ausliefern kann. Vorteile: winzige Dateien, statisch/per CDN (Content Delivery Network) auslieferbar, Umstylen ohne neuen Kachel-Cache. Im Projekt nicht genutzt; GeoServer könnte MVT per Extension erzeugen — das wäre der eigentliche Gewinnschritt einer MapLibre-Portierung.
 
 **GPX (GPS Exchange Format)** — XML-Austauschformat für Routen und Tracks. Die Android-App exportiert geplante Routen als GPX (z. B. für Navigations-Apps); der Web-Client nimmt GPX-Dateien per Drag&Drop auf die Karte an.
 
@@ -100,7 +114,7 @@ Projekt. *(English version: [glossary_en.md](glossary_en.md))*
 
 **BBox (Bounding Box)** — Das umschließende Rechteck eines Gebiets, angegeben durch zwei Eckkoordinaten. Vorsicht Konventionen: Der BaumRadar-Katalog nutzt `[minLat, minLon, maxLat, maxLon]`, GeoJSON/Photon/GraphHopper dagegen lon-zuerst — Verwechslung ist *der* Klassiker unter den Geo-Bugs.
 
-**WGS84 / EPSG:4326** — Das Koordinatensystem von GPS: Breite/Länge in Grad auf dem Ellipsoid. `EPSG:4326` ist seine Katalognummer. Verwandt: **EPSG:3857** („Web-Mercator"), die Projektion der Karten-Kacheln im Browser, und **UTM**, metrische Zonen-Systeme, in denen manche Kataster liefern (das Backend rechnet nach WGS84 um).
+**WGS84 / EPSG:4326** — Das Koordinatensystem von GPS: Breite/Länge in Grad auf dem Ellipsoid. `EPSG:4326` ist seine Katalognummer. Verwandt: **EPSG:3857** („Web-Mercator"), die Projektion der Karten-Kacheln im Browser, und **UTM**, metrische Zonen-Systeme, in denen manche Kataster liefern (das Backend rechnet nach WGS84 um). Behörden arbeiten oft zusätzlich in amtlichen Landessystemen — in Österreich etwa **MGI** (z. B. EPSG:31256, „Gauß-Krüger Ost"), in dem u. a. basemap.at zusätzlich ausliefert; OpenLayers kann solche Projektionen darstellen, MapLibre praktisch nur Web-Mercator.
 
 **Ed25519** — Modernes, schnelles Signaturverfahren (elliptische Kurven). Das Backend signiert jede publizierte Datei; App und Loader verifizieren gegen einen fest eingebauten Public Key — Manipulation oder Übertragungsfehler fliegen auf, bevor Daten verwendet werden.
 

@@ -50,8 +50,9 @@ services:
       GEOSERVER_ADMIN_PASSWORD: ${GEOSERVER_PASSWORD:-geoserver}
       INSTALL_EXTENSIONS: "true"
       # OGC API Features ist seit GeoServer 2.25 eine stabile Extension
-      # (Community-Module gäbe es nur als Nightly-Builds).
-      STABLE_EXTENSIONS: "ogcapi-features"
+      # (Community-Module gäbe es nur als Nightly-Builds). vectortiles liefert
+      # MVT-Ausgabe (WMS + Kachel-Cache) für die MapLibre-Ansicht.
+      STABLE_EXTENSIONS: "ogcapi-features,vectortiles"
       SKIP_DEMO_DATA: "true"
     ports:
       - "${BIND_HOST:-127.0.0.1}:${GEOSERVER_PORT:-8081}:8080"
