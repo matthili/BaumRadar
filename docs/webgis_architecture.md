@@ -20,7 +20,7 @@ Wer bei den vielen Akronymen den Faden verliert: Der ganze Stack ist die vertrau
 | „das MySQL" (Datenspeicher) | **PostGIS** · Graph-Datei · Suchindex | Nur GeoServer hängt an der Datenbank (PostgreSQL + Geo-Erweiterung); GraphHopper liest seinen Graphen ins RAM, Photon seinen Index von der Platte — ein Speicher pro Spezialist. |
 | Installationsprogramm | **loader** · **graph-builder** | Einmal-Jobs: befüllen Datenbank bzw. Graph-Datei und beenden sich — im Anfrageweg kommen sie nie vor. |
 
-Merksatz zur MapLibre-Frage: Ein Umstieg ersetzt **genau ein Kästchen** — die Karten-Bibliothek in der Angular-App. Alle Ebenen darunter blieben unverändert (sinnvoll würde er erst, wenn GeoServer zusätzlich Vektorkacheln liefert — siehe [Glossar](glossary.md)).
+Merksatz zur MapLibre-Frage: Der Tausch betrifft **genau ein Kästchen** — die Karten-Bibliothek in der Angular-App. Genau das ist seit der Zwei-Renderer-Demo eingebaut: Der Panel-Schalter **„Rendering: Server | Browser (lokal)"** wechselt live zwischen OpenLayers (WMS-Bilder) und MapLibre (Vektorkacheln aus GeoServers Kachel-Cache, vom Loader in Zoom-Stufen generalisiert: Stadtpunkte → Rasterzellen mit dominanter Gattung → Einzelbäume). Kamera, Filter und Route wandern beim Wechsel mit; ein Automatik-Hinweis schlägt die Server-Ansicht vor, wenn GPU-WebGL fehlt oder die Messung dauerhaft unter ~30 fps liegt. Alle Ebenen darunter bleiben unverändert — siehe [Glossar](glossary.md).
 
 ---
 

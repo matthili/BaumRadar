@@ -32,11 +32,11 @@ skinparam rectangle {
 rectangle "📦  GitHub Pages (docs/data)\ncatalog.json · pro Stadt:\n<i>stadt</i>.db.gz + .sig (Bäume/Zonen)\ngeocoder_<i>stadt</i>.jsonl.gz + .sig" as GH <<github>>
 rectangle "🌍  Geofabrik\nOSM-Länder-PBFs (DE/AT/CH)" as OSM <<osm>>
 
-rectangle "⚙️  loader (Java 25, Maven)\n· Ed25519-Signaturprüfung (JDK-JCE)\n· idempotent je dataVersion\n· Statistiken global + je Stadt" as Loader <<core>>
+rectangle "⚙️  loader (Java 25, Maven)\n· Ed25519-Signaturprüfung (JDK-JCE)\n· idempotent je dataVersion\n· Statistiken global + je Stadt\n· Generalisierung: Stadtpunkte + Rasterzellen" as Loader <<core>>
 database "🐘  PostGIS\ntrees · allergy_zones\n(ST_Buffer geography)\ngenus_stats(_city)" as PG
-rectangle "🗺️  GeoServer 2.28\nWMS 1.3.0 · WFS 2.0 + CQL\nOGC API Features\n(REST-provisioniert)" as GS <<core>>
+rectangle "🗺️  GeoServer 2.28\nWMS 1.3.0 · WFS 2.0 + CQL\nOGC API Features\nVektorkacheln (MVT via Kachel-Cache)\n(REST-provisioniert)" as GS <<core>>
 
-rectangle "🖥️  web (nginx + Angular 22/OpenLayers)\nsame-origin Proxys:\n/geoserver · /graphhopper · /photon\n<b>einziger LAN-Port (8082)</b>" as Web <<web>>
+rectangle "🖥️  web (nginx + Angular 22)\nRenderer umschaltbar: OpenLayers (WMS)\n⇄ MapLibre (Vektorkacheln, Beta)\nsame-origin Proxys:\n/geoserver · /graphhopper · /photon\n<b>einziger LAN-Port (8082)</b>" as Web <<web>>
 
 rectangle "✂️  graph-builder (Profil routing)\nosmium: 19 Stadt-BBoxen + Rand\n→ island.osm.pbf" as GB <<opt>>
 rectangle "🧭  GraphHopper 10 (Profil routing)\nfoot + bike, flexibler Modus\nCustom-Model-Zonen je Anfrage" as GHopper <<opt>>
@@ -51,7 +51,7 @@ PG -up-> GS : JDBC
 GH -down-> Photon : geocoder_*.jsonl.gz\n(CITY_FILTER)
 OSM -down-> GB : PBF (gecacht)
 GB -right-> GHopper : island.osm.pbf
-GS -down-> Web : WMS/WFS
+GS -down-> Web : WMS/WFS + MVT
 GHopper -up-> Web : /route
 Photon -up-> Web : /api
 User -up-> Web : http://localhost:8082

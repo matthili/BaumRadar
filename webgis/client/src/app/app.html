@@ -69,13 +69,13 @@
   </section>
 
   <section>
-    <label class="sec">Ansicht</label>
+    <label class="sec">Rendering</label>
     <!-- Tech-Demo-Schalter: gleiche Daten, zwei Auslieferungswege. -->
-    <div class="engine-toggle" role="radiogroup" aria-label="Karten-Ansicht">
+    <div class="engine-toggle" role="radiogroup" aria-label="Rendering">
       <button type="button" [class.active]="mapEngine() === 'ol'" (click)="setMapEngine('ol')"
-              title="OpenLayers: fertige Kartenbilder vom Server (WMS)">am Server gerendert</button>
+              title="OpenLayers: fertige Kartenbilder vom Server (WMS)">Server</button>
       <button type="button" [class.active]="mapEngine() === 'maplibre'" (click)="setMapEngine('maplibre')"
-              title="MapLibre: Vektorkacheln, im Browser gerendert (Beta)">im Browser <span class="thin">(Beta)</span></button>
+              title="MapLibre: Vektorkacheln, im Browser gerendert (Beta)">Browser <span class="thin">(lokal)</span></button>
     </div>
   </section>
 
@@ -300,6 +300,22 @@
 <!-- Schmal-Bildschirm-Hinweis: immer gerendert, solange nicht weggeklickt —
      ob er SICHTBAR ist, entscheidet allein die CSS-Media-Query (<= 700 px).
      So erscheint er auch, wenn ein Fenster erst nachträglich schmal wird. -->
+<!-- Automatik-Vorschlag: misst, schlägt vor — umgeschaltet wird nur per Klick. -->
+@if (!engineHintDismissed() && (gpuCaveat() || slowFrameMs() !== null)) {
+  <div class="engine-hint glass" role="status">
+    @if (gpuCaveat()) {
+      <span>Dein Ger&auml;t stellt kein GPU-beschleunigtes WebGL bereit &mdash;
+        die Browser-Ansicht w&uuml;rde ruckeln, es bleibt beim Server-Rendering.</span>
+      <button type="button" (click)="dismissEngineHint()">Verstanden</button>
+    } @else {
+      <span>Die Browser-Ansicht l&auml;uft auf diesem Ger&auml;t z&auml;h
+        (&#8776;{{ slowFrameMs() }} ms pro Bild). Zur Server-Ansicht wechseln?</span>
+      <button type="button" (click)="acceptEngineHint()">Wechseln</button>
+      <button type="button" class="ghost" (click)="dismissEngineHint()">So lassen</button>
+    }
+  </div>
+}
+
 @if (showMobileHint()) {
   <div class="mobile-hint glass" role="note">
     <span>&#128241; Dieses WebGIS ist f&uuml;r <strong>Desktop und Tablet</strong> gedacht

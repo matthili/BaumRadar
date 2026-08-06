@@ -27,7 +27,7 @@ skinparam rectangle {
 
 rectangle "Layer 1 · in the browser — “the web page”" as B1 <<band>> {
   rectangle "🖥️  Angular app — the user interface\n(one built bundle of static files)" as APP <<run>> {
-    rectangle "🧩  OpenLayers\nbuilt-in map library —\nthe slot MapLibre would replace" as OL <<lib>>
+    rectangle "🧩  Map library (switchable)\nOpenLayers = server images (default)\nMapLibre = vector tiles in browser" as OL <<lib>>
   }
 }
 

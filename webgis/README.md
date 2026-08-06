@@ -219,6 +219,7 @@ mvn test -Pit
 - [x] Phase 4 – GraphHopper-Routing (Insel-Graph, Schlauch-Zonen-Vermeidung per Custom-Model mit Konvergenz + Querungs-Zähler + Direktrouten-Vergleich, Start/Ziel per Klick **oder** Adresssuche)
 - [x] Geocoding – Photon aus den pro-Stadt-Häppchen des Katalogs (lokal, `CITY_FILTER`-bewusst; Fallback photon.komoot.io)
 - [x] Phase 5 – Doku: [Architektur (DE)](../docs/webgis_architecture.md) / [EN](../docs/webgis_architecture_en.md) inkl. Diagrammen + Lessons Learned, Verlinkung im Haupt-README
+- [x] Phase 6 – Zwei Renderer, ein Unterbau: Panel-Schalter **„Rendering: Server | Browser (lokal)"** wechselt live zwischen OpenLayers (WMS-Bilder vom Server) und MapLibre GL (Vektorkacheln aus GeoServers Kachel-Cache, Beta). Der Loader rechnet dafür Generalisierungs-Stufen vor (Stadtpunkte → Rasterzellen mit dominanter Gattung → Einzelbäume — eine Wiener Übersichtskachel schrumpft von ~4,5 MB auf ~1,5 kB); Kamera/Filter/Route wandern beim Wechsel mit, Gattungsfilter laufen in der Browser-Ansicht ohne Server-Umlauf, und ein Automatik-Hinweis schlägt die Server-Ansicht vor, wenn GPU-WebGL fehlt oder die gemessenen Bildzeiten dauerhaft über ~33 ms liegen.
 
 Die ausführliche Architektur-Dokumentation (Datenweg, Routing, Geocoding, Stolpersteine):
 **[docs/webgis_architecture.md](../docs/webgis_architecture.md)** · [English version](../docs/webgis_architecture_en.md)

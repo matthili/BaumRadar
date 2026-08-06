@@ -27,7 +27,7 @@ skinparam rectangle {
 
 rectangle "Ebene 1 · im Browser — „die Webseite"" as B1 <<band>> {
   rectangle "🖥️  Angular-App — die Bedienoberfläche\n(ein gebautes Paket statischer Dateien)" as APP <<run>> {
-    rectangle "🧩  OpenLayers\neingebaute Karten-Bibliothek —\nder Steckplatz, den MapLibre ersetzen würde" as OL <<lib>>
+    rectangle "🧩  Karten-Bibliothek (umschaltbar)\nOpenLayers = Server-Bilder (Standard)\nMapLibre = Vektorkacheln im Browser" as OL <<lib>>
   }
 }
 

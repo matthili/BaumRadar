@@ -42,7 +42,7 @@ rectangle "📦  GitHub Repository\nSignierte SQLite-Datenbanken\n+ catalog.json
 
 rectangle "📱  Android-App (Kotlin / Compose)\n· Signaturprüfung\n· Offline-First (Room DB)\n· OSM-Karte + AR-Kompass-Pfeile\n· Allergiefreies Routing (OSRM)\n· Geofence-Annäherungswarnung" as App <<app>>
 
-rectangle "🖥️  WebGIS-Tech-Demo (Docker)\n· PostGIS + GeoServer (WMS/WFS/OGC API)\n· Angular/OpenLayers-Karte\n· lokales Routing + Adresssuche" as Web <<web>>
+rectangle "🖥️  WebGIS-Tech-Demo (Docker)\n· PostGIS + GeoServer (WMS/WFS/OGC API\n  + Vektorkacheln)\n· Angular-Karte, Renderer umschaltbar:\n  OpenLayers (Server-Bilder) ⇄ MapLibre (lokal)\n· lokales Routing + Adresssuche" as Web <<web>>
 
 actor "Nutzer:in\n(Allergie-Profil)" as User
 

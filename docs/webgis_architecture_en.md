@@ -20,7 +20,7 @@ If the acronyms make you lose the thread: the whole stack is the familiar chain 
 | "the MySQL" (data stores) | **PostGIS** · graph file · search index | Only GeoServer talks to the database (PostgreSQL + geo extension); GraphHopper loads its graph into RAM, Photon reads its index from disk — one store per specialist. |
 | Installer | **loader** · **graph-builder** | One-shot jobs: they fill the database resp. the graph file and exit — they never appear on the request path. |
 
-Mnemonic for the MapLibre question: a switch would replace **exactly one box** — the map library inside the Angular app. Every layer below stays untouched (it only becomes worthwhile once GeoServer also serves vector tiles — see the [glossary](glossary_en.md)).
+Mnemonic for the MapLibre question: the swap concerns **exactly one box** — the map library inside the Angular app. That is exactly what the dual-renderer demo ships: the panel toggle **"Rendering: Server | Browser (local)"** switches live between OpenLayers (WMS images) and MapLibre (vector tiles from GeoServer's tile cache, generalised by the loader in zoom stages: city points → grid cells with dominant genus → individual trees). Camera, filters and route carry over on switch; an automatic hint suggests the server view when GPU WebGL is missing or measured frame times stay below ~30 fps. Every layer below stays untouched — see the [glossary](glossary_en.md).
 
 ---
 

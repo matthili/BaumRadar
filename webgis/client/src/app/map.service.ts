@@ -28,6 +28,10 @@ export class MapService {
   /** Aktiver Motor — fürs UI (Schalter-Zustand, Beta-Hinweis). */
   readonly engineKind = signal<EngineKind>(MapService.storedEngine());
 
+  /** Automatik-Signale: Gerät kann kein GPU-WebGL bzw. MapLibre ruckelt messbar. */
+  readonly gpuCaveat = signal(false);
+  readonly slowFrameMs = signal<number | null>(null);
+
   // Replay-Zustand für den Motor-Wechsel.
   private genera: ReadonlySet<string> = new Set();
   private cityId: string | null = null;
@@ -47,13 +51,29 @@ export class MapService {
   ): void {
     this.target = target;
     this.popupElement = popupElement;
-    this.callbacks = { onFeatureInfo, onRouteLoaded };
+    this.callbacks = {
+      onFeatureInfo,
+      onRouteLoaded,
+      onSlowRendering: (ms) => this.slowFrameMs.set(ms),
+    };
+    // Gespeicherte MapLibre-Wahl auf einem Gerät ohne GPU-WebGL: leise auf OL.
+    if (this.engineKind() === 'maplibre' && !MapService.webglOk()) {
+      this.engineKind.set('ol');
+      this.gpuCaveat.set(true);
+    }
     void this.mount(this.engineKind(), null);
   }
 
   /** Motor wechseln: Kamera mitnehmen, alten Motor abbauen, Zustand neu einspielen. */
   async switchEngine(kind: EngineKind): Promise<void> {
     if (kind === this.engineKind() || this.switching || !this.target) return;
+    // Harter Vorab-Test: ohne GPU-beschleunigtes WebGL wäre MapLibre eine Qual —
+    // Wechsel ablehnen und der App den Grund signalisieren (Hinweis-Banner).
+    if (kind === 'maplibre' && !MapService.webglOk()) {
+      this.gpuCaveat.set(true);
+      return;
+    }
+    this.slowFrameMs.set(null);
     this.switching = true;
     try {
       const view = this.engine?.viewState() ?? null;
@@ -82,6 +102,17 @@ export class MapService {
     if (this.markers.start || this.markers.end) engine.setRouteMarkers(this.markers.start, this.markers.end);
     if (this.directRoute) engine.drawDirectRoute(this.directRoute);
     if (this.route.length > 0) engine.drawRoute(this.route);
+  }
+
+  /** WebGL mit failIfMajorPerformanceCaveat: Software-Rendering zählt als Nein. */
+  private static webglOk(): boolean {
+    try {
+      const canvas = document.createElement('canvas');
+      const opts = { failIfMajorPerformanceCaveat: true };
+      return !!(canvas.getContext('webgl2', opts) ?? canvas.getContext('webgl', opts));
+    } catch {
+      return false;
+    }
   }
 
   private static storedEngine(): EngineKind {

@@ -61,7 +61,34 @@ export class MaplibreEngine implements MapEngine {
       }
 
       this.enableGpxDrop(target, cb.onRouteLoaded);
+      map.once('load', () => this.measureFrames(cb));
     });
+  }
+
+  /**
+   * Ehrliche Leistungsmessung statt Datenblatt-Raten: ~4 Sekunden lang wird pro
+   * Frame ein Repaint erzwungen und die Bildwiederholzeit gemessen. Liegt der
+   * Median über 33 ms (unter ~30 fps), meldet der Motor das der App — die
+   * schlägt dann den Server-Renderer vor, schaltet aber nie eigenmächtig um.
+   */
+  private measureFrames(cb: MapCallbacks): void {
+    if (!cb.onSlowRendering) return;
+    const deltas: number[] = [];
+    let last = performance.now();
+    const tick = (now: number) => {
+      deltas.push(now - last);
+      last = now;
+      if (!this.map) return; // Motor wurde inzwischen gewechselt — Messung verwerfen.
+      if (deltas.length < 240) {
+        this.map.triggerRepaint();
+        requestAnimationFrame(tick);
+        return;
+      }
+      const sorted = [...deltas].sort((a, b) => a - b);
+      const median = sorted[Math.floor(sorted.length / 2)];
+      if (median > 33) cb.onSlowRendering!(Math.round(median));
+    };
+    requestAnimationFrame(tick);
   }
 
   destroy(): void {

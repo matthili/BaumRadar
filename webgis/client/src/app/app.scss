@@ -266,12 +266,15 @@
   right: 16px;
   width: 300px;
   max-height: calc(100vh - 32px);
+  // Wächst der Inhalt über den Viewport (z. B. Routenplanung auf FullHD),
+  // scrollt das ganze Panel — sonst wären untere Abschnitte unerreichbar.
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 16px;
   padding: 16px;
   z-index: 5;
-  overflow: hidden;
+  overflow-x: hidden;
 
   section {
     display: flex;
@@ -294,6 +297,37 @@
   text-transform: uppercase;
   letter-spacing: 1px;
   color: var(--br-primary-container);
+}
+
+// Automatik-Vorschlag (Motor-Empfehlung): dezent unten links, wie der Mobil-Hinweis.
+.engine-hint {
+  position: fixed;
+  left: 12px;
+  bottom: 12px;
+  max-width: 420px;
+  z-index: 9;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  font-size: 12.5px;
+
+  button {
+    flex: 0 0 auto;
+    padding: 6px 10px;
+    border: none;
+    border-radius: 8px;
+    background: var(--br-primary-bright);
+    color: #0b1a0b;
+    font-weight: 600;
+    cursor: pointer;
+
+    &.ghost {
+      background: transparent;
+      color: var(--br-on-glass-muted);
+      font-weight: 400;
+    }
+  }
 }
 
 // Schalter „Ansicht": zwei Segmente, aktives im Marken-Grün.

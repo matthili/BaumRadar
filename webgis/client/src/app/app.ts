@@ -292,6 +292,21 @@ export class App implements AfterViewInit {
   /** Aktiver Karten-Motor (fürs Schalter-UI). */
   readonly mapEngine = this.mapService.engineKind;
 
+  /** Automatik-Signale des MapService (GPU fehlt / MapLibre ruckelt messbar). */
+  readonly gpuCaveat = this.mapService.gpuCaveat;
+  readonly slowFrameMs = this.mapService.slowFrameMs;
+  /** Wechsel-Vorschlag beantwortet? (Pro Sitzung — die Messung läuft je Aktivierung neu.) */
+  readonly engineHintDismissed = signal(false);
+
+  dismissEngineHint(): void {
+    this.engineHintDismissed.set(true);
+  }
+
+  acceptEngineHint(): void {
+    this.engineHintDismissed.set(true);
+    this.setMapEngine('ol');
+  }
+
   /** Ansicht wechseln: serverseitig (OpenLayers/WMS) ↔ lokal (MapLibre/Vektorkacheln). */
   setMapEngine(kind: 'ol' | 'maplibre'): void {
     this.closePopup();

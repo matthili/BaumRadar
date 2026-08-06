@@ -14,6 +14,12 @@ export interface MapCallbacks {
   onFeatureInfo: (data: PopupData | null) => void;
   /** Name der per Drag&Drop geladenen GPX-Datei. */
   onRouteLoaded: (fileName: string) => void;
+  /**
+   * Automatik-Vorschlag: Der Motor meldet, dass er auf diesem Gerät zäh läuft
+   * (gemessene Bildwiederholzeiten, kein Datenblatt-Raten). Die App zeigt dann
+   * einen dezenten Wechsel-Hinweis — entschieden wird von Menschenhand.
+   */
+  onSlowRendering?: (medianFrameMs: number) => void;
 }
 
 /**
