@@ -53,7 +53,7 @@ export class MaplibreEngine implements MapEngine {
       // Diagnose-Griff für die Browser-Konsole (Tech-Demo: bewusst zugänglich).
       (globalThis as { __brMlMap?: unknown }).__brMlMap = map;
       // +/- wie in der OL-Ansicht (oben links); Kompass wäre hier nur Deko.
-      map.addControl(new NavigationControl({ showCompass: false }), 'top-left');
+      map.addControl(new NavigationControl({ showCompass: false }), 'top-right');
 
       map.on('click', (e) => {
         if (this.routingMode && this.onRoutingPoint) {
@@ -120,6 +120,7 @@ export class MaplibreEngine implements MapEngine {
     this.whenReady(() => {
       this.map!.setFilter('trees', combined);
       this.map!.setFilter('zones', combined);
+      this.map!.setFilter('zones-outline', combined);
       // Zellen kennen keine Einzel-Gattung — auf sie wirkt nur der Stadtfilter.
       const cityOnly: FilterSpecification | null = cityId ? ['==', ['get', 'city_id'], cityId] : null;
       for (const id of ['cells8', 'cells11', 'cells13']) this.map!.setFilter(id, cityOnly);
@@ -136,7 +137,10 @@ export class MaplibreEngine implements MapEngine {
 
   setZonesVisible(visible: boolean): void {
     this.zonesVisible = visible;
-    this.whenReady(() => this.map!.setLayoutProperty('zones', 'visibility', visible ? 'visible' : 'none'));
+    this.whenReady(() =>
+      ['zones', 'zones-outline'].forEach((id) =>
+        this.map!.setLayoutProperty(id, 'visibility', visible ? 'visible' : 'none')),
+    );
   }
 
   fitCity(boundingBox: [number, number, number, number]): void {
@@ -247,7 +251,14 @@ export class MaplibreEngine implements MapEngine {
         {
           id: 'zones', type: 'fill', source: 'src-allergy_zones', 'source-layer': 'allergy_zones',
           minzoom: 9 - Z,
-          paint: { 'fill-color': '#c62828', 'fill-opacity': 0.22, 'fill-outline-color': '#c62828' },
+          paint: { 'fill-color': '#c62828', 'fill-opacity': 0.35 },
+        },
+        // Deutlicher Rand wie in der Server-Ansicht — sonst gehen die Zonen
+        // neben Route und Grundkarte optisch unter.
+        {
+          id: 'zones-outline', type: 'line', source: 'src-allergy_zones', 'source-layer': 'allergy_zones',
+          minzoom: 9 - Z,
+          paint: { 'line-color': '#c62828', 'line-width': 1.4, 'line-opacity': 0.8 },
         },
         cellLayer('cells8', 'tree_cells_z8', 8 - Z, 11 - Z),
         cellLayer('cells11', 'tree_cells_z11', 11 - Z, 13 - Z),

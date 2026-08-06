@@ -299,6 +299,39 @@
   color: var(--br-primary-container);
 }
 
+// Eigenes Tooltip statt title-Attribut: feste Maximalbreite und Mehrzeiligkeit —
+// auch bei 20 Gattungen ein kompaktes Rechteck, kein Bildschirmbreiten-Banner.
+.tip-wrap {
+  position: relative;
+  display: inline-flex;
+
+  .tip {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    z-index: 20;
+    max-width: 240px;
+    width: max-content;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: rgba(10, 20, 10, 0.92);
+    border: 1px solid var(--br-glass-border);
+    color: var(--br-on-glass);
+    font-size: 12px;
+    line-height: 1.45;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+
+  &:hover .tip,
+  &:focus-within .tip {
+    opacity: 1;
+  }
+}
+
 // Automatik-Vorschlag (Motor-Empfehlung): dezent unten links, wie der Mobil-Hinweis.
 .engine-hint {
   position: fixed;

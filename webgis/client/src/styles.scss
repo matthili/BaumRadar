@@ -125,16 +125,51 @@ body {
 
 /* --- OpenLayers-Controls in den Glas-Look überführen -------------------- */
 .ol-zoom {
-  top: auto;
+  bottom: auto;
   left: auto;
-  /* Links neben dem 300px-Steuer-Panel, nicht darunter. */
+  /* Links neben dem 300px-Steuer-Panel, oben statt unten. */
   right: 336px;
-  bottom: 28px;
+  top: 16px;
   background: none;
   padding: 0;
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+/* MapLibre-Zoom: gleiche Stelle und gleicher Glas-Look wie die OL-Buttons.
+   (Der Container bringt 8px Eigen-Margin mit → 328/8 ergibt optisch 336/16.) */
+.maplibregl-ctrl-top-right {
+  top: 8px;
+  right: 328px;
+}
+
+.maplibregl-ctrl-group {
+  background: none !important;
+  box-shadow: none !important;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.maplibregl-ctrl-group button {
+  width: 42px !important;
+  height: 42px !important;
+  border-radius: 14px !important;
+  border: 1px solid var(--br-glass-border) !important;
+  background-color: var(--br-glass-bg) !important;
+  box-shadow: var(--br-shadow);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+
+  /* Die +/−-Symbole sind schwarze Icon-Grafiken — auf dunklem Glas invertieren. */
+  .maplibregl-ctrl-icon {
+    filter: invert(1);
+  }
+
+  &:hover {
+    border-color: var(--br-primary-bright) !important;
+  }
 }
 
 .ol-zoom button {

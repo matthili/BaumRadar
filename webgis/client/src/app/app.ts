@@ -289,6 +289,16 @@ export class App implements AfterViewInit {
     return this.speciesByGenus().get(genusDe) ?? [];
   }
 
+  /** „Aktiv sind Filter nach Birke und Erle" — Beistrich-Liste, „und" vor dem letzten. */
+  readonly activeGeneraLabel = computed(() => {
+    const names = [...this.selectedGenera()].sort((a, b) => a.localeCompare(b, 'de'));
+    if (names.length === 0) return '';
+    const list = names.length === 1
+      ? names[0]
+      : `${names.slice(0, -1).join(', ')} und ${names[names.length - 1]}`;
+    return `Aktiv sind Filter nach ${list}`;
+  });
+
   /** Aktiver Karten-Motor (fürs Schalter-UI). */
   readonly mapEngine = this.mapService.engineKind;
 

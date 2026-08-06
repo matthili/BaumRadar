@@ -202,9 +202,12 @@
         </button>
       </span>
       @if (selectedGenera().size > 0) {
-        <button class="chip" type="button" (click)="clearGenera()">
-          {{ selectedGenera().size }} aktiv &middot; zur&uuml;cksetzen
-        </button>
+        <span class="tip-wrap">
+          <button class="chip" type="button" (click)="clearGenera()">
+            {{ selectedGenera().size }} aktiv &middot; zur&uuml;cksetzen
+          </button>
+          <span class="tip" role="tooltip">{{ activeGeneraLabel() }}</span>
+        </span>
       }
     </div>
     <input id="genus-search" type="search" placeholder="Gattung oder Art suchen &hellip;"
