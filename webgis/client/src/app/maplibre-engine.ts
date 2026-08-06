@@ -1,5 +1,8 @@
 import { NgZone } from '@angular/core';
-import { Map as MlMap, Popup, LngLat, GeoJSONSource, StyleSpecification, FilterSpecification } from 'maplibre-gl';
+// v5-Linie gepinnt: v6 lagert den Worker in eine eigene Moduldatei aus, die der
+// Angular-Build nicht mit ausliefert — ohne Worker lädt MapLibre still keine
+// einzige Vektorkachel (Raster läuft weiter; tückisch fehlerlos).
+import { Map as MlMap, NavigationControl, Popup, LngLat, GeoJSONSource, StyleSpecification, FilterSpecification } from 'maplibre-gl';
 import type { Feature as GeoJsonFeature } from 'geojson';
 import { MapCallbacks, MapEngine, ViewState } from './map-engine';
 import { LonLat, PopupData, TreeHit, ZoneHit } from './models';
@@ -47,6 +50,10 @@ export class MaplibreEngine implements MapEngine {
         attributionControl: { compact: true },
       });
       this.map = map;
+      // Diagnose-Griff für die Browser-Konsole (Tech-Demo: bewusst zugänglich).
+      (globalThis as { __brMlMap?: unknown }).__brMlMap = map;
+      // +/- wie in der OL-Ansicht (oben links); Kompass wäre hier nur Deko.
+      map.addControl(new NavigationControl({ showCompass: false }), 'top-left');
 
       map.on('click', (e) => {
         if (this.routingMode && this.onRoutingPoint) {
