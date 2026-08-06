@@ -14,6 +14,34 @@ public class SwissGeoJsonProviderTest {
 
     private final ObjectMapper mapper = new ObjectMapper();
 
+    /** Luzern verteilt den botanischen Namen auf zwei Spalten. */
+    @Test
+    public void luzernRecombinesGenusAndEpithet() throws Exception {
+        String json = "{ \"type\": \"Feature\","
+            + " \"geometry\": { \"type\": \"Point\", \"coordinates\": [ 8.30571247, 47.03244294 ] },"
+            + " \"properties\": { \"OBJECTID\": 1589, \"GATTUNG_TEXT\": \"Acer\","
+            + " \"ART_SORTE_TEXT\": \"pseudoplatanus\", \"BAUMHOEHE\": 6.0, \"PFLANZJAHR\": null } }";
+
+        TreeRecord t = new LuzernProvider().mapFeatureToTree(mapper.readTree(json));
+        assertNotNull(t);
+        assertEquals("Ahorn", t.genusDe);
+        assertEquals("Maple", t.genusEn);
+        assertEquals("", t.speciesDe);                       // Quelle führt keinen deutschen Artnamen
+        assertEquals("Acer pseudoplatanus", t.speciesEn);    // aus zwei Spalten zusammengesetzt
+        assertEquals("luzern_1589", t.id);
+        assertEquals(47.03244294, t.latitude, 1e-7);
+    }
+
+    /** Winterthur listet deutsche Synonyme hinter Kommata — das erste zählt. */
+    @Test
+    public void winterthurKeepsFirstCompleteGermanSynonym() {
+        assertEquals("Hainbuche", WinterthurProvider.firstName("Hainbuche, Weissbuche"));
+        assertEquals("Stieleiche", WinterthurProvider.firstName("Stieleiche"));
+        // "Sand-" ist nur ein halbes Wort; das erste vollständige gewinnt.
+        assertEquals("Weissbirke", WinterthurProvider.firstName("Sand-, Weissbirke, Hängebirke"));
+        assertEquals("", WinterthurProvider.firstName("  "));
+    }
+
     @Test
     public void baselNormalizesLatinGenus() throws Exception {
         String json = "{ \"type\": \"Feature\","

@@ -30,7 +30,7 @@ The central design decision of the whole project carries through to the WebGIS: 
 
 | Data | Raw source | Published per city | Zug example | Cologne example |
 |---|---|---|---|---|
-| Trees + allergy zones | 19 tree cadastres (CSV/GeoJSON/WFS/XLSX) | `<city>.db.gz` + `.sig` | ~2 MB | ~7 MB |
+| Trees + allergy zones | 31 tree cadastres (CSV/GeoJSON/WFS/GML/XLSX) | `<city>.db.gz` + `.sig` | ~2 MB | ~7 MB |
 | Geocoder (addresses + POIs) | Photon planet dump (**25.9 GB**) | `geocoder_<city>.jsonl.gz` + `.sig` | 25 MB | 176 MB |
 | Routing graph | Geofabrik country PBFs (DE ~4 GB) | *(cut locally: island PBF)* | — | — |
 
@@ -75,7 +75,7 @@ The loader is the Java counterpart of the `data-processor` — consuming instead
    ST_Buffer(ST_SetSRID(ST_MakePoint(lon, lat), 4326)::geography, radius_m)::geometry
    ```
    The detour through the `geography` type buffers in real metres on the ellipsoid.
-5. **Statistics as tables, not views**: `genus_stats` (global) and `genus_stats_city` (per city) are refilled with a `GROUP BY` after every import — so the client's WFS requests never aggregate 2.6 M rows on the fly.
+5. **Statistics as tables, not views**: `genus_stats` (global) and `genus_stats_city` (per city) are refilled with a `GROUP BY` after every import — so the client's WFS requests never aggregate 2.8 M rows on the fly.
 6. **GeoServer as code**: workspace, PostGIS datastore, SLD styles and all layers are created idempotently through the **REST API** — no click-configuration, the stack is reproducible.
 
 ---
@@ -84,7 +84,7 @@ The loader is the Java counterpart of the `data-processor` — consuming instead
 
 GeoServer publishes the PostGIS tables in a standards-conformant way:
 
-- **WMS 1.3.0** renders trees and zones server-side (SLD styles); the client only requests visible tiles — 2.6 M points stay fast.
+- **WMS 1.3.0** renders trees and zones server-side (SLD styles); the client only requests visible tiles — 2.8 M points stay fast.
 - **WFS 2.0 + CQL** serves features as GeoJSON; the client uses it for statistics, the search base and the **corridor zones for routing**.
 - **OGC API Features** (stable extension since GeoServer 2.27) is the modern REST/JSON access to the same data.
 

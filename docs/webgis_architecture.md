@@ -30,7 +30,7 @@ Die zentrale Design-Entscheidung des gesamten Projekts zieht sich auch durchs We
 
 | Datenart | Quelle (roh) | publiziert pro Stadt | Beispiel Zug | Beispiel Köln |
 |---|---|---|---|---|
-| Bäume + Allergiezonen | 19 Baumkataster (CSV/GeoJSON/WFS/XLSX) | `<stadt>.db.gz` + `.sig` | ~2 MB | ~7 MB |
+| Bäume + Allergiezonen | 31 Baumkataster (CSV/GeoJSON/WFS/GML/XLSX) | `<stadt>.db.gz` + `.sig` | ~2 MB | ~7 MB |
 | Geocoder (Adressen + POIs) | Photon-Planet-Dump (**25,9 GB**) | `geocoder_<stadt>.jsonl.gz` + `.sig` | 25 MB | 176 MB |
 | Routing-Graph | Geofabrik-Länder-PBFs (DE ~4 GB) | *(lokal geschnitten: Insel-PBF)* | — | — |
 
@@ -75,7 +75,7 @@ Der Loader ist das Java-Gegenstück zum `data-processor` — nur konsumierend st
    ST_Buffer(ST_SetSRID(ST_MakePoint(lon, lat), 4326)::geography, radius_m)::geometry
    ```
    Der Umweg über den `geography`-Typ buffert in echten Metern auf dem Ellipsoid.
-5. **Statistiken als Tabellen statt Views**: `genus_stats` (global) und `genus_stats_city` (je Stadt) werden nach jedem Import per `GROUP BY` neu befüllt — damit WFS-Zugriffe des Clients nicht bei jedem Request 2,6 Mio Zeilen aggregieren.
+5. **Statistiken als Tabellen statt Views**: `genus_stats` (global) und `genus_stats_city` (je Stadt) werden nach jedem Import per `GROUP BY` neu befüllt — damit WFS-Zugriffe des Clients nicht bei jedem Request 2,8 Mio Zeilen aggregieren.
 6. **GeoServer als Code**: Workspace, PostGIS-Datastore, SLD-Styles und alle Layer entstehen idempotent über die **REST-API** — keine Klick-Konfiguration, der Stack ist reproduzierbar.
 
 ---
@@ -84,7 +84,7 @@ Der Loader ist das Java-Gegenstück zum `data-processor` — nur konsumierend st
 
 GeoServer publiziert die PostGIS-Tabellen standardkonform:
 
-- **WMS 1.3.0** rendert Bäume und Zonen serverseitig (SLD-Styles); der Client fordert nur sichtbare Kacheln an — 2,6 Mio Punkte bleiben performant.
+- **WMS 1.3.0** rendert Bäume und Zonen serverseitig (SLD-Styles); der Client fordert nur sichtbare Kacheln an — 2,8 Mio Punkte bleiben performant.
 - **WFS 2.0 + CQL** liefert Features als GeoJSON; der Client nutzt es für Statistiken, die Such-Grundlage und die **Korridor-Zonen des Routings**.
 - **OGC API Features** (stabile Extension ab GeoServer 2.27) ist der moderne REST/JSON-Zugang zu denselben Daten.
 

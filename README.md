@@ -15,7 +15,7 @@
 [![Open Data](https://img.shields.io/badge/Open_Data-19_Städte-orange.svg)](#-multi-city-support)
 [![Bäume](https://img.shields.io/badge/Bäume-~2,6_Mio-forestgreen.svg)](docs/data_structure.md)
 
-> **Baumradar ist ein Open-Data-basiertes Werkzeug, mit dem Bäume in der direkten Umgebung erkundet und bei der Fortbewegung durch die Stadt gezielt gemieden werden können – besonders hilfreich bei einer Baumpollen-Allergie (z. B. gegen Frühblüher).** Im Hintergrund: eine Open-Data-Geodaten-Pipeline, die Baumkataster aus derzeit 19 Städten vereinheitlicht, räumlich clustert und signiert verteilt.
+> **Baumradar ist ein Open-Data-basiertes Werkzeug, mit dem Bäume in der direkten Umgebung erkundet und bei der Fortbewegung durch die Stadt gezielt gemieden werden können – besonders hilfreich bei einer Baumpollen-Allergie (z. B. gegen Frühblüher).** Im Hintergrund: eine Open-Data-Geodaten-Pipeline, die Baumkataster aus derzeit 31 Städten vereinheitlicht, räumlich clustert und signiert verteilt.
 
 ---
 
@@ -56,7 +56,7 @@
     <td align="center" width="33%">
       <img src="docs/screenshots/staedte_frei_waehlbar.jpg" width="250"/><br/>
       <b>Multi-City Support</b><br/>
-      <sub>19 Städte in AT, DE und CH frei wählbar</sub>
+      <sub>31 Städte in AT, DE und CH frei wählbar</sub>
     </td>
     <td align="center" width="33%">
       <img src="docs/screenshots/auswahl_baeume.jpg" width="250"/><br/>

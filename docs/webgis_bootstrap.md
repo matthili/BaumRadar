@@ -88,7 +88,7 @@ webgis/
    EXTRACT_BATCH=1                # Städte je osmium-Lauf (~1,5 GB RAM/Stadt)
    PHOTON_VERSION=1.2.1
    PHOTON_PORT=2322
-   PHOTON_IMPORT_JAVA_OPTS=-Xmx4g # Heap für den Index-Import (19 Städte ≈ 18 GB Rohdaten)
+   PHOTON_IMPORT_JAVA_OPTS=-Xmx4g # Heap für den Index-Import (31 Städte ≈ 20 GB Rohdaten)
    PHOTON_JAVA_OPTS=-Xmx1g
    ```
 

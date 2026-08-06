@@ -7,7 +7,7 @@
 *(Für die deutsche Dokumentation, siehe [README.md](README.md))*
 
 A locally runnable web GIS built on **OGC standards** that consumes the signed
-BaumRadar datasets (19 cities, ~2.6 M trees) — a standalone complement to the
+BaumRadar datasets (31 cities, ~2.84 M trees) — a standalone complement to the
 Android app. No server operation required: everything runs in containers on your
 own machine.
 
@@ -67,7 +67,7 @@ search over photon.komoot.io in the meantime. If the repository is checked out i
 full locally, the address search takes the geocoder files straight from `docs/data/`
 — entirely without a GitHub download.
 
-**Disk footprint (full stack, all 19 cities):** persistently ~50–60 GB of Docker
+**Disk footprint (full stack, all 31 cities):** persistently ~50–60 GB of Docker
 data (country PBFs ~6 GB, PostGIS ~3–4 GB, Photon search index ~15–25 GB, routing
 graph, images/build cache ~8–10 GB) — **peaking during the first Photon import at
 up to ~75 GB**, because the merged raw dump (>20 GB) sits next to the index being
@@ -135,7 +135,7 @@ http://localhost:8081/geoserver/baumradar/wfs?service=WFS&version=2.0.0&request=
 - **PostGIS instead of GeoPackage as the runtime store:** the allergy zones come as
   centre + radius (metres); `ST_Buffer(…::geography, radius)` turns that into
   geodetically correct circle polygons. Plus GiST indexes and robust concurrent
-  serving for 2.6 M points. The outward OGC conformance is delivered by GeoServer
+  serving for 2.8 M points. The outward OGC conformance is delivered by GeoServer
   (WMS/WFS/OGC API Features) — the store behind it is an implementation detail.
 - **Maven instead of Gradle — on purpose:** the Android part of the repo is bound to
   Gradle by AGP. This server extension is deliberately separated as a standalone
@@ -177,7 +177,7 @@ http://localhost:8081/geoserver/baumradar/wfs?service=WFS&version=2.0.0&request=
 | `GH_VERSION` / `GRAPHHOPPER_PORT` / `GH_JAVA_OPTS` | `10.0` / `8989` / `-Xmx2g` | GraphHopper (profile `routing`) |
 | `BBOX_MARGIN_DEG` | `0.03` | margin around city bboxes for the island graph |
 | `PHOTON_VERSION` / `PHOTON_PORT` | `1.2.1` / `2322` | Photon geocoder (profile `geocoding`) |
-| `PHOTON_IMPORT_JAVA_OPTS` | `-Xmx4g` | heap for the **one-time** index import — for all 19 cities (~18 GB raw) raise to `-Xmx6g`/`-Xmx8g` if the import crashes |
+| `PHOTON_IMPORT_JAVA_OPTS` | `-Xmx4g` | heap for the **one-time** index import — for all 31 cities (~18 GB raw) raise to `-Xmx6g`/`-Xmx8g` if the import crashes |
 | `PHOTON_JAVA_OPTS` | `-Xmx1g` | heap of the running search service |
 
 ## Development

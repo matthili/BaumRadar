@@ -8,7 +8,7 @@ Projekt. *(English version: [glossary_en.md](glossary_en.md))*
 
 ## BaumRadar-Bausteine
 
-**data-processor** — Das Java-Backend des Projekts (Gradle-Modul neben der Android-App). Eine Batch-Pipeline: liest die offenen Baumkataster von 19 Städten (CSV, GeoJSON, WFS, XLSX, Esri-JSON), vereinheitlicht Namen und Koordinaten, clustert Allergiezonen, signiert alles und publiziert es als Stadt-Häppchen nach `docs/data/`.
+**data-processor** — Das Java-Backend des Projekts (Gradle-Modul neben der Android-App). Eine Batch-Pipeline: liest die offenen Baumkataster von 31 Städten (CSV, GeoJSON, WFS, XLSX, Esri-JSON), vereinheitlicht Namen und Koordinaten, clustert Allergiezonen, signiert alles und publiziert es als Stadt-Häppchen nach `docs/data/`.
 
 **Runner (Runner-UI)** — Die lokale Web-Oberfläche des data-processors (`--args="--ui"`, Port 8420, null Zusatz-Abhängigkeiten). Städte lassen sich per Checkbox einzeln neu publizieren, Geocoder-Daten pro Stadt aktualisieren; Fortschritt kommt live per Server-Sent Events, und nach getaner Arbeit beendet sich der Runner selbst.
 
@@ -26,7 +26,7 @@ Projekt. *(English version: [glossary_en.md](glossary_en.md))*
 
 **GeocoderCutter** — Backend-Werkzeug, das aus dem offiziellen Photon-Planet-Dump (~26 GB) die Geocoder-Daten pro Stadt herausschneidet: ein Streaming-Durchlauf, jeder Ort wird anhand seiner Koordinate den Stadt-BBoxen (+15 km Rand) zugeordnet. Jede Ausgabedatei bleibt ein eigenständig Photon-importierbarer Dump.
 
-**Insel-Graph (island.osm.pbf)** — Die 19 Stadt-Ausschnitte (+ Rand), zu **einer** OSM-Datei zusammengeführt. GraphHopper baut daraus seinen Routing-Graphen: Routing funktioniert innerhalb jeder Stadt; zwischen den Städten gibt es bewusst keine Verbindung — daher „Insel".
+**Insel-Graph (island.osm.pbf)** — Die 31 Stadt-Ausschnitte (+ Rand), zu **einer** OSM-Datei zusammengeführt. GraphHopper baut daraus seinen Routing-Graphen: Routing funktioniert innerhalb jeder Stadt; zwischen den Städten gibt es bewusst keine Verbindung — daher „Insel".
 
 **graph-builder** — Einmal-Container im WebGIS-Stack: lädt die Länder-PBFs von Geofabrik (gecacht, abbruchsicher), schneidet die Stadt-BBoxen mit osmium heraus (eine Stadt pro Lauf — siehe Stolpersteine) und merged sie zum Insel-Graph.
 
@@ -64,6 +64,10 @@ Projekt. *(English version: [glossary_en.md](glossary_en.md))*
 
 **osmium (osmium-tool)** — Das Schweizer Taschenmesser für OSM-Dateien: `extract` (Ausschneiden nach BBox), `merge`, `tags-filter`, `fileinfo`. Speicher-Eigenheit, die uns einen Stolperstein bescherte: `extract` hält pro Ausschnitt eine Bitmap über den *globalen* Node-ID-Raum — ~1,5 GB, egal wie klein die Stadt ist.
 
+**KRZN (Niederrhein-Quelle)** — Das Kommunale Rechenzentrum Niederrhein betreibt einen offenen WFS, der **je Kommune eine eigene Baum-Ebene** führt (Krefeld, Moers, Viersen, Kleve, Emmerich, Xanten, Issum, Schwalmtal, Bedburg-Hau — zusammen ~184.000 Bäume). Lizenz: **Datenlizenz Deutschland – Zero 2.0** (gemeinfrei, Namensnennung nicht einmal verpflichtend). Weil alle Ebenen dasselbe Schema haben, bedient sie ein einziger Provider. Eigenheit: Viersens GeoJSON-Ausgabe scheitert an Mehrfach-Geometrien (`Could not export multi geometry`), daher läuft diese Stadt über [[GML]] — siehe `KrznGmlProvider`.
+
+**GML (Geography Markup Language)** — Das XML-Format der OGC für Geodaten und die *Standard*-Ausgabe jedes WFS; GeoJSON ist dort nur eine (verbreitete) Zusatzoption. Ausführlicher als GeoJSON, dafür ausdrucksstärker — es kann u. a. Mehrfach-Geometrien, an denen manche GeoJSON-Schreiber scheitern. Im Projekt liest `AbstractGmlProvider` es per StAX-Streaming (JDK-Bordmittel, keine neue Abhängigkeit); von einer Mehrfach-Geometrie zählt die erste Position, denn ein Baum ist ein Punkt.
+
 **Geofabrik** — Deutscher Anbieter täglich aktualisierter OSM-Auszüge (Kontinente, Länder, Bundesländer) als PBF. Quelle der Routing-Rohdaten (`germany-latest.osm.pbf` ~4 GB usw.).
 
 **Compose-Profil** — Docker-Compose-Mechanismus, um Service-Gruppen an- und abzuschalten. Im WebGIS: `routing` (graph-builder + GraphHopper) und `geocoding` (Photon). Das Startskript aktiviert beide standardmäßig; `-NoRouting`/`-NoGeocoding` schalten ab.
@@ -74,7 +78,7 @@ Projekt. *(English version: [glossary_en.md](glossary_en.md))*
 
 **OGC** — Das *Open Geospatial Consortium*, das Standardisierungsgremium für Geo-Schnittstellen. „OGC-konform" heißt: Jeder Standard-Client (QGIS, ArcGIS, Web-Bibliotheken) kann die Dienste ohne Spezialwissen nutzen.
 
-**WMS 1.3.0 (Web Map Service)** — Liefert **fertig gerenderte Kartenbilder** (Kacheln) statt Rohdaten. Dadurch bleibt die Darstellung von 2,6 Mio Bäumen flüssig: Der Server rendert, der Browser zeigt nur Bilder. Das Styling kommt aus SLD-Dateien.
+**WMS 1.3.0 (Web Map Service)** — Liefert **fertig gerenderte Kartenbilder** (Kacheln) statt Rohdaten. Dadurch bleibt die Darstellung von 2,8 Mio Bäumen flüssig: Der Server rendert, der Browser zeigt nur Bilder. Das Styling kommt aus SLD-Dateien.
 
 **GetFeatureInfo** — Die dritte WMS-Grundoperation neben GetCapabilities/GetMap: „Was liegt an diesem Pixel?" — liefert die Attribute der getroffenen Features. Im WebGIS die Basis der Klick-Popups: Bäume und Zonen am Klickpunkt, unter Berücksichtigung des aktiven CQL-Filters.
 
@@ -114,7 +118,7 @@ Projekt. *(English version: [glossary_en.md](glossary_en.md))*
 
 **BBox (Bounding Box)** — Das umschließende Rechteck eines Gebiets, angegeben durch zwei Eckkoordinaten. Vorsicht Konventionen: Der BaumRadar-Katalog nutzt `[minLat, minLon, maxLat, maxLon]`, GeoJSON/Photon/GraphHopper dagegen lon-zuerst — Verwechslung ist *der* Klassiker unter den Geo-Bugs.
 
-**WGS84 / EPSG:4326** — Das Koordinatensystem von GPS: Breite/Länge in Grad auf dem Ellipsoid. `EPSG:4326` ist seine Katalognummer. Verwandt: **EPSG:3857** („Web-Mercator"), die Projektion der Karten-Kacheln im Browser, und **UTM**, metrische Zonen-Systeme, in denen manche Kataster liefern (das Backend rechnet nach WGS84 um). Behörden arbeiten oft zusätzlich in amtlichen Landessystemen — in Österreich etwa **MGI** (z. B. EPSG:31256, „Gauß-Krüger Ost"), in dem u. a. basemap.at zusätzlich ausliefert; OpenLayers kann solche Projektionen darstellen, MapLibre praktisch nur Web-Mercator.
+**WGS84 / EPSG:4326** — Das Koordinatensystem von GPS: Breite/Länge in Grad auf dem Ellipsoid. `EPSG:4326` ist seine Katalognummer. Verwandt: **EPSG:3857** („Web-Mercator"), die Projektion der Karten-Kacheln im Browser, und **UTM**, metrische Zonen-Systeme, in denen manche Kataster liefern (das Backend rechnet nach WGS84 um). Die Schweiz nutzt statt UTM ihr eigenes Landessystem **LV95 / EPSG:2056** (schiefachsige Mercator-Projektion, Ostwert ab 2.600.000 m) — dafür gibt es den `SwissConverter` mit den swisstopo-Näherungsformeln (~1 m genau, für Bäume mehr als ausreichend). Behörden arbeiten oft zusätzlich in amtlichen Landessystemen — in Österreich etwa **MGI** (z. B. EPSG:31256, „Gauß-Krüger Ost"), in dem u. a. basemap.at zusätzlich ausliefert; OpenLayers kann solche Projektionen darstellen, MapLibre praktisch nur Web-Mercator.
 
 **Ed25519** — Modernes, schnelles Signaturverfahren (elliptische Kurven). Das Backend signiert jede publizierte Datei; App und Loader verifizieren gegen einen fest eingebauten Public Key — Manipulation oder Übertragungsfehler fliegen auf, bevor Daten verwendet werden.
 

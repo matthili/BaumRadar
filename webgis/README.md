@@ -7,7 +7,7 @@
 *(For the English documentation, see [README_en.md](README_en.md))*
 
 Ein lokal betreibbares Web-GIS auf Basis von **OGC-Standards**, das die signierten
-BaumRadar-Datenbestände (19 Städte, ~2,6 Mio Bäume) konsumiert — als eigenständige
+BaumRadar-Datenbestände (31 Städte, ~2,84 Mio Bäume) konsumiert — als eigenständige
 Ergänzung zur Android-App. Kein Server-Betrieb nötig: alles läuft in Containern
 auf dem eigenen Rechner.
 
@@ -66,7 +66,7 @@ der Web-Client überbrückt die Adresssuche solange automatisch über photon.kom
 Liegt das Repository vollständig lokal vor, nimmt die Adresssuche die Geocoder-Dateien
 direkt aus `docs/data/` — ganz ohne GitHub-Download.
 
-**Plattenbedarf (Voll-Stack, alle 19 Städte):** dauerhaft ~50–60 GB Docker-Daten
+**Plattenbedarf (Voll-Stack, alle 31 Städte):** dauerhaft ~50–60 GB Docker-Daten
 (Länder-PBFs ~6 GB, PostGIS ~3–4 GB, Photon-Suchindex ~15–25 GB, Routing-Graph,
 Images/Build-Cache ~8–10 GB) — **in der Spitze während des ersten Photon-Imports
 bis ~75 GB**, weil der gemergte Rohdump (>20 GB) neben dem entstehenden Index liegt.
@@ -134,7 +134,7 @@ http://localhost:8081/geoserver/baumradar/wfs?service=WFS&version=2.0.0&request=
 - **PostGIS statt GeoPackage als Laufzeit-Store:** Die Allergiezonen liegen als
   Mittelpunkt + Radius (Meter) vor; `ST_Buffer(…::geography, radius)` macht daraus
   geodätisch korrekte Kreis-Polygone. Dazu GiST-Indizes und robustes
-  Concurrent-Serving für 2,6 Mio Punkte. Die OGC-Konformität nach außen liefert
+  Concurrent-Serving für 2,8 Mio Punkte. Die OGC-Konformität nach außen liefert
   GeoServer (WMS/WFS/OGC API Features) — der Store dahinter ist Implementierungsdetail.
 - **Maven statt Gradle — bewusst:** Der Android-Teil des Repos ist durch AGP an
   Gradle gebunden. Diese Server-Erweiterung ist absichtlich als eigenständiges
@@ -177,7 +177,7 @@ http://localhost:8081/geoserver/baumradar/wfs?service=WFS&version=2.0.0&request=
 | `GH_VERSION` / `GRAPHHOPPER_PORT` / `GH_JAVA_OPTS` | `10.0` / `8989` / `-Xmx2g` | GraphHopper (Profil `routing`) |
 | `BBOX_MARGIN_DEG` | `0.03` | Rand um Stadt-BBoxen beim Insel-Graph |
 | `PHOTON_VERSION` / `PHOTON_PORT` | `1.2.1` / `2322` | Photon-Geocoder (Profil `geocoding`) |
-| `PHOTON_IMPORT_JAVA_OPTS` | `-Xmx4g` | Heap für den **einmaligen** Index-Import — bei allen 19 Städten (~18 GB Rohdaten) ggf. auf `-Xmx6g`/`-Xmx8g` erhöhen, wenn der Import abstürzt |
+| `PHOTON_IMPORT_JAVA_OPTS` | `-Xmx4g` | Heap für den **einmaligen** Index-Import — bei allen 31 Städten (~18 GB Rohdaten) ggf. auf `-Xmx6g`/`-Xmx8g` erhöhen, wenn der Import abstürzt |
 | `PHOTON_JAVA_OPTS` | `-Xmx1g` | Heap des laufenden Suchdienstes |
 
 ## Entwicklung

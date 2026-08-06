@@ -15,7 +15,7 @@
 [![Open Data](https://img.shields.io/badge/Open_Data-19_Cities-orange.svg)](#-multi-city-support)
 [![Trees](https://img.shields.io/badge/Trees-~2.6_M-forestgreen.svg)](docs/data_structure_en.md)
 
-> **Baumradar is an Open-Data-based tool that allows you to explore trees in your vicinity and intentionally avoid them when navigating through the city – especially helpful if you suffer from tree pollen allergies (e.g., early bloomers).** Behind the scenes: an Open Data geodata pipeline that unifies tree cadastres from currently 19 cities, spatially clusters them, and distributes them with cryptographic signatures.
+> **Baumradar is an Open-Data-based tool that allows you to explore trees in your vicinity and intentionally avoid them when navigating through the city – especially helpful if you suffer from tree pollen allergies (e.g., early bloomers).** Behind the scenes: an Open Data geodata pipeline that unifies tree cadastres from currently 31 cities, spatially clusters them, and distributes them with cryptographic signatures.
 
 ---
 
@@ -56,7 +56,7 @@
     <td align="center" width="33%">
       <img src="docs/screenshots/staedte_frei_waehlbar.jpg" width="250"/><br/>
       <b>Multi-City Support</b><br/>
-      <sub>19 cities across AT, DE, and CH freely selectable</sub>
+      <sub>31 cities across AT, DE, and CH freely selectable</sub>
     </td>
     <td align="center" width="33%">
       <img src="docs/screenshots/auswahl_baeume.jpg" width="250"/><br/>

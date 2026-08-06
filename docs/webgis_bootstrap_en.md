@@ -88,7 +88,7 @@ webgis/
    EXTRACT_BATCH=1                # cities per osmium run (~1.5 GB RAM/city)
    PHOTON_VERSION=1.2.1
    PHOTON_PORT=2322
-   PHOTON_IMPORT_JAVA_OPTS=-Xmx4g # heap for the index import (19 cities ≈ 18 GB raw)
+   PHOTON_IMPORT_JAVA_OPTS=-Xmx4g # heap for the index import (31 cities ≈ 20 GB raw)
    PHOTON_JAVA_OPTS=-Xmx1g
    ```
 

@@ -8,7 +8,7 @@ this project. *(Deutsche Fassung: [glossary.md](glossary.md))*
 
 ## BaumRadar building blocks
 
-**data-processor** — The project's Java backend (a Gradle module next to the Android app). A batch pipeline: reads the open tree cadastres of 19 cities (CSV, GeoJSON, WFS, XLSX, Esri JSON), unifies names and coordinates, clusters allergy zones, signs everything and publishes it as per-city slices to `docs/data/`.
+**data-processor** — The project's Java backend (a Gradle module next to the Android app). A batch pipeline: reads the open tree cadastres of 31 cities (CSV, GeoJSON, WFS, XLSX, Esri JSON), unifies names and coordinates, clusters allergy zones, signs everything and publishes it as per-city slices to `docs/data/`.
 
 **Runner (runner UI)** — The data-processor's local web interface (`--args="--ui"`, port 8420, zero extra dependencies). Cities can be re-published individually via checkboxes, geocoder data refreshed per city; progress streams live via Server-Sent Events, and once all work is done the runner shuts itself down.
 
@@ -26,7 +26,7 @@ this project. *(Deutsche Fassung: [glossary.md](glossary.md))*
 
 **GeocoderCutter** — Backend tool that slices per-city geocoder data out of the official Photon planet dump (~26 GB): one streaming pass, each place assigned to the city bboxes (+15 km margin) containing its coordinate. Every output file remains a standalone, Photon-importable dump.
 
-**Island graph (island.osm.pbf)** — The 19 city cut-outs (+ margin) merged into **one** OSM file. GraphHopper builds its routing graph from it: routing works within each city; between cities there is deliberately no connection — hence "island".
+**Island graph (island.osm.pbf)** — The 31 city cut-outs (+ margin) merged into **one** OSM file. GraphHopper builds its routing graph from it: routing works within each city; between cities there is deliberately no connection — hence "island".
 
 **graph-builder** — One-shot container in the WebGIS stack: downloads the country PBFs from Geofabrik (cached, abort-safe), cuts out the city bboxes with osmium (one city per run — see the pitfalls table) and merges them into the island graph.
 
@@ -64,6 +64,10 @@ this project. *(Deutsche Fassung: [glossary.md](glossary.md))*
 
 **osmium (osmium-tool)** — The Swiss army knife for OSM files: `extract` (cut by bbox), `merge`, `tags-filter`, `fileinfo`. A memory quirk that earned us a pitfall entry: `extract` keeps a bitmap over the *global* node-ID space per cut-out — ~1.5 GB, no matter how small the city is.
 
+**KRZN (Lower Rhine source)** — The Kommunales Rechenzentrum Niederrhein runs an open WFS carrying **one tree layer per municipality** (Krefeld, Moers, Viersen, Kleve, Emmerich, Xanten, Issum, Schwalmtal, Bedburg-Hau — ~184,000 trees in total). Licence: **Datenlizenz Deutschland – Zero 2.0** (public domain; attribution not even required). Since every layer shares one schema, a single provider serves them all. Quirk: Viersen's GeoJSON output chokes on multi-geometries (`Could not export multi geometry`), so that city goes through [[GML]] — see `KrznGmlProvider`.
+
+**GML (Geography Markup Language)** — OGC's XML format for geodata and the *default* output of any WFS; GeoJSON is merely a (popular) extra option there. More verbose than GeoJSON but more expressive — it handles multi-geometries, which some GeoJSON writers cannot. Here `AbstractGmlProvider` reads it with StAX streaming (JDK built-in, no new dependency); of a multi-geometry the first position counts, because a tree is a point.
+
 **Geofabrik** — German provider of daily-updated OSM extracts (continents, countries, states) as PBF. Source of the raw routing data (`germany-latest.osm.pbf` ~4 GB etc.).
 
 **Compose profile** — Docker Compose mechanism for switching service groups on and off. In the WebGIS: `routing` (graph-builder + GraphHopper) and `geocoding` (Photon). The start script enables both by default; `-NoRouting`/`-NoGeocoding` opt out.
@@ -74,7 +78,7 @@ this project. *(Deutsche Fassung: [glossary.md](glossary.md))*
 
 **OGC** — The *Open Geospatial Consortium*, the standards body for geospatial interfaces. "OGC-compliant" means: any standard client (QGIS, ArcGIS, web libraries) can use the services without special knowledge.
 
-**WMS 1.3.0 (Web Map Service)** — Delivers **pre-rendered map images** (tiles) instead of raw data. That keeps 2.6 M trees fluid: the server renders, the browser only shows images. Styling comes from SLD files.
+**WMS 1.3.0 (Web Map Service)** — Delivers **pre-rendered map images** (tiles) instead of raw data. That keeps 2.8 M trees fluid: the server renders, the browser only shows images. Styling comes from SLD files.
 
 **GetFeatureInfo** — The third core WMS operation next to GetCapabilities/GetMap: "what sits at this pixel?" — returns the attributes of the features hit. In the WebGIS the basis of the click popups: trees and zones at the click point, respecting the active CQL filter.
 
@@ -114,7 +118,7 @@ this project. *(Deutsche Fassung: [glossary.md](glossary.md))*
 
 **BBox (bounding box)** — The enclosing rectangle of an area, given by two corner coordinates. Mind the conventions: the BaumRadar catalog uses `[minLat, minLon, maxLat, maxLon]`, while GeoJSON/Photon/GraphHopper are lon-first — mixing them up is *the* classic geo bug.
 
-**WGS84 / EPSG:4326** — The coordinate system of GPS: latitude/longitude in degrees on the ellipsoid; `EPSG:4326` is its catalogue number. Related: **EPSG:3857** ("web Mercator"), the projection of browser map tiles, and **UTM**, metric zone systems some cadastres deliver in (the backend converts to WGS84). Authorities often additionally work in official national systems — in Austria e.g. **MGI** (such as EPSG:31256, "Gauß-Krüger East"), in which basemap.at also delivers; OpenLayers can display such projections, MapLibre essentially only web Mercator.
+**WGS84 / EPSG:4326** — The coordinate system of GPS: latitude/longitude in degrees on the ellipsoid; `EPSG:4326` is its catalogue number. Related: **EPSG:3857** ("web Mercator"), the projection of browser map tiles, and **UTM**, metric zone systems some cadastres deliver in (the backend converts to WGS84). Switzerland uses its own national grid instead of UTM — **LV95 / EPSG:2056** (oblique Mercator, easting counted from 2,600,000 m) — handled by `SwissConverter` using swisstopo's approximation formulas (~1 m accurate, ample for trees). Authorities often additionally work in official national systems — in Austria e.g. **MGI** (such as EPSG:31256, "Gauß-Krüger East"), in which basemap.at also delivers; OpenLayers can display such projections, MapLibre essentially only web Mercator.
 
 **Ed25519** — Modern, fast signature scheme (elliptic curves). The backend signs every published file; app and loader verify against a built-in public key — tampering or transfer corruption is caught before any data is used.
 

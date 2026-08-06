@@ -64,7 +64,34 @@ public class Main {
             new KoelnProvider(),
             new StuttgartProvider(),
             new GelsenkirchenProvider(),
-            new BonnProvider()
+            new BonnProvider(),
+
+            // Niederrhein: ein offener KRZN-WFS (dl-de/zero-2-0) liefert je Kommune
+            // eine eigene Ebene mit identischem Schema — daher ein Provider, neun
+            // Registrierungen. BBoxen stammen aus den Capabilities des Dienstes.
+            new KrznProvider("krefeld", "Krefeld", "skre_baum",
+                new double[]{51.2835, 6.4770, 51.4089, 6.7086}),
+            new KrznProvider("moers", "Moers", "moer_baum",
+                new double[]{51.3892, 6.5523, 51.5253, 6.6818}),
+            // Viersen über GML: dessen GeoJSON-Ausgabe stirbt an Mehrfach-Geometrien.
+            new KrznGmlProvider("viersen", "Viersen", "svie_baum",
+                new double[]{51.2151, 6.2612, 51.3241, 6.4594}),
+            new KrznProvider("kleve", "Kleve", "skle_baum",
+                new double[]{51.7306, 6.0356, 51.8696, 6.2486}),
+            new KrznProvider("emmerich", "Emmerich am Rhein", "emme_baum",
+                new double[]{51.8009, 6.1027, 51.9106, 6.3909}),
+            new KrznProvider("xanten", "Xanten", "xant_baum",
+                new double[]{51.6106, 6.3517, 51.7575, 6.5185}),
+            new KrznProvider("issum", "Issum", "issu_baum",
+                new double[]{51.4656, 6.3756, 51.5776, 6.5032}),
+            new KrznProvider("schwalmtal", "Schwalmtal", "swta_baum",
+                new double[]{51.1736, 6.2079, 51.2701, 6.3329}),
+            new KrznProvider("bedburg-hau", "Bedburg-Hau", "bedh_baum",
+                new double[]{51.7096, 6.1113, 51.8141, 6.2868}),
+
+            new WeselProvider(),
+            new LuzernProvider(),
+            new WinterthurProvider()
         );
     }
 
