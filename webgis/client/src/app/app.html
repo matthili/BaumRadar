@@ -273,9 +273,11 @@
   <div class="hint glass">GPX-Route (App-Export) einfach auf die Karte ziehen</div>
 }
 
-<!-- Das Element geh&ouml;rt dem OL-Overlay und muss dauerhaft existieren;
-     nur sein Inhalt ist Angular-gesteuert. -->
-<div class="popup glass" #popupHost>
+<!-- Beide Karten-Motoren borgen sich dieses Element (OL h&auml;ngt es in sein
+     Overlay, MapLibre in seinen Popup-Rahmen), es muss also dauerhaft existieren.
+     Sichtbar ist es nur mit Inhalt &mdash; sonst st&uuml;nde ein leerer Glaskasten
+     in der Ecke, sobald kein Motor es gerade versteckt h&auml;lt. -->
+<div class="popup glass" [class.popup-empty]="!popup()" #popupHost>
   @if (popup(); as p) {
     <button class="close" type="button" (click)="closePopup()" aria-label="Schlie&szlig;en">&#10005;</button>
     @for (t of p.trees; track $index) {

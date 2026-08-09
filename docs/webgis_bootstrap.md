@@ -159,12 +159,19 @@ nur localhost — von außen per SSH-Tunnel `ssh -L 8081:localhost:8081 …`).
 
 ---
 
-## Phase 3 — Client (Angular + OpenLayers)
+## Phase 3 — Client (Angular + OpenLayers/MapLibre)
 
 **Ziel:** Karte im Browser, alle Dienste same-origin — kein CORS.
 
-**Bauen.** Multi-Stage: `node:24-alpine` baut die Angular-App (`npm run build`), das
-`nginx:1.27-alpine`-Image liefert das statische Ergebnis aus.
+**Bauen.** Multi-Stage: `node:24.18-alpine` baut die Angular-App (`npm ci` + `npm run build`),
+das `nginx:1.27-alpine`-Image liefert das statische Ergebnis aus. Node-Minor und
+`package-lock.json` sind bewusst festgenagelt — sonst löst jeder Build die Angular-Version
+neu auf und kann an einer gestiegenen Node-Anforderung scheitern.
+
+**Zwei Karten-Motoren.** Der Client bringt OpenLayers *und* MapLibre GL mit; welcher läuft,
+entscheidet ein Panel-Schalter. Beide sprechen dieselbe interne `MapEngine`-Schnittstelle,
+der inaktive wird erst bei Bedarf nachgeladen. Details in der
+[Architektur-Doku](webgis_architecture.md#zwei-renderer-ein-unterbau).
 
 **Verbinden — das ist der Kern.** nginx ist zugleich Webserver *und* Reverse-Proxy. In
 `nginx.conf`:

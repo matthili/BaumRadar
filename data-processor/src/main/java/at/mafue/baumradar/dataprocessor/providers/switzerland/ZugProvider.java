@@ -9,6 +9,7 @@ import at.mafue.baumradar.dataprocessor.utils.*;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import java.util.UUID;
+import static at.mafue.baumradar.dataprocessor.utils.Text.clean;
 
 /**
  * City provider for <strong>Zug, Switzerland</strong>.
@@ -82,12 +83,5 @@ public class ZugProvider extends AbstractGeoJsonProvider {
         String id = getCityId() + "_" + (rid.isEmpty() ? UUID.randomUUID().toString() : rid);
 
         return new TreeRecord(id, getCityId(), lat, lon, genusDe, genusEn, speciesDe, speciesEn);
-    }
-
-    /** Trims a JSON string value and maps the literal {@code "null"} to empty. */
-    private static String clean(String s) {
-        if (s == null) return "";
-        String t = s.trim();
-        return t.equalsIgnoreCase("null") ? "" : t;
     }
 }

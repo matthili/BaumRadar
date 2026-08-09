@@ -6,6 +6,7 @@ import at.mafue.baumradar.dataprocessor.utils.*;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import java.util.UUID;
+import static at.mafue.baumradar.dataprocessor.utils.Text.clean;
 
 /**
  * City provider for the <strong>Lower Rhine municipalities served by the KRZN</strong>
@@ -192,12 +193,5 @@ public class KrznProvider extends AbstractGeoJsonProvider {
         if (germanName.isEmpty()) return "";
         String[] parts = germanName.split("[\\s-]+");
         return parts.length == 0 ? "" : parts[parts.length - 1];
-    }
-
-    /** Trims a JSON string value and maps the literal {@code "null"} to empty. */
-    private static String clean(String s) {
-        if (s == null) return "";
-        String t = s.trim();
-        return t.equalsIgnoreCase("null") ? "" : t;
     }
 }

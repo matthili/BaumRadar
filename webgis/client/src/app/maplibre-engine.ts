@@ -203,6 +203,18 @@ export class MaplibreEngine implements MapEngine {
     };
   }
 
+  /**
+   * Baut die komplette Stil-Spezifikation der Browser-Ansicht — das Gegenstück
+   * zu den SLD-Dateien der Server-Ansicht, nur eben clientseitig ausgewertet.
+   *
+   * Reihenfolge der Ebenen = Zeichenreihenfolge (spätere liegen oben):
+   * OSM-Grundkarte → Zonen → Rasterzellen der drei Zoom-Bänder → Einzelbäume →
+   * Stadtpunkte → Routen-Ebenen. Die Zoom-Bänder überlappen sich um eine Stufe,
+   * damit beim Zoomen nie eine Lücke entsteht.
+   *
+   * Die Routen-Ebenen hängen an leeren GeoJSON-Quellen: sie existieren von
+   * Anfang an, damit {@link setGeoJson} später nur noch Daten nachschieben muss.
+   */
   private buildStyle(): StyleSpecification {
     const genusColor = [
       'match', ['get', 'dominant_genus'],

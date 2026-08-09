@@ -223,6 +223,11 @@ export class App implements AfterViewInit {
     void this.loadData();
   }
 
+  /**
+   * Startdaten holen: Stadtliste aus dem Katalog, Gattungs-Statistiken aus dem
+   * GeoServer. Die drei Pflichtabfragen laufen parallel, weil keine auf die
+   * andere wartet; die optionale Art-Statistik hängt bewusst darunter.
+   */
   private async loadData(): Promise<void> {
     try {
       const [cities, genera, generaByCity] = await Promise.all([
@@ -465,6 +470,15 @@ export class App implements AfterViewInit {
     return `Kartenpunkt ${f(p.lat)} / ${f(p.lon)}`;
   }
 
+  /**
+   * Route berechnen und zeichnen — der Weg mit Zonen-Meidung plus die
+   * gestrichelte Direktroute zum Vergleich.
+   *
+   * Drei Absicherungen greifen hier ineinander, weil die Berechnung sekundenlang
+   * dauern kann und nebenbei weitergeklickt wird: eine Sequenznummer gegen
+   * überholende Antworten, ein Watchdog gegen ein hängendes „rechnet"-Signal und
+   * das `finally`, das den Normalfall aufräumt.
+   */
   private async computeRoute(): Promise<void> {
     const start = this.routeStart();
     const end = this.routeEnd();

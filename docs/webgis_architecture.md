@@ -1,6 +1,6 @@
 # WebGIS-Architektur (Tech-Demo)
 
-Das BaumRadar-WebGIS ist ein **vollständig lokal betreibbares Geoinformationssystem** im Ordner [`webgis/`](../webgis/): PostGIS, GeoServer, ein Angular/OpenLayers-Client, GraphHopper-Routing und ein Photon-Geocoder — alles als Docker-Compose-Stack, gestartet mit einem einzigen Skript. Es konsumiert **dieselben signierten Datenbestände wie die Android-App** (GitHub Pages, `docs/data/`) und zeigt, wie man aus einer Open-Data-Pipeline heraus ein OGC-konformes GIS samt Offline-Routing und Offline-Adresssuche aufbaut.
+Das BaumRadar-WebGIS ist ein **vollständig lokal betreibbares Geoinformationssystem** im Ordner [`webgis/`](../webgis/): PostGIS, GeoServer, ein Angular-Client mit **zwei umschaltbaren Karten-Motoren** (OpenLayers und MapLibre), GraphHopper-Routing und ein Photon-Geocoder — alles als Docker-Compose-Stack, gestartet mit einem einzigen Skript. Es konsumiert **dieselben signierten Datenbestände wie die Android-App** (GitHub Pages, `docs/data/`) und zeigt, wie man aus einer Open-Data-Pipeline heraus ein OGC-konformes GIS samt Offline-Routing und Offline-Adresssuche aufbaut.
 
 ![WebGIS-Architektur](architecture/08_webgis_architecture.png)
 
@@ -46,8 +46,8 @@ Alle publizierten Artefakte sind **Ed25519-signiert** und tragen eine **inhaltsb
 |---|---|---|---|
 | `loader` | Java 25, Maven, Virtual Threads | Katalog laden → Signaturen prüfen → PostGIS-Import → GeoServer-Provisionierung | *(Basis)* |
 | `postgis` | PostGIS 17/3.5 | Datenbank (PostgreSQL + Geo-Erweiterung): `trees`, `allergy_zones`, Statistiken | *(Basis)* |
-| `geoserver` | GeoServer 2.28 | OGC-Dienste: WMS 1.3.0, WFS 2.0 (+CQL), OGC API Features | *(Basis)* |
-| `web` | nginx + Angular 22/OpenLayers 10 | Karte, Filter, Routing-UI; same-origin-Proxys | *(Basis)* |
+| `geoserver` | GeoServer 2.28 | OGC-Dienste: WMS 1.3.0, WFS 2.0 (+CQL), OGC API Features **+ Vektorkacheln (MVT)** | *(Basis)* |
+| `web` | nginx + Angular 22, OpenLayers 10 **und** MapLibre GL 5 | Karte (umschaltbarer Renderer), Filter, Routing-UI; same-origin-Proxys | *(Basis)* |
 | `graph-builder` | osmium-tool, jq | Stadt-BBoxen aus Länder-PBFs schneiden → `island.osm.pbf` | `routing` |
 | `graphhopper` | GraphHopper 10 | foot/bike-Routing, Zonen-Vermeidung per Custom Model | `routing` |
 | `photon` | Photon 1.2 (OpenSearch) | lokale Adress- & POI-Suche aus den Stadt-Häppchen | `geocoding` |
@@ -75,8 +75,9 @@ Der Loader ist das Java-Gegenstück zum `data-processor` — nur konsumierend st
    ST_Buffer(ST_SetSRID(ST_MakePoint(lon, lat), 4326)::geography, radius_m)::geometry
    ```
    Der Umweg über den `geography`-Typ buffert in echten Metern auf dem Ellipsoid.
-5. **Statistiken als Tabellen statt Views**: `genus_stats` (global) und `genus_stats_city` (je Stadt) werden nach jedem Import per `GROUP BY` neu befüllt — damit WFS-Zugriffe des Clients nicht bei jedem Request 2,8 Mio Zeilen aggregieren.
-6. **GeoServer als Code**: Workspace, PostGIS-Datastore, SLD-Styles und alle Layer entstehen idempotent über die **REST-API** — keine Klick-Konfiguration, der Stack ist reproduzierbar.
+5. **Generalisierung für die Vektorkacheln**: Nach dem Import entstehen `city_points` (ein Punkt je Stadt) und `tree_cells` (Rasterzellen in drei Zoom-Bändern, je mit Baumzahl und dominanter Gattung) — die Grundlage der Browser-Ansicht, siehe unten.
+6. **Statistiken als Tabellen statt Views**: `genus_stats` (global) und `genus_stats_city` (je Stadt) werden nach jedem Import per `GROUP BY` neu befüllt — damit WFS-Zugriffe des Clients nicht bei jedem Request 2,8 Mio Zeilen aggregieren.
+7. **GeoServer als Code**: Workspace, PostGIS-Datastore, SLD-Styles und alle Layer entstehen idempotent über die **REST-API** — keine Klick-Konfiguration, der Stack ist reproduzierbar.
 
 ---
 
@@ -102,6 +103,37 @@ genus_de IN ('Birke','Hasel') AND city_id = 'wien'
 - **Same-Origin-Proxys statt CORS**: nginx reicht `/geoserver`, `/graphhopper` und `/photon` an die Container durch. Der Client kennt nur relative URLs; im Dev-Modus übernimmt `proxy.conf.json` die gleiche Rolle. Kein CORS-Setup, keine Origin-Probleme.
 - **Stadt-Auswahl ist ein echter Filter**: Sie zoomt nicht nur, sondern scopt die Gattungszahlen (aus `genus_stats_city`), die Karten-Layer (CQL) und die Adresssuche (BBox-Parameter). „Ahorn" zeigt in Wien 50.241 Bäume — nicht die globale halbe Million.
 - **Suche wie im App-Profil**: Gattungs- *und* Artnamen, deutsch wie botanisch („Acer" findet Ahorn); die Auswahl bleibt gattungsweit, passend zu den genus-geclusterten Zonen.
+
+---
+
+## Zwei Renderer, ein Unterbau
+
+Der Panel-Schalter **„Rendering: Server | Browser (lokal)"** wechselt live zwischen zwei Karten-Motoren, die auf demselben Datenbestand sitzen. Er ist die Antwort auf eine oft gestellte Frage — „warum nicht MapLibre?" — als vorführbarer Vergleich statt als Meinung.
+
+![Klassenstruktur des WebGIS-Clients](architecture/11_webgis_client_classes.png)
+
+| | Server-Rendering (Standard) | Browser-Rendering (Beta) |
+|---|---|---|
+| Bibliothek | OpenLayers 10 | MapLibre GL 5 |
+| Was über die Leitung geht | fertige **Kartenbilder** (WMS) | rohe **Vektorkacheln** (MVT) |
+| Wer zeichnet | GeoServer, serverseitig | die **Grafikkarte** des Besuchers |
+| Gattungsfilter | CQL-Parameter → neue Bilder vom Server | **Stil-Filter ohne Server-Umlauf** |
+| Klick-Sprechblase | WMS GetFeatureInfo (Server-Anfrage) | direkt aus der geladenen Kachel |
+| Zoomen | stufig, Kacheln nachladen | stufenlos, Drehen und Neigen möglich |
+
+**Der MapService ist die einzige Tür**: Die Angular-Komponente kennt keinen der beiden Motoren, sondern nur die Fassade. Die spricht mit der `MapEngine`-Schnittstelle, lädt den inaktiven Motor erst bei Bedarf nach (eigenes Bundle-Häppchen) und spielt beim Wechsel Kamera, Filter, Sichtbarkeit, Route und Marker neu ein. Ein dritter Motor müsste nur dieselben Methoden erfüllen.
+
+**Damit Vektorkacheln überhaupt tragbar sind, wird generalisiert.** 2,8 Millionen Bäume als Rohpunkte wären in einer Übersichtskachel absurd — eine Wiener Kachel wiegt roh 4,5 MB. Der Loader rechnet deshalb beim Import Aggregate vor, und der Client blendet je nach Zoom die passende Stufe ein:
+
+| Zoom | Was gezeigt wird | Tabelle |
+|---|---|---|
+| < 8 | ein Symbol je Stadt mit Gesamtzahl | `city_points` |
+| 8 – 13 | Rasterzellen, gefärbt nach **dominanter Gattung** | `tree_cells` (drei Zoom-Bänder) |
+| ab 14 | jeder einzelne Baum | `trees` |
+
+Dieselbe Wiener Übersichtskachel schrumpft damit auf **~1,5 kB** — Faktor 2.900. Ausgeliefert werden die Kacheln von GeoServers `vectortiles`-Extension über dessen Kachel-Cache; die Rasterzellen sind deterministisch gerastert, damit der Cache gültig bleibt.
+
+**Automatik statt Zumutung**: Fehlt GPU-beschleunigtes WebGL, bleibt es ohne Nachfrage beim Server-Rendering. Läuft die Browser-Ansicht messbar zäh (Median der Bildzeiten über 33 ms), erscheint ein dezenter Wechsel-Vorschlag — entschieden wird per Klick, nie automatisch.
 
 ---
 
@@ -192,3 +224,5 @@ Dinge, die erst der echte Betrieb gezeigt hat — dokumentiert, weil man an ihne
 - [Backend / Data-Processor](backend_architecture.md) — die produzierende Seite der Pipeline (inkl. GeocoderCutter)
 - [Datenstruktur & Third-Party](data_structure.md) — `catalog.json`, Datenbank-Schema, eigene Konsumenten bauen
 - [App-Architektur](app_architecture.md) — die Android-Seite derselben Datenbestände
+
+**Diagramme zu diesem Dokument:** [Datenfluss](architecture/08_webgis_architecture.png) · [Routing & Geocoding](architecture/09_webgis_route_geocoding.png) · [Schichten im klassischen Modell](architecture/10_webgis_layers.png) · [Klassenstruktur des Clients](architecture/11_webgis_client_classes.png) — Quellen als `.puml` im selben Ordner.

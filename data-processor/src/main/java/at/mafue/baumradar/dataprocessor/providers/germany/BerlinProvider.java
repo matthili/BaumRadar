@@ -9,6 +9,7 @@ import at.mafue.baumradar.dataprocessor.utils.*;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import java.util.UUID;
+import static at.mafue.baumradar.dataprocessor.utils.Text.clean;
 
 /**
  * City provider for <strong>Berlin, Germany</strong>.
@@ -128,13 +129,6 @@ public class BerlinProvider implements CityProvider {
         String speciesEn = clean(props.path("art_bot").asText(""));
 
         return new TreeRecord(id, getCityId(), lat, lon, genusDe, genusEn, speciesDe, speciesEn);
-    }
-
-    /** Trims a JSON string value and maps the literal {@code "null"} to empty. */
-    private static String clean(String s) {
-        if (s == null) return "";
-        String t = s.trim();
-        return t.equalsIgnoreCase("null") ? "" : t;
     }
 }
 

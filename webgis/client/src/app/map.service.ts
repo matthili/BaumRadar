@@ -22,6 +22,8 @@ export class MapService {
   private engine?: MapEngine;
   private target?: HTMLElement;
   private popupElement?: HTMLElement;
+  /** Wohin das Popup-Element gehört, wenn gerade kein Motor es sich ausborgt. */
+  private popupHome?: HTMLElement;
   private callbacks?: MapCallbacks;
   private switching = false;
 
@@ -43,6 +45,11 @@ export class MapService {
   private route: [number, number][] = [];
   private directRoute: [number, number][] | null = null;
 
+  /**
+   * Einstiegspunkt aus der Komponente: merkt sich Ziel-Element, Popup-Rahmen und
+   * Rückrufe und startet den zuletzt gewählten Motor. Alles Weitere läuft über
+   * die Delegations-Methoden unten — die Komponente kennt die Motoren nicht.
+   */
   createMap(
     target: HTMLElement,
     popupElement: HTMLElement,
@@ -51,6 +58,7 @@ export class MapService {
   ): void {
     this.target = target;
     this.popupElement = popupElement;
+    this.popupHome = popupElement.parentElement ?? undefined;
     this.callbacks = {
       onFeatureInfo,
       onRouteLoaded,
@@ -88,6 +96,12 @@ export class MapService {
   }
 
   private async mount(kind: EngineKind, view: ViewState | null): Promise<void> {
+    // OpenLayers hängt das Popup-Element in seinen Overlay-Container und nimmt es
+    // beim Abbau mit — ohne Rückholung stünde der neue Motor ohne Popup da.
+    if (this.popupElement && this.popupHome && !this.popupHome.contains(this.popupElement)) {
+      this.popupHome.appendChild(this.popupElement);
+    }
+
     const engine: MapEngine = kind === 'maplibre'
       ? new (await import('./maplibre-engine')).MaplibreEngine(this.zone)
       : new (await import('./ol-engine')).OlEngine(this.zone);

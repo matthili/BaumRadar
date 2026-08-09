@@ -1,6 +1,6 @@
 # WebGIS Architecture (Tech Demo)
 
-The BaumRadar WebGIS is a **fully self-hostable geographic information system** living in [`webgis/`](../webgis/): PostGIS, GeoServer, an Angular/OpenLayers client, GraphHopper routing and a Photon geocoder — all as a Docker Compose stack, started with a single script. It consumes **the same signed datasets as the Android app** (GitHub Pages, `docs/data/`) and demonstrates how to build an OGC-conformant GIS with offline routing and offline address search on top of an open-data pipeline.
+The BaumRadar WebGIS is a **fully self-hostable geographic information system** living in [`webgis/`](../webgis/): PostGIS, GeoServer, an Angular client with **two switchable map engines** (OpenLayers and MapLibre), GraphHopper routing and a Photon geocoder — all as a Docker Compose stack, started with a single script. It consumes **the same signed datasets as the Android app** (GitHub Pages, `docs/data/`) and demonstrates how to build an OGC-conformant GIS with offline routing and offline address search on top of an open-data pipeline.
 
 ![WebGIS architecture](architecture/08_webgis_architecture.png)
 
@@ -46,8 +46,8 @@ All published artifacts are **Ed25519-signed** and carry a **content-based versi
 |---|---|---|---|
 | `loader` | Java 25, Maven, virtual threads | fetch catalog → verify signatures → import into PostGIS → provision GeoServer | *(base)* |
 | `postgis` | PostGIS 17/3.5 | the database (PostgreSQL + geo extension): `trees`, `allergy_zones`, statistics | *(base)* |
-| `geoserver` | GeoServer 2.28 | OGC services: WMS 1.3.0, WFS 2.0 (+CQL), OGC API Features | *(base)* |
-| `web` | nginx + Angular 22/OpenLayers 10 | map, filters, routing UI; same-origin proxies | *(base)* |
+| `geoserver` | GeoServer 2.28 | OGC services: WMS 1.3.0, WFS 2.0 (+CQL), OGC API Features **+ vector tiles (MVT)** | *(base)* |
+| `web` | nginx + Angular 22, OpenLayers 10 **and** MapLibre GL 5 | map (switchable renderer), filters, routing UI; same-origin proxies | *(base)* |
 | `graph-builder` | osmium-tool, jq | cut city bboxes from country PBFs → `island.osm.pbf` | `routing` |
 | `graphhopper` | GraphHopper 10 | foot/bike routing, zone avoidance via custom model | `routing` |
 | `photon` | Photon 1.2 (OpenSearch) | local address & POI search from the per-city slices | `geocoding` |
@@ -75,8 +75,9 @@ The loader is the Java counterpart of the `data-processor` — consuming instead
    ST_Buffer(ST_SetSRID(ST_MakePoint(lon, lat), 4326)::geography, radius_m)::geometry
    ```
    The detour through the `geography` type buffers in real metres on the ellipsoid.
-5. **Statistics as tables, not views**: `genus_stats` (global) and `genus_stats_city` (per city) are refilled with a `GROUP BY` after every import — so the client's WFS requests never aggregate 2.8 M rows on the fly.
-6. **GeoServer as code**: workspace, PostGIS datastore, SLD styles and all layers are created idempotently through the **REST API** — no click-configuration, the stack is reproducible.
+5. **Generalisation for the vector tiles**: after the import, `city_points` (one point per city) and `tree_cells` (grid cells in three zoom bands, each with tree count and dominant genus) are computed — the basis of the browser view, see below.
+6. **Statistics as tables, not views**: `genus_stats` (global) and `genus_stats_city` (per city) are refilled with a `GROUP BY` after every import — so the client's WFS requests never aggregate 2.8 M rows on the fly.
+7. **GeoServer as code**: workspace, PostGIS datastore, SLD styles and all layers are created idempotently through the **REST API** — no click-configuration, the stack is reproducible.
 
 ---
 
@@ -102,6 +103,37 @@ genus_de IN ('Birke','Hasel') AND city_id = 'wien'
 - **Same-origin proxies instead of CORS**: nginx forwards `/geoserver`, `/graphhopper` and `/photon` to the containers. The client only knows relative URLs; in dev mode `proxy.conf.json` plays the same role. No CORS setup, no origin issues.
 - **City selection is a real filter**: it doesn't just zoom — it scopes the genus counts (from `genus_stats_city`), the map layers (CQL) and the address search (bbox parameter). "Ahorn" (maple) shows 50,241 trees in Vienna — not the global half million.
 - **Search like the app profile**: genus *and* species names, German and botanical ("Acer" finds maple); selection stays genus-wide, matching the genus-clustered zones.
+
+---
+
+## Two renderers, one backbone
+
+The panel toggle **"Rendering: Server | Browser (local)"** switches live between two map engines sitting on the very same data. It is the answer to a frequently asked question — "why not MapLibre?" — as a demonstrable comparison rather than an opinion.
+
+![Class structure of the WebGIS client](architecture/11_webgis_client_classes_en.png)
+
+| | Server rendering (default) | Browser rendering (beta) |
+|---|---|---|
+| Library | OpenLayers 10 | MapLibre GL 5 |
+| What travels the wire | finished **map images** (WMS) | raw **vector tiles** (MVT) |
+| Who draws | GeoServer, server-side | the visitor's **GPU** |
+| Genus filter | CQL parameter → new images from the server | **style filter, no server round trip** |
+| Click popup | WMS GetFeatureInfo (server request) | straight from the loaded tile |
+| Zooming | stepped, tiles reloaded | continuous, rotation and pitch possible |
+
+**The MapService is the only door**: the Angular component knows neither engine, only the facade. That facade talks to the `MapEngine` interface, lazily loads the inactive engine when needed (its own bundle chunk) and replays camera, filters, visibility, route and markers on every switch. A third engine would only have to fulfil the same methods.
+
+**Vector tiles are only viable because of generalisation.** 2.8 million raw tree points would make an overview tile absurd — one Vienna tile weighs 4.5 MB raw. The loader therefore precomputes aggregates at import time, and the client shows the stage matching the zoom:
+
+| Zoom | What is shown | Table |
+|---|---|---|
+| < 8 | one symbol per city with its total | `city_points` |
+| 8 – 13 | grid cells coloured by **dominant genus** | `tree_cells` (three zoom bands) |
+| 14+ | every individual tree | `trees` |
+
+That same Vienna overview tile shrinks to **~1.5 kB** — a factor of 2,900. Tiles are served by GeoServer's `vectortiles` extension through its tile cache; the grid cells are rastered deterministically so that cache stays valid.
+
+**Automatic, not imposed**: without GPU-accelerated WebGL the server rendering simply stays. If the browser view runs measurably sluggish (median frame time above 33 ms), a discreet suggestion to switch appears — the decision is always a click, never automatic.
 
 ---
 
@@ -192,3 +224,5 @@ Things only real operation revealed — documented because they teach something:
 - [Backend / data-processor](backend_architecture_en.md) — the producing side of the pipeline (incl. GeocoderCutter)
 - [Data structure & third party](data_structure_en.md) — `catalog.json`, database schema, building your own consumers
 - [App architecture](app_architecture_en.md) — the Android side of the same datasets
+
+**Diagrams for this document:** [data flow](architecture/08_webgis_architecture.png) · [routing & geocoding](architecture/09_webgis_route_geocoding.png) · [layers in classic terms](architecture/10_webgis_layers_en.png) · [client class structure](architecture/11_webgis_client_classes_en.png) — sources as `.puml` in the same folder.

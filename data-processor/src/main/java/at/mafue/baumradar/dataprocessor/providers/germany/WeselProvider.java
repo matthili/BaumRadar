@@ -5,6 +5,7 @@ import at.mafue.baumradar.dataprocessor.models.*;
 import at.mafue.baumradar.dataprocessor.utils.*;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import static at.mafue.baumradar.dataprocessor.utils.Text.clean;
 
 /**
  * City provider for <strong>Wesel, Germany</strong>.
@@ -80,12 +81,5 @@ public class WeselProvider extends AbstractGeoJsonProvider {
         String id = getCityId() + "_" + clean(props.path("ID").asText(""));
 
         return new TreeRecord(id, getCityId(), lat, lon, genusDe, genusEn, speciesDe, botanical);
-    }
-
-    /** Trims a JSON string value and maps the literal {@code "null"} to empty. */
-    private static String clean(String s) {
-        if (s == null) return "";
-        String t = s.trim();
-        return t.equalsIgnoreCase("null") ? "" : t;
     }
 }

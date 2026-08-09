@@ -31,8 +31,20 @@ export interface MapCallbacks {
  * - {@link MaplibreEngine}: MapLibre GL, Vektorkacheln, im Browser gerendert.
  */
 export interface MapEngine {
+  /**
+   * Baut die Karte im Ziel-Element auf. `view` übernimmt die Kamera des
+   * abgelösten Motors; `null` heißt Kaltstart (DACH-Überblick).
+   *
+   * Beide Motoren borgen sich dasselbe `popupElement` — OL hängt es in sein
+   * Overlay, MapLibre in seinen Popup-Rahmen. Wer es beim Abbau mitnimmt,
+   * bekommt es vom MapService zurückgeholt.
+   */
   create(target: HTMLElement, popupElement: HTMLElement, cb: MapCallbacks, view: ViewState | null): void;
+
+  /** Karte samt Ereignis-Bindungen abbauen; danach ist die Instanz verbraucht. */
   destroy(): void;
+
+  /** Aktuelle Kamera für die Übergabe an den anderen Motor; `null` vor {@link create}. */
   viewState(): ViewState | null;
 
   /** Gattungs-/Stadtfilter — jeder Motor übersetzt selbst (CQL bzw. Stil-Filter). */
@@ -43,11 +55,26 @@ export interface MapEngine {
   /** Auf eine Stadt-BoundingBox zoomen (Katalog-Reihenfolge: [minLat, minLon, maxLat, maxLon]). */
   fitCity(boundingBox: [number, number, number, number]): void;
 
+  /** Nur die per Drag&Drop geladene GPX-Spur entfernen — die berechnete Route bleibt. */
   clearRoute(): void;
+
+  /**
+   * Routing-Modus: Klicks auf die Karte melden Start/Ziel, statt eine
+   * Sprechblase zu öffnen.
+   */
   enableRouting(on: boolean, onPoint: (p: LonLat) => void): void;
+
+  /** Start-/Ziel-Marker setzen; `null` entfernt den jeweiligen Marker. */
   setRouteMarkers(start: LonLat | null, end: LonLat | null): void;
+
+  /** Berechnete Route zeichnen und in den Blick rücken (Stützpunkte [lon, lat]). */
   drawRoute(coords: [number, number][]): void;
+
+  /** Vergleichs-Direktroute gestrichelt zeichnen; `null` entfernt sie. */
   drawDirectRoute(coords: [number, number][] | null): void;
+
+  /** Route, Direktroute und Marker gemeinsam entfernen. */
   clearRouting(): void;
+
   hidePopup(): void;
 }

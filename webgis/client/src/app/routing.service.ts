@@ -188,6 +188,15 @@ export class RoutingService {
     return [...seen.values()];
   }
 
+  /**
+   * Eine Anfrage an GraphHopper.
+   *
+   * `ch.disable` ist Pflicht, nicht Geschmack: Contraction Hierarchies frieren
+   * die Kantengewichte beim Vorrechnen ein — mit ihnen wäre ein pro Anfrage
+   * mitgeschicktes Custom Model (unsere Zonen-Meidung) wirkungslos.
+   * `points_encoded: false` liefert echte Koordinaten statt Googles
+   * Polyline-Kodierung, die wir sonst erst dekodieren müssten.
+   */
   private async ghRoute(
     profile: RouteProfile,
     start: LonLat,
@@ -370,6 +379,7 @@ export class RoutingService {
     return [minX, minY, maxX, maxY];
   }
 
+  /** Punkt-in-Zone: prüft nur Außenringe — Allergiezonen sind Kreise ohne Löcher. */
   private static inZone(x: number, y: number, g: GeoJsonGeometry): boolean {
     if (g.type === 'Polygon') {
       return RoutingService.inRing(x, y, (g.coordinates as number[][][])[0]);

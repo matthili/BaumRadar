@@ -44,7 +44,12 @@ export function matchGenera(
   return result;
 }
 
-/** Anzeigename eines Art-Tupels: „Spitzahorn · Acer platanoides". */
+/**
+ * Anzeigename eines Art-Tupels: „Spitzahorn · Acer platanoides".
+ *
+ * Exportiert nur, damit der Test ihn isoliert prüfen kann; benutzt wird er
+ * innerhalb von {@link matchGenera} für den `matchedVia`-Hinweis.
+ */
 export function speciesLabel(s: SpeciesStat): string {
   if (s.speciesDe && s.speciesEn) {
     return `${s.speciesDe} · ${s.speciesEn}`;

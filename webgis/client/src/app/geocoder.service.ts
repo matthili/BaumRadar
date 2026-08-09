@@ -81,6 +81,12 @@ export class GeocoderService {
     return this.toHits(fc);
   }
 
+  /**
+   * Photon-Treffer in eine einzeilige Beschriftung gießen: vorne das Konkrete
+   * (POI-Name, sonst Straße + Hausnummer), dahinter der Kontext (Straße bei
+   * einem POI, dazu PLZ und Ort). Treffer ohne brauchbaren Namen fliegen raus —
+   * ein Vorschlag, der nur aus einem Zeichen besteht, hilft niemandem.
+   */
   private toHits(fc: PhotonFc): GeocodeHit[] {
     return (fc.features ?? []).map((f) => {
       const p = f.properties;

@@ -98,6 +98,12 @@ export class StatusService {
     return ok ? { state: 'ready', text: 'bereit' } : { state: 'pending', text: 'startet …' };
   }
 
+  /**
+   * Prüft nicht die Baum-Tabelle selbst, sondern `genus_stats`: Diese Statistik
+   * füllt der Loader erst *nach* dem Import einer Stadt. Sie ist damit das
+   * verlässliche „fertig"-Signal — die Baum-Tabelle enthält schon mitten im
+   * Import Zeilen und würde zu früh „bereit" melden.
+   */
   private async probeTrees(): Promise<Pick<ModuleStatus, 'state' | 'text'>> {
     try {
       const params = new HttpParams({

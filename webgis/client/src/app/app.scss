@@ -860,6 +860,12 @@
   font-size: 13px;
   position: relative;
 
+  // Ohne Inhalt bleibt nur der Glas-Rahmen übrig — der gehört weg, egal
+  // welcher Motor das Element gerade beherbergt.
+  &.popup-empty {
+    display: none;
+  }
+
   .close {
     position: absolute;
     top: 6px;

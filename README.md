@@ -9,11 +9,12 @@
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.2-blue.svg)](https://kotlinlang.org)
 [![Java](https://img.shields.io/badge/Java-21_·_25-red.svg)](https://openjdk.org)
 [![Angular](https://img.shields.io/badge/Angular-22-dd0031.svg)](https://angular.dev)
+[![Karten-Motoren](https://img.shields.io/badge/Rendering-OpenLayers_·_MapLibre-2E6B2E.svg)](docs/webgis_architecture.md)
 [![OGC](https://img.shields.io/badge/OGC-WMS_·_WFS_·_API_Features-1f6feb.svg)](docs/webgis_architecture.md)
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED.svg)](webgis/README.md)
 [![Tests](https://img.shields.io/badge/Tests-passing-brightgreen.svg)](#-technische-dokumentation)
-[![Open Data](https://img.shields.io/badge/Open_Data-19_Städte-orange.svg)](#-multi-city-support)
-[![Bäume](https://img.shields.io/badge/Bäume-~2,6_Mio-forestgreen.svg)](docs/data_structure.md)
+[![Open Data](https://img.shields.io/badge/Open_Data-31_Städte-orange.svg)](#-multi-city-support)
+[![Bäume](https://img.shields.io/badge/Bäume-~2,84_Mio-forestgreen.svg)](docs/data_structure.md)
 
 > **Baumradar ist ein Open-Data-basiertes Werkzeug, mit dem Bäume in der direkten Umgebung erkundet und bei der Fortbewegung durch die Stadt gezielt gemieden werden können – besonders hilfreich bei einer Baumpollen-Allergie (z. B. gegen Frühblüher).** Im Hintergrund: eine Open-Data-Geodaten-Pipeline, die Baumkataster aus derzeit 31 Städten vereinheitlicht, räumlich clustert und signiert verteilt.
 
@@ -110,7 +111,7 @@ Die Daten werden vom Backend verarbeitet und kryptografisch mit **Ed25519** sign
 Beim Start prüft die App auf Neuerungen: Gibt es im GitHub-Release eine neuere App-Version, lädt und installiert sie sich auf Wunsch selbst (mit Hinweis auf die nötige Installationsberechtigung und direktem Sprung in die passende Einstellung). Ebenso werden aktualisierte oder korrigierte **Baumdaten** erkannt – jede Stadt trägt eine inhaltsbasierte Daten-Version, und bereits geladenen Städten wird ein Refresh angeboten, sobald sich ihre Daten ändern.
 
 ### 🖥️ WebGIS-Tech-Demo (Docker)
-Neben der App gibt es ein **komplettes Web-GIS zum Selbst-Hosten** ([`webgis/`](webgis/README.md)): PostGIS und GeoServer publizieren dieselben signierten Datenbestände als **OGC-Dienste** (WMS 1.3.0, WFS 2.0, OGC API Features), ein Angular/OpenLayers-Client bringt Karte, Gattungsfilter und Stadt-Scoping — dazu **lokales Routing** (GraphHopper-Insel-Graph, Allergiezonen-Vermeidung per Custom Model — mit wählbarer Meidungs-Stärke von „5-fach" bis „praktisch strikt") und **lokale Adress-/POI-Suche** (Photon). Die Besonderheit: Auch Routing-OSM und Geocoder-Index werden aus **pro Stadt geschnittenen, signierten Häppchen** gespeist — wer nur Zug ausprobiert, lädt für die Adresssuche 25 MB statt der 11 GB fertiger Länder-Indizes. Ein Befehl genügt (nur Docker nötig):
+Neben der App gibt es ein **komplettes Web-GIS zum Selbst-Hosten** ([`webgis/`](webgis/README.md)): PostGIS und GeoServer publizieren dieselben signierten Datenbestände als **OGC-Dienste** (WMS 1.3.0, WFS 2.0, OGC API Features), ein Angular-Client bringt Karte, Gattungsfilter und Stadt-Scoping — **wahlweise mit zwei Karten-Motoren**: OpenLayers zeigt serverseitig gerenderte Kartenbilder, MapLibre GL rendert **Vektorkacheln direkt im Browser** auf der Grafikkarte („Rendering“-Schalter im Panel). Dazu **lokales Routing** (GraphHopper-Insel-Graph, Allergiezonen-Vermeidung per Custom Model — mit wählbarer Meidungs-Stärke von „5-fach" bis „praktisch strikt") und **lokale Adress-/POI-Suche** (Photon). Die Besonderheit: Auch Routing-OSM und Geocoder-Index werden aus **pro Stadt geschnittenen, signierten Häppchen** gespeist — wer nur Zug ausprobiert, lädt für die Adresssuche 25 MB statt der 11 GB fertiger Länder-Indizes. Ein Befehl genügt (nur Docker nötig):
 
 ```powershell
 cd webgis

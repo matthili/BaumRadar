@@ -158,7 +158,7 @@ GeoServer admin to click through: `http://localhost:8081/geoserver` (credentials
 
 ---
 
-## Phase 3 — Client (Angular + OpenLayers)
+## Phase 3 — Client (Angular + OpenLayers/MapLibre)
 
 **Goal:** a map in the browser, all services same-origin — no CORS.
 

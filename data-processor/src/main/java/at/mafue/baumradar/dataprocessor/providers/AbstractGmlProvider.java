@@ -69,11 +69,6 @@ public abstract class AbstractGmlProvider implements CityProvider {
         return true;
     }
 
-    /** Optional pause (ms) between successful pages for rate-limited servers. */
-    protected long pageDelayMs() {
-        return 0;
-    }
-
     private String resolveUrl(int offset) {
         if (sourceUrlOverride != null && !sourceUrlOverride.isBlank()) {
             return sourceUrlOverride.replace("{offset}", String.valueOf(offset));
@@ -131,12 +126,6 @@ public abstract class AbstractGmlProvider implements CityProvider {
                 logger.info("[{}] fetched up to offset {} ({} valid trees so far)...", getName(), offset, inserted);
                 if (!supportsPagination()) {
                     hasMoreData = false;
-                } else if (pageDelayMs() > 0) {
-                    try {
-                        Thread.sleep(pageDelayMs());
-                    } catch (InterruptedException ie) {
-                        Thread.currentThread().interrupt();
-                    }
                 }
             }
         }
