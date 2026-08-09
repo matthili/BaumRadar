@@ -1,0 +1,104 @@
+@startuml
+' Klassenstruktur des WebGIS-Clients: die Komponente kennt nur den MapService,
+' der die beiden austauschbaren Karten-Motoren hinter einer Schnittstelle hält.
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName Inter
+skinparam roundCorner 8
+skinparam classFontColor black
+skinparam classAttributeFontColor black
+
+skinparam class {
+  BackgroundColor<<ui>> #FFF3E0
+  BorderColor<<ui>> #F57C00
+  BackgroundColor<<facade>> #E3F2FD
+  BorderColor<<facade>> #1976D2
+  BackgroundColor<<engine>> #E0F2F1
+  BorderColor<<engine>> #00897B
+  BackgroundColor<<service>> #F3E5F5
+  BorderColor<<service>> #7B1FA2
+}
+
+class App <<ui>> {
+  Signals: cities, selectedGenera, route …
+  --
+  selectCity(), toggleGenus()
+  setMapEngine(kind)
+  computeRoute()
+}
+
+class MapService <<facade>> {
+  engineKind: Signal<EngineKind>
+  gpuCaveat, slowFrameMs
+  --
+  createMap(target, popup, callbacks)
+  switchEngine(kind)
+  .. merkt sich fürs Wiedereinspielen ..
+  Filter · Sichtbarkeit · Route · Marker
+}
+
+interface MapEngine <<engine>> {
+  create(target, popup, cb, view)
+  destroy() : void
+  viewState() : ViewState
+  setFilter(genera, cityId)
+  drawRoute(coords)
+  hidePopup()
+}
+
+class OlEngine <<engine>> {
+  OpenLayers + WMS-Bilder
+  Filter → CQL an den Server
+  GetFeatureInfo für Popups
+}
+
+class MaplibreEngine <<engine>> {
+  MapLibre GL + Vektorkacheln
+  Filter → Stil-Filter auf der GPU
+  Zoom-Leiter: Stadtpunkte →
+  Rasterzellen → Einzelbäume
+  misst Bildzeiten (Automatik-Hinweis)
+}
+
+class RoutingService <<service>> {
+  route(): Schlauch, Konvergenz,
+  Querungen, Direktroute, Cache
+}
+class GeoServerService <<service>> {
+  WFS-Statistiken, CQL-Bau
+}
+class CatalogService <<service>> {
+  Stadtliste (alphabetisch)
+}
+class GeocoderService <<service>> {
+  Adresssuche, Fallback online
+}
+class StatusService <<service>> {
+  Lade-Status je Modul
+}
+
+App --> MapService : nur diese\neine Tür
+App --> RoutingService
+App --> GeoServerService
+App --> CatalogService
+App --> GeocoderService
+App --> StatusService
+
+MapService o--> "1" MapEngine : aktiver Motor\n(lazy geladen)
+MapEngine <|.. OlEngine
+MapEngine <|.. MaplibreEngine
+
+note right of MapService
+  Beim Umschalten: Kamera vom alten
+  Motor holen, alten abbauen, neuen
+  laden — und Filter, Sichtbarkeit,
+  Route und Marker neu einspielen.
+end note
+
+note bottom of MapEngine
+  Der Vertrag beider Ansichten.
+  Neue Motoren müssten nur diese
+  Methoden erfüllen; App und
+  Services bleiben unberührt.
+end note
+@enduml

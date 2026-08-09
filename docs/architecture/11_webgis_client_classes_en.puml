@@ -1,0 +1,104 @@
+@startuml
+' Class structure of the WebGIS client: the component only knows the MapService,
+' which keeps the two interchangeable map engines behind one interface.
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName Inter
+skinparam roundCorner 8
+skinparam classFontColor black
+skinparam classAttributeFontColor black
+
+skinparam class {
+  BackgroundColor<<ui>> #FFF3E0
+  BorderColor<<ui>> #F57C00
+  BackgroundColor<<facade>> #E3F2FD
+  BorderColor<<facade>> #1976D2
+  BackgroundColor<<engine>> #E0F2F1
+  BorderColor<<engine>> #00897B
+  BackgroundColor<<service>> #F3E5F5
+  BorderColor<<service>> #7B1FA2
+}
+
+class App <<ui>> {
+  Signals: cities, selectedGenera, route …
+  --
+  selectCity(), toggleGenus()
+  setMapEngine(kind)
+  computeRoute()
+}
+
+class MapService <<facade>> {
+  engineKind: Signal<EngineKind>
+  gpuCaveat, slowFrameMs
+  --
+  createMap(target, popup, callbacks)
+  switchEngine(kind)
+  .. remembered for the replay ..
+  filter · visibility · route · markers
+}
+
+interface MapEngine <<engine>> {
+  create(target, popup, cb, view)
+  destroy() : void
+  viewState() : ViewState
+  setFilter(genera, cityId)
+  drawRoute(coords)
+  hidePopup()
+}
+
+class OlEngine <<engine>> {
+  OpenLayers + WMS images
+  filter → CQL to the server
+  GetFeatureInfo for popups
+}
+
+class MaplibreEngine <<engine>> {
+  MapLibre GL + vector tiles
+  filter → style filter on the GPU
+  zoom ladder: city points →
+  grid cells → individual trees
+  measures frame times (auto hint)
+}
+
+class RoutingService <<service>> {
+  route(): tube, convergence,
+  crossings, direct route, cache
+}
+class GeoServerService <<service>> {
+  WFS statistics, CQL building
+}
+class CatalogService <<service>> {
+  city list (alphabetical)
+}
+class GeocoderService <<service>> {
+  address search, online fallback
+}
+class StatusService <<service>> {
+  loading status per module
+}
+
+App --> MapService : the only\ndoor
+App --> RoutingService
+App --> GeoServerService
+App --> CatalogService
+App --> GeocoderService
+App --> StatusService
+
+MapService o--> "1" MapEngine : active engine\n(lazily loaded)
+MapEngine <|.. OlEngine
+MapEngine <|.. MaplibreEngine
+
+note right of MapService
+  On switching: take the camera from the
+  old engine, tear it down, load the new
+  one — then replay filter, visibility,
+  route and markers.
+end note
+
+note bottom of MapEngine
+  The contract of both views.
+  A new engine only has to fulfil
+  these methods; app and services
+  stay untouched.
+end note
+@enduml
