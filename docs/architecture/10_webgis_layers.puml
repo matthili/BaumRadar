@@ -31,9 +31,9 @@ rectangle "Ebene 1 · im Browser — „die Webseite"" as B1 <<band>> {
   }
 }
 
-rectangle "Ebene 2 · nginx — „der Webserver" (zwei Hüte)" as B2 <<band>> {
-  rectangle "📤  Hut 1: Webserver\nliefert die fertige App aus" as HUT1 <<run>>
-  rectangle "🔀  Hut 2: Reverse-Proxy\nreicht Anfragen an die Dienste weiter" as HUT2 <<run>>
+rectangle "Ebene 2 · nginx — „der Webserver" (ein Darsteller, zwei Rollen)" as B2 <<band>> {
+  rectangle "📤  Rolle 1: Webserver\nliefert die fertige App aus" as HUT1 <<run>>
+  rectangle "🔀  Rolle 2: Reverse-Proxy\nreicht Anfragen an die Dienste weiter" as HUT2 <<run>>
 }
 
 rectangle "Ebene 3 · Server-Programme — „das PHP", als drei Spezialisten" as B3 <<band>> {

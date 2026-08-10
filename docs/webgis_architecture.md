@@ -15,7 +15,7 @@ Wer bei den vielen Akronymen den Faden verliert: Der ganze Stack ist die vertrau
 | Klassisch | Hier | Aufgabe in einem Satz |
 |---|---|---|
 | Webseite (HTML + JS) | **Angular-App** | Die Bedienoberfläche; OpenLayers steckt als Karten-Bibliothek *in* ihr — beim Build zusammengefügt, wie eine DLL im Programm (nicht von nginx „verheiratet"). |
-| Webserver + Reverse-Proxy | **nginx** | Zwei Hüte: liefert die fertige App aus **und** reicht `/geoserver`, `/graphhopper`, `/photon` an die Dienste weiter. |
+| Webserver + Reverse-Proxy | **nginx** | Ein Darsteller in Doppelrolle: liefert die fertige App aus **und** reicht `/geoserver`, `/graphhopper`, `/photon` an die Dienste weiter. |
 | „das PHP" (Server-Programme) | **GeoServer** · **GraphHopper** · **Photon** | Malt Kartenbilder + liefert Rohdaten · berechnet Routen · findet Adressen — drei fertige Spezialisten statt eines Skripts, alle sprechen nur HTTP. |
 | „das MySQL" (Datenspeicher) | **PostGIS** · Graph-Datei · Suchindex | Nur GeoServer hängt an der Datenbank (PostgreSQL + Geo-Erweiterung); GraphHopper liest seinen Graphen ins RAM, Photon seinen Index von der Platte — ein Speicher pro Spezialist. |
 | Installationsprogramm | **loader** · **graph-builder** | Einmal-Jobs: befüllen Datenbank bzw. Graph-Datei und beenden sich — im Anfrageweg kommen sie nie vor. |
