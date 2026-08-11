@@ -216,6 +216,32 @@ Things only real operation revealed — documented because they teach something:
 
 ---
 
+## Version change: GeoServer 2.28.4 → 3.0.0 (August 2026)
+
+It took **one line** — `GEOSERVER_VERSION` in `.env`. Neither the loader nor the client
+nor nginx had to be touched: outwards we speak standards (WMS 1.3.0, WFS 2.0, OGC API
+Features, MVT), the GeoServer configuration is written by the loader via REST anyway, and
+the data lives in PostGIS, not in GeoServer. What changed internally — Spring 7, Jakarta
+EE, GeoTools 35, GeoWebCache 2.0, ImageN instead of JAI — is invisible to us.
+
+**Measured, not assumed:** let 2.28.0 create and provision the data directory, swap the
+container, start 3.0.0 on the same volume → 9 layers, 6 tile layers, byte-identical
+responses on WMS, WFS, OGC API and MVT, no migration in the log
+(`security migration check … 2.6 (previous was 2.6)`). The data directory format is
+unchanged from 2.28.
+
+**The one pitfall was picking the version.** In the OSGeo registry, `<branch>.x` means
+**nightly snapshot**, not "latest patch release": `3.0.x` is `3.0.0-SNAPSHOT` (same digest
+as `nightly`), `3.1.x` is `3.1-SNAPSHOT` of a version that does not exist yet — the
+GeoServer repository does not even have a `3.1.x` branch. Hence the hard pin to `3.0.0`;
+`3.0-latest` would follow patch releases automatically, and `2.28.4` is the way back.
+
+**Without containers this looks different:** 3.0 requires Jakarta EE Servlet 6.1 and thus
+**Tomcat 11** (10.1 is not enough — it only ships Servlet 6.0). The image settles that;
+on a grown Tomcat 9 server it is the actual work.
+
+---
+
 ## Related documents
 
 - [Building the WebGIS from scratch](webgis_bootstrap_en.md) — from-scratch guide: what to download where, how the seven containers are wired, verification per phase
