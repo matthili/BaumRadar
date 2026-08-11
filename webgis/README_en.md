@@ -11,15 +11,21 @@ BaumRadar datasets (31 cities, ~2.84 M trees) — a standalone complement to the
 Android app. No server operation required: everything runs in containers on your
 own machine.
 
+The map can be **drawn two ways**, switchable at runtime: classically with
+server-rendered map images (OpenLayers + WMS), or with vector tiles the browser
+renders itself on the GPU (MapLibre GL). Same data, two philosophies — the tech
+demo makes the difference demonstrable.
+
 ```
-┌─────────┐     ┌──────────────┐    ┌────────────┐    ┌─────────────────┐
-│ loader  │───▶│   PostGIS     │◀──│ GeoServer  │◀──│ Angular client  │
-│ (Java 25│     │ trees        │    │ WMS 1.3.0  │    │ (OpenLayers)    │
-│  Maven) │     │ allergy_zones│    │ WFS 2.0    │    └─────────────────┘
-└────┬────┘     └──────────────┘    │ OGC API    │    ┌─────────────────┐
-     │  catalog.json + *.db.gz      │ Features   │    │ GraphHopper     │
-     └── GitHub Pages (signed) ─────└────────────┘    │ (island graph)  │
-                                                      └─────────────────┘
+┌─────────┐     ┌──────────────┐    ┌──────────────┐    ┌──────────────────────┐
+│ loader  │───▶│   PostGIS    │◀───│  GeoServer   │◀───│   Angular client     │
+│ (Java 25│     │ trees        │    │ WMS 1.3.0    │    │  OpenLayers (images) │
+│  Maven) │     │ allergy_zones│    │ WFS 2.0      │    │  MapLibre (tiles)    │
+└────┬────┘     │ tree_cells   │    │ OGC API      │    └──────────────────────┘
+     │          │ city_points  │    │ vector tiles │    ┌──────────────────────┐
+     │          └──────────────┘    └──────────────┘    │ GraphHopper · Photon │
+     └── catalog.json + *.db.gz from GitHub Pages        └──────────────────────┘
+         (Ed25519-signed)
 ```
 
 ## Quick start
@@ -56,7 +62,7 @@ PostGIS and provisions GeoServer via REST — idempotent, unchanged cities
 (`dataVersion`) are skipped on every further start.
 
 **First-run data volumes** (one-time, cached in volumes afterwards): tree data
-depending on `CITY_FILTER` (Zug ~2 MB … all 19 ~600 MB) · address search (default;
+depending on `CITY_FILTER` (Zug ~0.7 MB … all 31 together ~133 MB) · address search (default;
 opt out with `-NoGeocoding`) downloads the geocoder slices of the chosen cities
 (15–176 MB per city) · routing (default; opt out with `-NoRouting`) downloads the
 country PBFs from Geofabrik (**DE ~4 GB**, AT/CH ~0.5 GB each — only the countries
@@ -111,11 +117,12 @@ an overlay with the real per-module state — the same messages as `docker logs`
 
 | Service | URL | Access |
 |---|---|---|
-| **Web client** (Angular + OpenLayers) | http://localhost:8082 | — (only LAN-visible port) |
+| **Web client** (Angular + OpenLayers **and** MapLibre) | http://localhost:8082 | — (only LAN-visible port) |
 | GeoServer web UI | http://localhost:8081/geoserver | see `.env` (localhost only) |
 | WMS 1.3.0 | http://localhost:8081/geoserver/baumradar/wms | — |
 | WFS 2.0 | http://localhost:8081/geoserver/baumradar/wfs | — |
 | OGC API Features | http://localhost:8081/geoserver/ogc/features/v1 | — |
+| Vector tiles (MVT, tile cache) | http://localhost:8081/geoserver/gwc/service/tms/1.0.0 | — (source of the browser view) |
 | PostGIS | localhost:5433 (container-internal 5432) | see `.env` (localhost only) |
 | GraphHopper (profile `routing`) | http://localhost:8989 | — (localhost only; client uses `/graphhopper/`) |
 | Photon geocoder (profile `geocoding`) | http://localhost:2322 | — (localhost only; client uses `/photon/`) |
@@ -128,6 +135,10 @@ http://localhost:8081/geoserver/baumradar/wms?service=WMS&version=1.3.0&request=
 
 # Features (WFS): all birches in a window as GeoJSON
 http://localhost:8081/geoserver/baumradar/wfs?service=WFS&version=2.0.0&request=GetFeature&typeNames=baumradar:trees&outputFormat=application/json&count=100&cql_filter=genus_de='Birke'
+
+# Vector tile (MVT): one tile of the overview grid cells — what the browser view
+# loads (TMS counts y from the bottom)
+http://localhost:8081/geoserver/gwc/service/tms/1.0.0/baumradar%3Atree_cells_z8@EPSG%3A900913@pbf/10/558/668.pbf
 ```
 
 ## Why this architecture?
@@ -148,7 +159,17 @@ http://localhost:8081/geoserver/baumradar/wfs?service=WFS&version=2.0.0&request=
   Android 10, and there the system crypto provider doesn't yet ship Ed25519 — on
   Android the JCA's offering depends on the device OS, not on the SDK the app is
   built against.)
-- **One GraphHopper with an "island graph"** (phase 4): the 19 city extracts are
+- **Two map engines behind one interface:** the client knows neither OpenLayers nor
+  MapLibre directly, only a `MapEngine` interface; the inactive engine is loaded
+  lazily on switching, and camera, filters and route carry over. The difference is
+  tangible in use: in the server view every genus filter fetches new map images, in
+  the browser view it is a pure style filter on the GPU — without a single server
+  round trip. To keep vector tiles viable at 2.84 M trees, the loader precomputes
+  generalisation stages (city points → grid cells with dominant genus → individual
+  trees from street zoom): one Vienna overview tile shrinks from 4.5 MB to ~1.5 kB.
+  Without GPU-accelerated WebGL the server view simply stays; if the client measures
+  persistently sluggish frame times it suggests switching — the decision is a click.
+- **One GraphHopper with an "island graph"** (phase 4): the 31 city extracts are
   merged into one PBF with osmium. Routing works within each city; between cities
   there is deliberately no connection. A build-plan marker makes the rebuild
   idempotent: as long as cities/bboxes/margin are unchanged, every further start
@@ -177,7 +198,7 @@ http://localhost:8081/geoserver/baumradar/wfs?service=WFS&version=2.0.0&request=
 | `GH_VERSION` / `GRAPHHOPPER_PORT` / `GH_JAVA_OPTS` | `10.0` / `8989` / `-Xmx2g` | GraphHopper (profile `routing`) |
 | `BBOX_MARGIN_DEG` | `0.03` | margin around city bboxes for the island graph |
 | `PHOTON_VERSION` / `PHOTON_PORT` | `1.2.1` / `2322` | Photon geocoder (profile `geocoding`) |
-| `PHOTON_IMPORT_JAVA_OPTS` | `-Xmx4g` | heap for the **one-time** index import — for all 31 cities (~18 GB raw) raise to `-Xmx6g`/`-Xmx8g` if the import crashes |
+| `PHOTON_IMPORT_JAVA_OPTS` | `-Xmx4g` | heap for the **one-time** index import — for all 31 cities (~20 GB raw) raise to `-Xmx6g`/`-Xmx8g` if the import crashes |
 | `PHOTON_JAVA_OPTS` | `-Xmx1g` | heap of the running search service |
 
 ## Development
@@ -189,19 +210,22 @@ docker run --rm -v "${PWD}\loader:/src" -w /src -v baumradar-m2:/root/.m2 `
   maven:3.9-eclipse-temurin-25 mvn test
 ```
 
-**Web client** — Angular 22 (standalone + signals, zoneless), OpenLayers directly
-without a wrapper library; the map is created in `runOutsideAngular` (already
-defused under zoneless, kept as a documented pattern). For a local `npm start` the
-Angular CLI needs **Node ≥ 24.15** — alternatively build and tests run in the
-container:
+**Web client** — Angular 22 (standalone + signals, zoneless); OpenLayers **and**
+MapLibre GL, each used directly without a wrapper library. Both sit behind the
+`MapEngine` interface (`ol-engine.ts` / `maplibre-engine.ts`), with `MapService` as
+the component's only door. The map is created in `runOutsideAngular` (already
+defused under zoneless, kept as a documented pattern). Node version and
+`package-lock.json` are pinned in the Dockerfile — otherwise every build resolves a
+different Angular version. For a local `npm start` the Angular CLI needs
+**Node ≥ 24.15**; alternatively build and tests run in the container:
 
 ```powershell
 # Dev server locally (Node >= 24.15): proxies /geoserver -> localhost:8081
-cd client; npm install; npm start
+cd client; npm ci; npm start
 
-# Unit tests (vitest) in the container:
-docker run --rm -v "${PWD}\client:/src:ro" node:24-alpine `
-  sh -c "cp -r /src /app && cd /app && npm install --silent && npx ng test --watch=false"
+# Unit tests (vitest) in the container — the host's node_modules stay out of it:
+docker run --rm -v "${PWD}\client:/src:ro" node:24.18-alpine `
+  sh -c "mkdir /app && cd /app && cp -r /src/package.json /src/package-lock.json /src/angular.json /src/tsconfig*.json /src/src /src/public . && npm ci --silent && npm test -- --watch=false"
 ```
 
 Integration test against real PostGIS (Testcontainers, needs a local Docker socket,
