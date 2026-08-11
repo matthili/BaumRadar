@@ -20,6 +20,38 @@
 
 ---
 
+## 🧭 Project structure — three standalone applications
+
+This repository holds **three independently runnable applications** that share nothing
+but their data — each with its own toolchain, its own build and its own docs. If only
+one of them interests you, the other two can safely be ignored:
+
+| Folder | What it is | Tech | Start here |
+|---|---|---|---|
+| [`app/`](app/) | **Android app** — map, allergy profile, warning zones, AR compass, routes; offline-first | Kotlin, Jetpack Compose, Room, osmdroid | [App architecture](docs/app_architecture_en.md) |
+| [`data-processor/`](data-processor/) | **Java backend** — the data pipeline: reads 31 tree cadastres, unifies names, clusters zones, signs and publishes | Java 25, Gradle, SQLite, Ed25519 | [Backend architecture](docs/backend_architecture_en.md) |
+| [`webgis/`](webgis/README_en.md) | **WebGIS** — a complete self-hostable geographic information system: OGC services, routing, address search, two map renderers | Docker Compose, PostGIS, GeoServer, Angular, GraphHopper, Photon | [WebGIS README](webgis/README_en.md) · [architecture](docs/webgis_architecture_en.md) |
+
+```
+BaumRadar/
+├─ app/              Android app (Kotlin/Compose)      → ./gradlew :app:assembleDebug
+├─ data-processor/   data pipeline (Java 25)           → ./gradlew :data-processor:run
+├─ webgis/           web GIS stack (Docker Compose)    → cd webgis && ./start.sh
+├─ docs/
+│  ├─ data/          the published data (GitHub Pages): catalog.json + signed per-city slices
+│  ├─ architecture/  PlantUML diagrams (.puml + rendered .png)
+│  └─ *.md           architecture docs, glossary, data structure — in German and English
+└─ assets/           logos, icons, screenshots
+```
+
+**The joint is `docs/data/`.** The `data-processor` writes there, app and WebGIS read
+from there — over GitHub Pages, with Ed25519 signatures and content-based versions.
+There is **no application server**: both consumers only ever see static, signed files.
+That is why they run independently — the app does not need the WebGIS, nor the other
+way round.
+
+---
+
 ## 📐 System Architecture
 
 <p align="center">

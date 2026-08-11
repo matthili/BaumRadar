@@ -20,6 +20,38 @@
 
 ---
 
+## 🧭 Projektstruktur — drei eigenständige Anwendungen
+
+Dieses Repository enthält **drei getrennt lauffähige Anwendungen**, die sich nur die
+Daten teilen — jede hat ihre eigene Toolchain, ihren eigenen Build und ihre eigene
+Doku. Wer sich nur für eine interessiert, kann die anderen beiden ignorieren:
+
+| Ordner | Was es ist | Technik | Einstieg |
+|---|---|---|---|
+| [`app/`](app/) | **Android-App** — Karte, Allergie-Profil, Warnzonen, AR-Kompass, Routen; offline-first | Kotlin, Jetpack Compose, Room, osmdroid | [App-Architektur](docs/app_architecture.md) |
+| [`data-processor/`](data-processor/) | **Java-Backend** — die Daten-Pipeline: liest 31 Baumkataster, vereinheitlicht Namen, clustert Zonen, signiert und publiziert | Java 25, Gradle, SQLite, Ed25519 | [Backend-Architektur](docs/backend_architecture.md) |
+| [`webgis/`](webgis/README.md) | **WebGIS** — vollständiges Geoinformationssystem zum Selbst-Hosten: OGC-Dienste, Routing, Adresssuche, zwei Karten-Renderer | Docker Compose, PostGIS, GeoServer, Angular, GraphHopper, Photon | [WebGIS-README](webgis/README.md) · [Architektur](docs/webgis_architecture.md) |
+
+```
+BaumRadar/
+├─ app/              Android-App (Kotlin/Compose)      → ./gradlew :app:assembleDebug
+├─ data-processor/   Daten-Pipeline (Java 25)          → ./gradlew :data-processor:run
+├─ webgis/           Web-GIS-Stack (Docker Compose)    → cd webgis && ./start.sh
+├─ docs/
+│  ├─ data/          die publizierten Daten (GitHub Pages): catalog.json + signierte Stadt-Häppchen
+│  ├─ architecture/  PlantUML-Diagramme (.puml + gerenderte .png)
+│  └─ *.md           Architektur-Dokumentation, Glossar, Datenstruktur — je DE und EN
+└─ assets/           Logos, Icons, Screenshots
+```
+
+**Das Bindeglied ist `docs/data/`.** Der `data-processor` schreibt dort hinein, App und
+WebGIS lesen von dort — über GitHub Pages, mit Ed25519-Signaturen und inhaltsbasierten
+Versionen. Es gibt **keinen Anwendungsserver**: Die beiden Konsumenten kennen nur
+statische, signierte Dateien. Deshalb laufen sie auch unabhängig voneinander — die App
+braucht das WebGIS nicht und umgekehrt.
+
+---
+
 ## 📐 Systemarchitektur
 
 <p align="center">
