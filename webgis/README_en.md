@@ -190,7 +190,7 @@ http://localhost:8081/geoserver/gwc/service/tms/1.0.0/baumradar%3Atree_cells_z8@
 | `PG_PORT` | `5433` | host port for PostGIS (container: 5432) |
 | `GEOSERVER_PORT` | `8081` | host port for GeoServer |
 | `GEOSERVER_USER` / `GEOSERVER_PASSWORD` | `admin` / script: random | GeoServer admin |
-| `GEOSERVER_VERSION` | `2.28.0` | image tag; at least 2.27 (OGC API Features is a stable extension only from there) |
+| `GEOSERVER_VERSION` | `3.0.0` | image tag. **Careful:** `3.0.x`/`3.1.x` are *nightly snapshots* in the OSGeo registry, not releases — `3.0-latest` follows patch releases automatically, `2.28.4` is the last 2.x line |
 | `BIND_HOST` | `127.0.0.1` | bind address of the internal services (`0.0.0.0` = LAN) |
 | `WEB_PORT` | `8082` | host port of the web client |
 | `CITY_FILTER` | *(empty = all)* | comma-separated city IDs, e.g. `wien,linz` — applies to loader, routing **and** geocoder |

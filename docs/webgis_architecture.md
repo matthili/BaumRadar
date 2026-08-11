@@ -46,7 +46,7 @@ Alle publizierten Artefakte sind **Ed25519-signiert** und tragen eine **inhaltsb
 |---|---|---|---|
 | `loader` | Java 25, Maven, Virtual Threads | Katalog laden → Signaturen prüfen → PostGIS-Import → GeoServer-Provisionierung | *(Basis)* |
 | `postgis` | PostGIS 17/3.5 | Datenbank (PostgreSQL + Geo-Erweiterung): `trees`, `allergy_zones`, Statistiken | *(Basis)* |
-| `geoserver` | GeoServer 2.28 | OGC-Dienste: WMS 1.3.0, WFS 2.0 (+CQL), OGC API Features **+ Vektorkacheln (MVT)** | *(Basis)* |
+| `geoserver` | GeoServer 3.0 | OGC-Dienste: WMS 1.3.0, WFS 2.0 (+CQL), OGC API Features **+ Vektorkacheln (MVT)** | *(Basis)* |
 | `web` | nginx + Angular 22, OpenLayers 10 **und** MapLibre GL 5 | Karte (umschaltbarer Renderer), Filter, Routing-UI; same-origin-Proxys | *(Basis)* |
 | `graph-builder` | osmium-tool, jq | Stadt-BBoxen aus Länder-PBFs schneiden → `island.osm.pbf` | `routing` |
 | `graphhopper` | GraphHopper 10 | foot/bike-Routing, Zonen-Vermeidung per Custom Model | `routing` |

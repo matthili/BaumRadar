@@ -192,7 +192,7 @@ http://localhost:8081/geoserver/gwc/service/tms/1.0.0/baumradar%3Atree_cells_z8@
 | `PG_PORT` | `5433` | Host-Port für PostGIS (Container: 5432) |
 | `GEOSERVER_PORT` | `8081` | Host-Port für GeoServer |
 | `GEOSERVER_USER` / `GEOSERVER_PASSWORD` | `admin` / Skript: zufällig | GeoServer-Admin |
-| `GEOSERVER_VERSION` | `2.28.0` | Image-Tag; mindestens 2.27 (OGC API Features ist erst ab dort stabile Extension) |
+| `GEOSERVER_VERSION` | `3.0.0` | Image-Tag. **Achtung:** `3.0.x`/`3.1.x` sind im OSGeo-Registry *Nightly-Snapshots*, keine Releases — `3.0-latest` zieht Patch-Releases automatisch nach, `2.28.4` ist die letzte 2er-Linie |
 | `BIND_HOST` | `127.0.0.1` | Bind-Adresse der internen Dienste (`0.0.0.0` = LAN) |
 | `WEB_PORT` | `8082` | Host-Port des Web-Clients |
 | `CITY_FILTER` | *(leer = alle)* | Kommagetrennte Stadt-IDs, z. B. `wien,linz` — gilt für Loader, Routing **und** Geocoder |

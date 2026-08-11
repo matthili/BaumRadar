@@ -21,9 +21,9 @@ locally (`docs/data/`), the geocoder even reads straight from there.
 | # | Container | Origin | Role |
 |---|---|---|---|
 | 1 | **postgis** | Off-the-shelf `postgis/postgis:17-3.5` | Spatial database — PostgreSQL + geo (`trees`, `allergy_zones`) |
-| 2 | **geoserver** | Off-the-shelf `docker.osgeo.org/geoserver:2.28.0` | OGC services (WMS 1.3.0, WFS 2.0, OGC API Features) on PostGIS |
+| 2 | **geoserver** | Off-the-shelf `docker.osgeo.org/geoserver:3.0.0` | OGC services (WMS 1.3.0, WFS 2.0, OGC API Features, vector tiles) on PostGIS |
 | 3 | **loader** | Self-built: `maven:3.9-eclipse-temurin-25` → `eclipse-temurin:25-jre` | Catalog → signature check → PostGIS import → GeoServer provisioning |
-| 4 | **web** | Self-built: `node:24-alpine` → `nginx:1.27-alpine` | Angular/OpenLayers UI + same-origin reverse proxy |
+| 4 | **web** | Self-built: `node:24.18-alpine` → `nginx:1.27-alpine` | Angular UI (OpenLayers **and** MapLibre) + same-origin reverse proxy |
 | 5 | **graph-builder** | Self-built: `debian:bookworm-slim` + osmium-tool/jq/curl | One-shot job: country PBFs → `island.osm.pbf` |
 | 6 | **graphhopper** | Self-built: `eclipse-temurin:21-jre` + GH web JAR from GitHub release | Routing engine (foot + bike, flexible mode) |
 | 7 | **photon** | Self-built: `eclipse-temurin:21-jre` + Photon JAR from GitHub release | Geocoder (address/place search), local |
@@ -77,7 +77,7 @@ webgis/
    GEOSERVER_PORT=8081
    GEOSERVER_USER=admin
    GEOSERVER_PASSWORD=geoserver   # also replaced by a random value
-   GEOSERVER_VERSION=2.28.0
+   GEOSERVER_VERSION=3.0.0         # "3.0.x"/"3.1.x" would be nightly snapshots!
    BIND_HOST=127.0.0.1            # hardening: internal services localhost-only (0.0.0.0 = LAN)
    WEB_PORT=8082
    CITY_FILTER=                   # empty = all cities; e.g. "zug,wien"
